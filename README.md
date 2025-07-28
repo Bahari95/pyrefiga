@@ -4,7 +4,7 @@
 It builds upon and extends the capabilities of the [simplines](https://github.com/ratnania/simplines) project by A. Ratnani.
 
 
-** Modifications in this version were made by Mustapha Bahari (2025), including: **
+**Modifications in this version were made by Mustapha Bahari (2025), including:**
 
     Support for NURBS basis functions in CAD and IGA
 
