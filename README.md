@@ -31,8 +31,8 @@ This project is licensed under the [GNU GPL v3.0](LICENSE), as it includes and m
 ## Clone the Repository
 
 ```bash
-    git clone https://github.com/Bahari95/pyrefiga.git
-    cd pyrefiga
+git clone https://github.com/Bahari95/pyrefiga.git
+cd pyrefiga
 ```
 
 ## Install
