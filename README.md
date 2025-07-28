@@ -27,10 +27,6 @@ This project is licensed under the [GNU GPL v3.0](LICENSE), as it includes and m
 
 © 2025 Mustapha Bahari. See the LICENSE file for more details.
 
-## About `simplines`
-
-**simplines** is a simple and minimalistic library for B-splines, primarily targeting IGA and CAD applications.
-
 ## Clone the Repository
 
 ```bash
