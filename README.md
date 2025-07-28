@@ -10,15 +10,13 @@ It builds upon and extends the capabilities of the [simplines](https://github.co
 
     Fast solvers
 
-    Examples on Poisson, Cahn-Hilliard, and Elasticity problems
-
-    Multipatch simulations
+    Examples on Poisson, Cahn-Hilliard, and Elasticity problems ...
 
     r-refinement (coming soon)
 
     Adaptation to complex 2D and 3D geometries
 
-    Enhancements for multipatch and toroidal domains
+    Enhancements for multipatch domains (coming soon)
 
     Improvements to solver stability and adaptive mesh refinement
 
