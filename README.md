@@ -5,7 +5,6 @@
 It builds upon and extends the simplines library to handle more advanced geometries and adaptive strategies.
 
 ## License
-License
 
 This project is licensed under the GNU GPL v3.0, as it includes and modifies code from the original [simplines](https://github.com/ratnania/simplines) library.
 
