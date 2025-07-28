@@ -1,4 +1,4 @@
-# pyrefiga
+# pyrefiga (python + refinement + Isogeometric analysis
 
 **pyrefiga** is a CAD and simulation library tailored for Isogeometric Analysis (IGA). It offers advanced capabilities, including r-adaptive mesh refinement, enabling accurate and efficient computations on complex geometries.
 
