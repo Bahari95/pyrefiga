@@ -1,6 +1,6 @@
 # pyrefiga
 
-**pyrefiga** is a simulation and r-adaptive mesh refinement library based on Isogeometric Analysis (IGA).  
+**pyrefiga** is a simulation and r-adaptive mesh refinement library based on Isogeometric Analysis (IGA).
 
 ## License
 
@@ -18,7 +18,7 @@ This project is licensed under the [GNU GPL v3.0](LICENSE), as it includes and m
 
     Examples on Poisson, Cahn-Hilliard, and Elasticity problems ...
 
-    r-refinement (coming soon)
+    It supports mappings defined by composition.
 
     Adaptation to complex 2D and 3D geometries
 
