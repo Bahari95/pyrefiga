@@ -3,11 +3,32 @@
 **pyrefiga** is a simulation and adaptive mesh refinement library based on Isogeometric Analysis (IGA).  
 It builds upon and extends the capabilities of the [simplines](https://github.com/ratnania/simplines) project by A. Ratnani.
 
+
+** Modifications in this version were made by Mustapha Bahari (2025), including: **
+
+    Support for NURBS basis functions in CAD and IGA
+
+    Fast solvers
+
+    Examples on Poisson, Cahn-Hilliard, and Elasticity problems
+
+    Multipatch simulations
+
+    r-refinement (coming soon)
+
+    Adaptation to complex 2D and 3D geometries
+
+    Enhancements for multipatch and toroidal domains
+
+    Improvements to solver stability and adaptive mesh refinement
+
+    Extended support for visualization and performance diagnostics
+
 ## License
 
 This project is licensed under the [GNU GPL v3.0](LICENSE), as it includes and modifies code from the original [simplines](https://github.com/ratnania/simplines) library.
 
-© 2025 Mustapha Bahari. See the [NOTICE](NOTICE) file for details on original authorship and modifications.
+© 2025 Mustapha Bahari. See the LICENSE file for more details.
 
 ## About `simplines`
 
