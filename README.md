@@ -26,7 +26,7 @@ This project is licensed under the GNU GPL v3.0, as it includes and modifies cod
 
     Improvements to solver stability and adaptive mesh refinement
 
-    Extended support for visualization and performance diagnostics
+    Extended support for visualization (matplotlib and paraview) and performance diagnostics
     
 ## Clone the Repository
 
