@@ -2,6 +2,13 @@
 
 **pyrefiga** is a simulation and r-adaptive mesh refinement library based on Isogeometric Analysis (IGA).  
 
+## License
+
+This project is licensed under the [GNU GPL v3.0](LICENSE), as it includes and modifies code from the original [simplines](https://github.com/ratnania/simplines) library.
+
+© 2025 Mustapha Bahari. See the LICENSE file for more details.
+
+
 
 **Modifications in this version were made, including:**
 
@@ -20,13 +27,7 @@
     Improvements to solver stability and adaptive mesh refinement
 
     Extended support for visualization and performance diagnostics
-
-## License
-
-This project is licensed under the [GNU GPL v3.0](LICENSE), as it includes and modifies code from the original [simplines](https://github.com/ratnania/simplines) library.
-
-© 2025 Mustapha Bahari. See the LICENSE file for more details.
-
+    
 ## Clone the Repository
 
 ```bash
