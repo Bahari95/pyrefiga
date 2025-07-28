@@ -3,7 +3,7 @@
 **pyrefiga** is a simulation and r-adaptive mesh refinement library based on Isogeometric Analysis (IGA).  
 
 
-**Modifications in this version were made by Mustapha Bahari (2025), including:**
+**Modifications in this version were made, including:**
 
     Support for NURBS basis functions in CAD and IGA
 
