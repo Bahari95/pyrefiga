@@ -18,14 +18,16 @@ This project is licensed under the [GNU GPL v3.0](LICENSE), as it includes and m
 ```bash
     git clone https://github.com/Bahari95/pyrefiga.git
     cd pyrefiga
-
+```
 
 ## Install
 
 **Standard mode**
 
 ```shell
+
     python3 -m pip install .
+
 ```
 
 **Development mode**
