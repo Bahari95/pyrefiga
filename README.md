@@ -1,7 +1,7 @@
 # pyrefiga
 
 **pyrefiga** is a simulation and adaptive mesh refinement library based on Isogeometric Analysis (IGA).  
-It builds upon and extends the capabilities of the [simplines](https://github.com/ratnania/simplines) project by A. Ratnani.
+It builds upon and extends the capabilities of the [simplines](https://github.com/ratnania/simplines) project.
 
 
 **Modifications in this version were made by Mustapha Bahari (2025), including:**
