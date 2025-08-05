@@ -135,7 +135,7 @@ args = parser.parse_args()
 # Parameters and initialization
 #------------------------------------------------------------------------------
 nbpts       = 100 # Number of points for plotting
-RefinNumber = 2   # Number of global mesh refinements
+RefinNumber = 1   # Number of global mesh refinements
 nelements   = 8  # Initial mesh size
 table       = zeros((RefinNumber+1,5))
 i           = 1
@@ -155,7 +155,8 @@ g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 # Load CAD geometry
 #------------------------------------------------------------------------------
 # geometry = '../fields/unitSquare.xml'
-geometry = '../fields/quart_annulus.xml'
+geometry = '../fields/circle.xml'
+# geometry = '../fields/quart_annulus.xml'
 # geometry = '../fields/annulus.xml'
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
