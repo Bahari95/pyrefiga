@@ -27,9 +27,9 @@ assemble_rhs_un      = compile_kernel(assemble_vector_un_ex01, arity=1)
 assemble_norm_un     = compile_kernel(assemble_norm_un_ex01, arity=1)
 
 # ... nitsche assembly tools
-from gallery.gallery_section_10 import assemble_matrix_nitsche_ex00
+from gallery.gallery_nitsche_00 import assemble_matrix_nitsche_ex00
 assemble_stiffness_nitsche  = compile_kernel(assemble_matrix_nitsche_ex00, arity=2)
-from gallery.gallery_section_10 import assemble_matrix_nitsche_ex02
+from gallery.gallery_nitsche_00 import assemble_matrix_nitsche_ex02
 assemble_stiffness2_nitsche = compile_kernel(assemble_matrix_nitsche_ex02, arity=2)
 
 from   scipy.sparse                      import csr_matrix
@@ -67,8 +67,12 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     # Build global linear system
     n_basis                    = V.nbasis[0] * V.nbasis[1]
     M                          = zeros((n_basis*2,n_basis*2))
-    Kappa                      = 1e+3
-    normS                      = -1.0
+    #... computes coeffs for Nitsche's method
+    stab                       = 4 * ( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
+    m_h                        = (V.nbasis[0]*V.nbasis[1])
+    Kappa                      = 2. * stab*m_h
+    #Kappa                      = 1.*n_basis**2
+    normS                      = 0.5
 
     # Assemble stiffness matrix 11
     stiffness11                = assemble_stiffness_nitsche(V, fields=[u11_mph, u12_mph], knots=True, value=[Vh.omega[0],Vh.omega[1], interface[0], Kappa, normS])
@@ -76,7 +80,7 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     M[:n_basis,:n_basis]       = (stiffness11.tosparse()).toarray()[:,:]
 
     # Assemble stiffness matrix 22
-    stiffness22                = assemble_stiffness_nitsche(V, fields=[u21_mph, u22_mph], knots=True, value=[Vh.omega[0],Vh.omega[1], interface[1], Kappa, 0.])
+    stiffness22                = assemble_stiffness_nitsche(V, fields=[u21_mph, u22_mph], knots=True, value=[Vh.omega[0],Vh.omega[1], interface[1], Kappa, normS])
     stiffness22                = apply_dirichlet(V, stiffness22, dirichlet=dirichlet_2)
     M[n_basis:,n_basis:]       = (stiffness22.tosparse()).toarray()[:,:]
 
@@ -100,12 +104,10 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     b[:n_basis]                = rhs1.toarray()[:]
     b[n_basis:]                = rhs2.toarray()[:]
 
-    # Solve the linear system using GMRES
-    # M               =  csc_matrix(M)
-    print("conditionement ============ ", np.linalg.det(M))
-    x, inf          = sla.gmres(M, b)
+    # Solve the linear system using CGS
+    x, inf          = sla.cg(M, b)
 
-    print("GMRES converged:", inf, x.shape, "unknowns")
+    # print("GMRES converged:", inf, x.shape, "unknowns")
     # ... Extract solution
     u1              = StencilVector(V.vector_space)
     u2              = StencilVector(V.vector_space)
@@ -133,8 +135,8 @@ args = parser.parse_args()
 # Parameters and initialization
 #------------------------------------------------------------------------------
 nbpts       = 100 # Number of points for plotting
-RefinNumber = 1   # Number of global mesh refinements
-nelements   = 16  # Initial mesh size
+RefinNumber = 2   # Number of global mesh refinements
+nelements   = 8  # Initial mesh size
 table       = zeros((RefinNumber+1,5))
 i           = 1
 times       = []
@@ -152,17 +154,19 @@ g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-#geometry = '../fields/quart_annulus.xml'
-geometry = '../fields/annulus.xml'
+# geometry = '../fields/unitSquare.xml'
+geometry = '../fields/quart_annulus.xml'
+# geometry = '../fields/annulus.xml'
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 
 # Extract geometry mapping
-mp             = getGeometryMap(geometry,0)# .. First patch 
-mp1            = getGeometryMap(geometry,1)# .. Second patch
-degree         = mp.degree # Use same degree as geometry
-quad_degree    = max(degree[0],degree[1])+3 # Quadrature degree
-mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
+mp              = getGeometryMap(geometry,0)# .. First patch 
+mp1             = getGeometryMap(geometry,1)# .. Second patch
+degree          = mp.degree # Use same degree as geometry
+quad_degree     = max(degree[0],degree[1])+3 # Quadrature degree
+mp.nurbs_check  = True # Activate NURBS if geometry uses NURBS
+mp1.nurbs_check = True # Activate NURBS if geometry uses NURBS
 
 #------------------------------------------------------------------------------
 # Initialize spaces and mapping for initial mesh
@@ -177,7 +181,7 @@ V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,Nelements), nderiv = 1
 V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,Nelements), nderiv = 1, omega = wm2, quad_degree = quad_degree)
 # Create tensor product space
 Vh = TensorSpace(V1, V2)
-
+print("degree = {}  nelements = {}".format(Vh.degree, Vh.nelements))
 # Initialize mapping vectors
 u11_mph        = StencilVector(Vh.vector_space)
 u12_mph        = StencilVector(Vh.vector_space)
@@ -197,31 +201,31 @@ xd2, u_d2 = build_dirichlet(Vh, g, map = (xmp1, ymp1))
 interface = [2,1]
 dirichlet_1 = [[True, True], [True, True]]
 dirichlet_2 = [[True, True], [True, True]]
-if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-10 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-10 :
+if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-12 :
     xd1[-1,:]   = 0.0 # Reset xd to zero
     xd2[0,:]    = 0.0 # Reset xd to zero
-    print('#---IN-UNIFORM--MESH-Poisson equation', 2,1)
+    print('#---Interfaces: (patche left :', 2,',patche right :',1,')')
     interface   = [2,1]
     dirichlet_1 = [[True, False],[True, True]]
     dirichlet_2 = [[False, True],[True, True]]
-elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-10 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-10 :
+elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-12 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-12 :
     xd1[0,:]    = 0.0 # Reset xd to zero
     xd2[-1,:]   = 0.0 # Reset xd to zero
-    print('#---IN-UNIFORM--MESH-Poisson equation', 1,2)
+    print('#---Interfaces: (patche left :', 1,',patche right :',2,')')
     interface   = [1,2]
     dirichlet_1 = [[False, True], [True, True]]
     dirichlet_2 = [[True, False], [True, True]]
-elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-10 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-10 :
+elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-12 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-12 :
     xd1[:,0]    = 0.0 # Reset xd to zero
     xd2[:,-1]   = 0.0 # Reset xd to zero
-    print('#---IN-UNIFORM--MESH-Poisson equation', 3, 4)
+    print('#---Interfaces: (patche left :', 3,',patche right :',4,')')
     interface   = [3,4]
     dirichlet_1 = [[True, True], [False, True]]
     dirichlet_2 = [[True, True], [True, False]]
-elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-10 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-10 :
+elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-12 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-12 :
     xd1[:,-1]   = 0.0
     xd2[:,0]    = 0.0 # Reset xd to zero
-    print('#---IN-UNIFORM--MESH-Poisson equation', 4,3)
+    print('#---Interfaces: (patche left :', 4,',patche right :',3,')')
     interface   = [4,3]
     dirichlet_1 = [[True, True], [True, False]]
     dirichlet_2 = [[True, True], [False, True]]

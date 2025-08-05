@@ -1,15 +1,30 @@
-import numpy as np
-from functools import reduce
-from matplotlib import pyplot as plt
-from scipy.sparse import kron, csr_matrix
+"""
+This script provides tools for working with B-spline solutions in one dimension.
 
-from .cad import point_on_bspline_curve
-from .cad import point_on_bspline_surface
-from .bsplines import hrefinement_matrix
+Features:
+- Plotting a B-spline solution in 1D.
+- Construction of the prolongation matrix between hierarchical spaces.
+- save_geometry_to_xml`: Saves a computed geometry mapping to a .xml file.
+- getGeometryMap`: Extracts a geometry mapping from a .xml file.
 
+@author: Mustapha Bahari
+"""
+import numpy            as     np
+from   functools        import reduce
+from   matplotlib       import pyplot as plt
+from   scipy.sparse     import kron, csr_matrix
+from   .cad             import point_on_bspline_curve
+from   .cad             import point_on_bspline_surface
+from   .bsplines        import hrefinement_matrix
+from   .linalg          import StencilVector
+from   .spaces          import SplineSpace
+from   .spaces          import TensorSpace
+from   .results_f90     import least_square_Bspline
+from   .results_f90     import pyccel_sol_field_2d
+from   .nurbs_utilities import sol_field_NURBS_2d
+from   .nurbs_utilities import least_square_NURBspline
 
 __all__ = ['plot_field_1d', 
-           'plot_field_2d', 
            'prolongation_matrix',
            'save_geometry_to_xml',
            'getGeometryMap']
@@ -37,39 +52,14 @@ def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None,
         plt.plot(xs, Q[:,0])
 
 # ==========================================================
-def plot_field_2d(knots, degrees, u, nx=101, ny=101):
-    T1,T2 = knots
-    p1,p2 = degrees
-
-    n1 = len(T1) - p1 - 1
-    n2 = len(T2) - p2 - 1
-
-    xmin = T1[p1]
-    xmax = T1[-p1-1]
-
-    ymin = T2[p2]
-    ymax = T2[-p2-1]
-
-    xs = np.linspace(xmin, xmax, nx)
-    ys = np.linspace(ymin, ymax, ny)
-
-    n1,n2 = u.shape
-
-    P = np.zeros((n1, n2, 1))
-    P[:,:,0] = u[:,:]
-    Q = np.zeros((nx, ny, 1))
-    for i1,x in enumerate(xs):
-        for i2,y in enumerate(ys):
-            Q[i1,i2,:] = point_on_bspline_surface(T1, T2, P, x, y)
-    X,Y = np.meshgrid(xs,ys)
-    plt.contourf(X, Y, Q[:,:,0])
-
-# ==========================================================
 def prolongation_matrix(VH, Vh):
-    # TODO not working for duplicated internal knots
-
-    # ... TODO check that VH is included in Vh
+    # TODO not working for duplicated internal knots : to be fixed soon
     # ...
+    assert VH.dim == Vh.dim, "Spaces must have the same number of dimensions"
+    for i in range(VH.dim):
+        knots_VH = set(VH.knots[i])
+        knots_Vh = set(Vh.knots[i])
+        assert knots_VH.issubset(knots_Vh), f"Knots in VH not included in Vh at dimension {i}"
 
     # ...
     mats = []
@@ -87,24 +77,6 @@ def prolongation_matrix(VH, Vh):
 
     return M
 
-
-from .linalg          import StencilVector
-from .spaces          import SplineSpace
-from .spaces          import TensorSpace
-from .results_f90     import least_square_Bspline
-from .results_f90     import pyccel_sol_field_2d
-from .nurbs_utilities import sol_field_NURBS_2d
-from .nurbs_utilities import least_square_NURBspline
-
-from numpy            import exp
-from numpy            import cos
-from numpy            import sin, sinh
-from numpy            import pi
-from numpy            import arctan2
-from numpy            import sqrt
-from numpy            import cosh, tanh
-from numpy            import zeros
-from numpy            import empty
 def build_dirichlet(V, f, map = None, admap = None):
     '''
     V    : FE space

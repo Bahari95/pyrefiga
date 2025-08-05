@@ -1,5 +1,5 @@
 """
-results_f90.py: A fast post-processing script for visualizing the solution and its derivatives.
+results_f90.py: A fast post-processing script for visualizing the solution and its derivatives using B-spline functions.
 
 Author: M. Mustapha Bahari
 """

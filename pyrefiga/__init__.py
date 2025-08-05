@@ -70,7 +70,6 @@ from pyrefiga.linalg import ( StencilVectorSpace,
 from pyrefiga.quadratures import gauss_legendre
 
 from pyrefiga.utilities import ( plot_field_1d,
-                                  plot_field_2d,
                                   prolongation_matrix,
                                   build_dirichlet,
                                   getGeometryMap,

@@ -4,10 +4,11 @@ __all__ = ['assemble_matrix_nitsche_ex00',
            'assemble_norm_ex02']
 #------------------------------------------------------------------------------
 #... Nitsche's method for assembling the diagonal matrices : from paper https://hal.science/hal-01338133/document
+# Mustapha BAHARI
 #------------------------------------------------------------------------------
 def assemble_matrix_nitsche_ex00(
-    ne1: int, ne2: int,
-    p1: int, p2: int,
+    ne1: 'int', ne2: 'int',
+    p1: 'int', p2: 'int',
     spans_1: 'int[:]', spans_2: 'int[:]',
     basis_1: 'float[:,:,:,:]', basis_2: 'float[:,:,:,:]',
     weights_1: 'float[:,:]', weights_2: 'float[:,:]',
@@ -15,8 +16,8 @@ def assemble_matrix_nitsche_ex00(
     knots_1: 'float[:]', knots_2: 'float[:]',
     vector_m1: 'float[:,:]', vector_m2: 'float[:,:]',
     omega_1: 'float[:]', omega_2: 'float[:]',
-    domain_nb: int, Kappa: float,
-    normalS: float, matrix: 'float[:,:,:,:]'
+    domain_nb: 'int', Kappa: 'float',
+    normalS: 'float', matrix: 'float[:,:,:,:]'
 ):
     #..assemble  solution times noraml(test fuction)
     from numpy import zeros
@@ -624,11 +625,11 @@ def assemble_matrix_nitsche_ex02(
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         # bi_x  = basis_1[ie1, il_1, 1, g1]
                         # bi_y  = p2*bi_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
-                        #...
+                        # ...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
                         bj_x  = basis_1[ie1, jl_1, 1, g1]
                         bj_y  = p2*bj_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
-                        # # ...
+                        # ...
                         # comp_1          = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
                         # comp_1         += +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
