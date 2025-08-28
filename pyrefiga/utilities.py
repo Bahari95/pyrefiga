@@ -470,3 +470,70 @@ class getGeometryMap:
             # Refine the coefs
             M_mp      = prolongation_matrix(VH, Vh)
             return (M_mp.dot(solution.reshape(nbasis_tot))).reshape(Vh.nbasis)
+        
+# ==========================================================
+class pyrefInterface(object):
+    """
+    Detect interface between patches.
+    Returns the list of interfaces and Dirichlet BCs to be applied on each patch.
+    The patches are numbered as follows:
+        3  |  4
+       ----+----
+        1  |  2
+    The interface is defined as the common edge between two patches.
+    The Dirichlet BCs are defined as follows:
+        [True, False] : Dirichlet BC on the left edge
+        [False, True] : Dirichlet BC on the right edge
+    The input are the control points of the two patches.
+    """
+    def __init__(self, xmp, ymp, xmp1, ymp1):
+
+        self.interface   = [2,1]
+        self.dirichlet_1 = [[True, True], [True, True]]
+        self.dirichlet_2 = [[True, True], [True, True]]
+        if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-12 :
+            self.interface   = [2,1]
+            self.dirichlet_1 = [[True, False],[True, True]]
+            self.dirichlet_2 = [[False, True],[True, True]]
+        elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-12 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-12 :
+            self.interface   = [1,2]
+            self.dirichlet_1 = [[False, True], [True, True]]
+            self.dirichlet_2 = [[True, False], [True, True]]
+        elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-12 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-12 :
+            self.interface   = [3,4]
+            self.dirichlet_1 = [[True, True], [False, True]]
+            self.dirichlet_2 = [[True, True], [True, False]]
+        elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-12 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-12 :
+            self.interface   = [4,3]
+            self.dirichlet_1 = [[True, True], [True, False]]
+            self.dirichlet_2 = [[True, True], [False, True]]
+        else:
+            raise ValueError("Invalid interface configuration")
+    def interface(self):
+        return self.interface
+    def dirichlet_1(self):
+        return self.dirichlet_1
+    def dirichlet_2(self):
+        return self.dirichlet_2
+    
+    def printInterface(self):
+        print(f"Interface between patch {self.interface[0]} and patch {self.interface[1]}")
+        print(f"Dirichlet BCs for patch {self.interface[0]} : {self.dirichlet_1}")
+        print(f"Dirichlet BCs for patch {self.interface[1]} : {self.dirichlet_2}")
+
+    def setInterface(self, xd1, xd2):
+        if self.interface[0] == 2 and self.interface[1] == 1:
+            xd1[-1,:]   = 0.0 # Reset xd to zero
+            xd2[0,:]    = 0.0 # Reset xd to zero
+        elif self.interface[0] == 1 and self.interface[1] == 2:
+            xd1[0,:]    = 0.0 # Reset xd to zero
+            xd2[-1,:]   = 0.0 # Reset xd to zero
+        elif self.interface[0] == 3 and self.interface[1] == 4 :
+            xd1[:,0]    = 0.0 # Reset xd to zero
+            xd2[:,-1]   = 0.0 # Reset xd to zero
+        elif self.interface[0] == 4 and self.interface[1] == 3 :
+            xd1[:,-1]   = 0.0
+            xd2[:,0]    = 0.0 # Reset xd to zero
+        else:
+            raise ValueError("Invalid interface configuration")
+        return xd1, xd2

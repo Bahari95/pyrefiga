@@ -18,6 +18,7 @@ from   pyrefiga                         import prolongation_matrix
 from   pyrefiga                         import least_square_Bspline
 from   pyrefiga                         import getGeometryMap
 from   pyrefiga                         import build_dirichlet
+from   pyrefiga                         import pyrefInterface
 
 # Import Poisson assembly tools for uniform mesh
 from gallery.gallery_section_10 import assemble_vector_un_ex01
@@ -135,7 +136,7 @@ args = parser.parse_args()
 # Parameters and initialization
 #------------------------------------------------------------------------------
 nbpts       = 100 # Number of points for plotting
-RefinNumber = 1   # Number of global mesh refinements
+RefinNumber = 2   # Number of global mesh refinements
 nelements   = 8  # Initial mesh size
 table       = zeros((RefinNumber+1,5))
 i           = 1
@@ -154,9 +155,9 @@ g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-# geometry = '../fields/unitSquare.xml'
-geometry = '../fields/circle.xml'
-# geometry = '../fields/quart_annulus.xml'
+#geometry = '../fields/unitSquare.xml'
+#geometry = '../fields/circle.xml'
+geometry = '../fields/quart_annulus.xml'
 # geometry = '../fields/annulus.xml'
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
@@ -176,6 +177,12 @@ Nelements        = (nelements,nelements)
 weight, xmp, ymp = mp.RefineGeometryMap(Nelements=Nelements)
 wm1, wm2         = weight[:,0], weight[0,:]
 xmp1, ymp1       = mp1.RefineGeometryMap(Nelements=Nelements)[1:]
+
+#------------------------------------------------------------------------------
+# Detect interface between patches
+#------------------------------------------------------------------------------
+rInt             = pyrefInterface(xmp, ymp, xmp1, ymp1)
+rInt.printInterface() # Print detected interface
 
 # Create spline spaces for each direction
 V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,Nelements), nderiv = 1, omega = wm1, quad_degree = quad_degree)
@@ -199,46 +206,14 @@ u22_mph.from_array(Vh, ymp1)
 #------------------------------------------------------------------------------
 xd1, u_d1 = build_dirichlet(Vh, g, map = (xmp, ymp))
 xd2, u_d2 = build_dirichlet(Vh, g, map = (xmp1, ymp1))
-interface = [2,1]
-dirichlet_1 = [[True, True], [True, True]]
-dirichlet_2 = [[True, True], [True, True]]
-if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-12 :
-    xd1[-1,:]   = 0.0 # Reset xd to zero
-    xd2[0,:]    = 0.0 # Reset xd to zero
-    print('#---Interfaces: (patche left :', 2,',patche right :',1,')')
-    interface   = [2,1]
-    dirichlet_1 = [[True, False],[True, True]]
-    dirichlet_2 = [[False, True],[True, True]]
-elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-12 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-12 :
-    xd1[0,:]    = 0.0 # Reset xd to zero
-    xd2[-1,:]   = 0.0 # Reset xd to zero
-    print('#---Interfaces: (patche left :', 1,',patche right :',2,')')
-    interface   = [1,2]
-    dirichlet_1 = [[False, True], [True, True]]
-    dirichlet_2 = [[True, False], [True, True]]
-elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-12 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-12 :
-    xd1[:,0]    = 0.0 # Reset xd to zero
-    xd2[:,-1]   = 0.0 # Reset xd to zero
-    print('#---Interfaces: (patche left :', 3,',patche right :',4,')')
-    interface   = [3,4]
-    dirichlet_1 = [[True, True], [False, True]]
-    dirichlet_2 = [[True, True], [True, False]]
-elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-12 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-12 :
-    xd1[:,-1]   = 0.0
-    xd2[:,0]    = 0.0 # Reset xd to zero
-    print('#---Interfaces: (patche left :', 4,',patche right :',3,')')
-    interface   = [4,3]
-    dirichlet_1 = [[True, True], [True, False]]
-    dirichlet_2 = [[True, True], [False, True]]
-else:
-    raise ValueError("Invalid interface configuration")
+xd1, xd2  = rInt.setInterface(xd1, xd2)
 u_d1.from_array(Vh, xd1)
 u_d2.from_array(Vh, xd2)
 print('#')
 
 # Solve Poisson equation on coarse grid
 start = time.time()
-u1, u2, xuh1, xuh2, l2_error,  H1_error         = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, dirichlet_1, dirichlet_2)
+u1, u2, xuh1, xuh2, l2_error,  H1_error         = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, rInt.interface, rInt.dirichlet_1, rInt.dirichlet_2)
 times.append(time.time()- start)
 print('#')
 
@@ -249,9 +224,9 @@ table[0,:] = [degree[0], nelements, l2_error, H1_error, times[-1]]
 # Mesh refinement loop
 #------------------------------------------------------------------------------
 i_save = 1
-for nbne in range(RefinNumber):
+for nbne in range(1,1+RefinNumber):
     # Refine mesh
-    nelements = 2**(5+nbne)
+    nelements *= 2**nbne
     Nelements = (nelements,nelements)
     print('#---IN-UNIFORM--MESH', nelements)
     # Refine geometry mapping
@@ -276,26 +251,13 @@ for nbne in range(RefinNumber):
     # Assemble Dirichlet boundary conditions
     xd1, u_d1 = build_dirichlet(Vh, g, map = (xmp, ymp))
     xd2, u_d2 = build_dirichlet(Vh, g, map = (xmp1, ymp1))
-    if interface[0] == 2 and interface[1] == 1:
-        xd1[-1,:]   = 0.0 # Reset xd to zero
-        xd2[0,:]    = 0.0 # Reset xd to zero
-    elif interface[0] == 1 and interface[1] == 2:
-        xd1[0,:]    = 0.0 # Reset xd to zero
-        xd2[-1,:]   = 0.0 # Reset xd to zero
-    elif interface[0] == 3 and interface[1] == 4 :
-        xd1[:,0]    = 0.0 # Reset xd to zero
-        xd2[:,-1]   = 0.0 # Reset xd to zero
-    elif interface[0] == 4 and interface[1] == 3 :
-        xd1[:,-1]   = 0.0
-        xd2[:,0]    = 0.0 # Reset xd to zero
-    else:
-        raise ValueError("Invalid interface configuration")
+    xd1, xd2  = rInt.setInterface(xd1, xd2)
     u_d1.from_array(Vh, xd1)
     u_d2.from_array(Vh, xd2)
     print('#')
     # Solve Poisson equation on refined mesh
     start = time.time()
-    u1, u2, xuh1, xuh2, l2_error,  H1_error         = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, dirichlet_1, dirichlet_2)
+    u1, u2, xuh1, xuh2, l2_error,  H1_error         = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, rInt.interface, rInt.dirichlet_1, rInt.dirichlet_2)
     times.append(time.time()- start)
     print('#')
     # Store results

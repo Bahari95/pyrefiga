@@ -73,7 +73,8 @@ from pyrefiga.utilities import ( plot_field_1d,
                                   prolongation_matrix,
                                   build_dirichlet,
                                   getGeometryMap,
-                                  save_geometry_to_xml)
+                                  save_geometry_to_xml,
+                                  pyrefInterface)
 
 from pyrefiga.results import ( sol_field_2d)
 
