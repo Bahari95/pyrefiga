@@ -363,3 +363,125 @@ def assemble_vectorbasis_ex02(ne1, p1, spans_1,  basis_1,  weights_1, points_1, 
 
 
     
+# Assembles Quality of mesh adaptation
+#==============================================================================
+@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:]')
+def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_u, vector_w, vector_v1, vector_v2, times, spans_ad1, spans_ad2, basis_ad1, basis_ad2, rhs):
+
+    from numpy import exp
+    from numpy import cos
+    from numpy import sin
+    from numpy import pi
+    from numpy import arctan2
+    from numpy import sqrt
+    from numpy import cosh
+    from numpy import zeros
+    from numpy import empty
+    # ... sizes
+    k1           = weights_1.shape[1]
+    k2           = weights_2.shape[1]
+    # ...
+    lcoeffs_u    = zeros((p1+1,p2+1))
+    lcoeffs_w    = zeros((p1+1,p2+1))
+    # ...
+    lcoeffs_v1  = zeros((p1+1,p2+1))
+    lcoeffs_v2  = zeros((p1+1,p2+1))
+    # ...
+    lcoeffs_u1  = zeros((p1+1,p2+1))
+    lcoeffs_u2  = zeros((p1+1,p2+1))
+
+    Qual_l2      = 0.                                
+    displacement = 0.
+    area_geom    = 0.
+    cst          = 1.
+    for ie1 in range(0, ne1):
+        i_span_1 = spans_1[ie1]
+        for ie2 in range(0, ne2):
+            i_span_2 = spans_2[ie2]
+            v = 0.0
+            w = 0.0
+            for g1 in range(0, k1):
+                for g2 in range(0, k2):
+
+                    lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                    lcoeffs_w[ : , : ]   = vector_w[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                    lcoeffs_u1[ : , : ]  = vector_v1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                    lcoeffs_u2[ : , : ]  = vector_v2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                    wvol   = weights_1[ie1, g1] * weights_2[ie2, g2]
+
+                    #... We compute firstly the span in new adapted points
+                    span_5 = spans_ad1[ie1, ie2, g1, g2]
+                    span_6 = spans_ad2[ie1, ie2, g1, g2]
+
+                    #------------------   
+                    lcoeffs_v1[ : , : ]  =  vector_v1[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
+                    lcoeffs_v2[ : , : ]  =  vector_v2[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
+                    #...
+                    x     = 0.0
+                    y     = 0.0
+                    uhx   = 0.0
+                    uhy   = 0.0
+                    vhx   = 0.0
+                    vhy   = 0.0
+                    x1    = 0.0
+                    x2    = 0.0
+                    F1x   = 0.0
+                    F1y   = 0.0
+                    F2x   = 0.0
+                    F2y   = 0.0                    
+                    for il_1 in range(0, p1+1):
+                          for il_2 in range(0, p2+1):
+                                coef_v1   = lcoeffs_v1[il_1,il_2]
+                                coef_v2   = lcoeffs_v2[il_1,il_2]
+                                bi_0      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
+                                bi_x      = basis_ad1[ie1, ie2, il_1, 1, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
+                                bi_y      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 1, g1, g2]
+                                # ...
+                                x        +=  coef_v1*bi_0
+                                y        +=  coef_v2*bi_0
+                                F1x      +=  coef_v1*bi_x
+                                F1y      +=  coef_v1*bi_y
+                                F2x      +=  coef_v2*bi_x
+                                F2y      +=  coef_v2*bi_y
+                                # ...
+                                coeff_u1  = lcoeffs_u1[il_1,il_2]
+                                coeff_u2  = lcoeffs_u2[il_1,il_2]
+                                coeff_u   = lcoeffs_u[il_1,il_2]
+                                coeff_w   = lcoeffs_w[il_1,il_2]
+                                #...
+                                bi_0      = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 0, g2]
+                                bi_x      = basis_1[ie1, il_1, 1, g1] * basis_2[ie2, il_2, 0, g2]
+                                bi_y      = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 1, g2]
+                                #...
+                                x1       += coeff_u1*bi_0
+                                x2       += coeff_u2*bi_0
+                                uhx      += coeff_u*bi_x
+                                uhy      += coeff_u*bi_y
+                                vhx      += coeff_w*bi_x
+                                vhy      += coeff_w*bi_y
+                    #.. Test 1
+                    #rho   = 1.+5.*exp(-100.*abs((x-0.45)**2+(y-0.4)**2-0.1))+5.*exp(-100.*abs(x**2+y**2-0.2))+5.*exp(-100*abs((x+0.45)**2 +(y-0.4)**2-0.1)) +7.*exp(-100.*abs(x**2+(y+1.25)**2-0.4)) 
+                    # Test 5
+                    #rho  = (1.+ 9./(1.+(10.*sqrt((x-0.7-0.25*0.)**2+(y-0.5)**2)*cos(arctan2(y-0.5,x-0.7-0.25*0.) -20.*((x-0.7-0.25*0.)**2+(y-0.5)**2)))**2) )
+                    #rho  = (2.+sin(10.*pi*sqrt((x-0.6)**2+(y-0.6)**2)) )#0.8
+                    #rho   = (1. + 5./cosh( 5.*((x-sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2 + 5./cosh( 5.*((x+sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2)
+                    rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
+                    #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
+                    #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
+                    if ie1 == 0 and ie2 == 0 and g1 == 0 and g2 == 0:
+                       cst = rho*(uhx*vhy-uhy*vhx)
+
+                    v    += (rho*(uhx*vhy-uhy*vhx)-cst)**2 * wvol
+                    w    += ((x-x1)**2+(y-x2)**2) * wvol
+                    F_2y = uhy*F2x+vhy*F2y #F'2y
+                    F_1x = uhx*F1x+vhx*F1y #F'1x
+                    F_1y = uhy*F1x+vhy*F1y #F'1y
+                    F_2x = uhx*F2x+vhx*F2y #F'2x
+                    area_geom += abs(F2y*F1x-F1y*F2x) *abs(uhx*vhy-uhy*vhx) * wvol
+                        
+            Qual_l2      += v
+            displacement += w
+    rhs[p1,p2]   = sqrt(Qual_l2)
+    rhs[p1,p2+1] = sqrt(displacement)
+    rhs[p1,p2+2] = sqrt((area_geom-pi)**2)
+    # ...

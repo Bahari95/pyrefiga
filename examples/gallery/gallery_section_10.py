@@ -797,6 +797,7 @@ def assemble_norm_un_ex01(
 
     error_l2 = 0.
     error_H1 = 0.
+    area     = 0.
     # ...
     for ie1 in range(0, ne1):
         i_span_1 = spans_1[ie1]
@@ -853,9 +854,9 @@ def assemble_norm_un_ex01(
                               F2y     +=  coeff_m2 * bj_y
 
                     det_J = abs(F1x*F2y-F1y*F2x)
-                    
                     # ...                              
                     wvol  = weights_1[ie1, g1] * weights_2[ie2, g2]
+                    area += det_J * wvol
                     x1    =  points_1[ie1, g1]
                     x2    =  points_2[ie2, g2]
 
@@ -886,4 +887,5 @@ def assemble_norm_un_ex01(
             error_l2      += v
     rhs[p1,p2]   = sqrt(error_l2)
     rhs[p1,p2+1] = sqrt(error_H1)
+    rhs[p1,p2+2] = area
     #...

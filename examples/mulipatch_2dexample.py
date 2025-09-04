@@ -69,10 +69,10 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     n_basis                    = V.nbasis[0] * V.nbasis[1]
     M                          = zeros((n_basis*2,n_basis*2))
     #... computes coeffs for Nitsche's method
-    stab                       = 4 * ( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
-    m_h                        = (V.nbasis[0]*V.nbasis[1])
-    Kappa                      = 2. * stab*m_h
-    #Kappa                      = 1.*n_basis**2
+    # stab                       = 4 * ( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
+    # m_h                        = (V.nbasis[0]*V.nbasis[1])
+    Kappa                      = 1e+3 #2. * stab*m_h
+    # ...
     normS                      = 0.5
 
     # Assemble stiffness matrix 11
@@ -123,8 +123,8 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     norm1   = assemble_norm_un(V, fields=[u21_mph, u22_mph, u2]).toarray()
     l2_norm = np.sqrt(norm0[0]**2+norm1[0]**2)
     H1_norm = np.sqrt(norm0[1]**2+norm1[1]**2)
-    print("L2 norm:", l2_norm, "H1 norm:", H1_norm)
-    return u1, u2, x1, x2, l2_norm, H1_norm
+    print("L2 norm:", l2_norm, "H1 norm:", H1_norm, "area: ", norm0[2], "+", norm1[2])
+    return x1, x2, l2_norm, H1_norm
 
 #------------------------------------------------------------------------------
 # Argument parser for controlling plotting
@@ -136,7 +136,7 @@ args = parser.parse_args()
 # Parameters and initialization
 #------------------------------------------------------------------------------
 nbpts       = 100 # Number of points for plotting
-RefinNumber = 2   # Number of global mesh refinements
+RefinNumber = 3   # Number of global mesh refinements
 nelements   = 8  # Initial mesh size
 table       = zeros((RefinNumber+1,5))
 i           = 1
@@ -156,9 +156,9 @@ g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 # Load CAD geometry
 #------------------------------------------------------------------------------
 #geometry = '../fields/unitSquare.xml'
-#geometry = '../fields/circle.xml'
-geometry = '../fields/quart_annulus.xml'
-# geometry = '../fields/annulus.xml'
+geometry = '../fields/circle.xml'
+#geometry = '../fields/quart_annulus.xml'
+#geometry = '../fields/annulus.xml'
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 
@@ -213,7 +213,7 @@ print('#')
 
 # Solve Poisson equation on coarse grid
 start = time.time()
-u1, u2, xuh1, xuh2, l2_error,  H1_error         = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, rInt.interface, rInt.dirichlet_1, rInt.dirichlet_2)
+xuh1, xuh2, l2_error,  H1_error = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, rInt.interface, rInt.dirichlet_1, rInt.dirichlet_2)
 times.append(time.time()- start)
 print('#')
 
@@ -221,13 +221,13 @@ print('#')
 table[0,:] = [degree[0], nelements, l2_error, H1_error, times[-1]]
 
 #------------------------------------------------------------------------------
-# Mesh refinement loop
+# Mesh refinement loop 
 #------------------------------------------------------------------------------
 i_save = 1
-for nbne in range(1,1+RefinNumber):
+for nbne in range(4,4+RefinNumber):
     # Refine mesh
-    nelements *= 2**nbne
-    Nelements = (nelements,nelements)
+    nelements  = 2**nbne
+    Nelements  = (nelements,nelements)
     print('#---IN-UNIFORM--MESH', nelements)
     # Refine geometry mapping
     weight, xmp, ymp  = mp.RefineGeometryMap(Nelements=Nelements)
@@ -257,12 +257,12 @@ for nbne in range(1,1+RefinNumber):
     print('#')
     # Solve Poisson equation on refined mesh
     start = time.time()
-    u1, u2, xuh1, xuh2, l2_error,  H1_error         = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, rInt.interface, rInt.dirichlet_1, rInt.dirichlet_2)
+    xuh1, xuh2, l2_error,  H1_error = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, rInt.interface, rInt.dirichlet_1, rInt.dirichlet_2)
     times.append(time.time()- start)
     print('#')
     # Store results
-    table[i_save,:]                     = [degree[0], nelements, l2_error, H1_error, times[-1]]
-    i_save                             += 1
+    table[i_save,:]                 = [degree[0], nelements, l2_error, H1_error, times[-1]]
+    i_save                         += 1
 
 #------------------------------------------------------------------------------
 # Print error results in LaTeX table format
