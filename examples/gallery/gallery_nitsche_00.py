@@ -121,6 +121,7 @@ def assemble_matrix_nitsche_ex00(
     J_mat1     = zeros(k1)
     # ... build matrices
     if domain_nb == 1:
+        bx_left = p1/(knots_1[p1+1]-knots_1[1])*(omega_1[1]/omega_1[0])
         #... Assemble the boundary condition for Nitsche (x=left)
         ie1      = 0
         i_span_1 = spans_1[ie1]
@@ -144,8 +145,8 @@ def assemble_matrix_nitsche_ex00(
                     coeff_m11= lcoeffs_m1[1, il_2]
                     coeff_m22= lcoeffs_m2[1, il_2]
                     
-                    F1x     +=  p1*(coeff_m11-coeff_m1) * bj_0/(knots_1[p1+1]-knots_1[1])*(omega_1[1]/omega_1[0])
-                    F2x     +=  p1*(coeff_m22-coeff_m2) * bj_0/(knots_1[p1+1]-knots_1[1])*(omega_1[1]/omega_1[0])
+                    F1x     +=  (coeff_m11-coeff_m1) * bj_0 * bx_left
+                    F2x     +=  (coeff_m22-coeff_m2) * bj_0 * bx_left
                     F1y     +=  coeff_m1 * bj_y
                     F2y     +=  coeff_m2 * bj_y
                 # ... compute the normal derivative
@@ -162,11 +163,11 @@ def assemble_matrix_nitsche_ex00(
                     v  = 0.0
                     for g2 in range(0, k2):
                         bi_0  = basis_2[ie2, il_2, 0, g2]
-                        bi_x  = -1*p1*bi_0/(knots_1[p1+1]-knots_1[1])*(omega_1[1]/omega_1[0])
+                        bi_x  = -1* bi_0 * bx_left
                         bi_y  = basis_2[ie2, il_2, 1, g2]
                         #...
                         bj_0  = basis_2[ie2, jl_2, 0, g2]
-                        bj_x  = -1*p1*bj_0/(knots_1[p1+1]-knots_1[1])*(omega_1[1]/omega_1[0])
+                        bj_x  = -1* bj_0 * bx_left
                         bj_y  = basis_2[ie2, jl_2, 1, g2]
                         # ...
                         comp_1          = -1 * ( F_2y[g2]*bi_x - F_2x[g2]*bi_y)/J_mat[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
@@ -181,6 +182,7 @@ def assemble_matrix_nitsche_ex00(
 
                     matrix[p1, p2+i2, p1, p2+j2-i2]  += v
     elif domain_nb == 2:
+        bx_right = p1/(knots_1[-1]-knots_1[-p1-2])*(omega_1[-2]/omega_1[-1])
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
         i_span_1 = spans_1[ie1]
@@ -206,8 +208,8 @@ def assemble_matrix_nitsche_ex00(
 
                     F1y      +=  coeff_m1 * bj_y
                     F2y      +=  coeff_m2 * bj_y
-                    F1x      +=  p1*(coeff_m1-coeff_m10) * bj_0/(knots_1[-1]-knots_1[-p1-2])*(omega_1[-2]/omega_1[-1])
-                    F2x      +=  p1*(coeff_m2-coeff_m20) * bj_0/(knots_1[-1]-knots_1[-p1-2])*(omega_1[-2]/omega_1[-1])
+                    F1x      +=  (coeff_m1-coeff_m10) * bj_0 * bx_right
+                    F2x      +=  (coeff_m2-coeff_m20) * bj_0 * bx_right
                 # ... compute the normal derivative
                 F_1x[g2] = F1x
                 F_2x[g2] = F2x
@@ -225,11 +227,11 @@ def assemble_matrix_nitsche_ex00(
                     v  = 0.0
                     for g2 in range(0, k2):
                         bi_0  = basis_2[ie2, il_2, 0, g2]
-                        bi_x  = p1*bi_0/(knots_1[-1]-knots_1[-p1-2])*(omega_1[-2]/omega_1[-1])
+                        bi_x  = bi_0 * bx_right
                         bi_y  = basis_2[ie2, il_2, 1, g2]
                         #...
                         bj_0  = basis_2[ie2, jl_2, 0, g2]
-                        bj_x  = p1*bj_0/(knots_1[-1]-knots_1[-p1-2])*(omega_1[-2]/omega_1[-1])
+                        bj_x  = bj_0 * bx_right
                         bj_y  = basis_2[ie2, jl_2, 1, g2]
                         # ...
                         comp_1          = +1 * ( F_2y[g2]*bi_x - F_2x[g2]*bi_y)/J_mat[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
@@ -240,10 +242,11 @@ def assemble_matrix_nitsche_ex00(
                         #...
                         wvol  = weights_2[ie2, g2]
                         # ...
-                        v    += normalS * (comp_1 * bj_0 + bi_0*comp_2)  * wvol + Kappa * bi_0 * bj_0 * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
+                        v    += normalS * (comp_1 * bj_0 + bi_0 * comp_2)  * wvol + Kappa * bi_0 * bj_0 * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
 
                     matrix[i_span_1+p1, p2+i2, p1, p2+j2-i2]  += v
     if domain_nb == 3:
+        by_left = p2/(knots_2[p2+1]-knots_2[1])*omega_2[1]/omega_2[0]
         #... Assemble the boundary condition for Nitsche (y=left)
         ie2      = 0
         i_span_2 = spans_2[ie2]
@@ -269,8 +272,8 @@ def assemble_matrix_nitsche_ex00(
                     
                     F1x     +=  coeff_m1 * bj_x
                     F2x     +=  coeff_m2 * bj_x
-                    F1y     +=  p2*(coeff_m11-coeff_m1) * bj_0/(knots_2[p2+1]-knots_2[1])*(omega_2[1]/omega_2[0])
-                    F2y     +=  p2*(coeff_m22-coeff_m2) * bj_0/(knots_2[p2+1]-knots_2[1])*(omega_2[1]/omega_2[0])
+                    F1y     +=  (coeff_m11-coeff_m1) * bj_0 * by_left
+                    F2y     +=  (coeff_m22-coeff_m2) * bj_0 * by_left
                 # ... compute the normal derivative
                 F1_1x[g1]  = F1x
                 F1_2x[g1]  = F2x
@@ -286,11 +289,11 @@ def assemble_matrix_nitsche_ex00(
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
-                        bi_y  = -1*p2*bi_0/(knots_2[p2+1]-knots_2[1])*omega_2[1]/omega_2[0]
+                        bi_y  = -1* bi_0 * by_left
                         #...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
                         bj_x  = basis_1[ie1, jl_1, 1, g1]
-                        bj_y  = -1*p2* bj_0/(knots_2[p2+1]-knots_2[1])*omega_2[1]/omega_2[0]
+                        bj_y  = -1* bj_0 * by_left
                         # ...
                         comp_1          = -1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
                         comp_1         += +1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
@@ -304,6 +307,7 @@ def assemble_matrix_nitsche_ex00(
 
                     matrix[p1+i1, p2, p1+j1-i1, p2]  += v
     elif domain_nb == 4:
+        by_right = p2/(knots_2[-1]-knots_2[-p2-2])*(omega_2[-2]/omega_2[-1])
         #... Assemble the boundary condition for Nitsche (y=right)
         ie2      = ne2 -1
         i_span_2 = spans_2[ie2]
@@ -329,8 +333,8 @@ def assemble_matrix_nitsche_ex00(
                     
                     F1x     +=  coeff_m1 * bj_x
                     F2x     +=  coeff_m2 * bj_x
-                    F1y     +=  p2*(coeff_m1-coeff_m10) * bj_0/(knots_2[-1]-knots_2[-p2-2])*(omega_2[-2]/omega_2[-1])
-                    F2y     +=  p2*(coeff_m2-coeff_m20) * bj_0/(knots_2[-1]-knots_2[-p2-2])*(omega_2[-2]/omega_2[-1])
+                    F1y     +=  (coeff_m1-coeff_m10) * bj_0*by_right
+                    F2y     +=  (coeff_m2-coeff_m20) * bj_0*by_right
                 # ... compute the normal derivative
                 F1_1x[g1]  = F1x
                 F1_2x[g1]  = F2x
@@ -346,11 +350,11 @@ def assemble_matrix_nitsche_ex00(
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
-                        bi_y  = p2*bi_0/(knots_2[-1]-knots_2[-p2-2])*(omega_2[-2]/omega_2[-1])
+                        bi_y  = bi_0*by_right
                         #...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
                         bj_x  = basis_1[ie1, jl_1, 1, g1]
-                        bj_y  = p2* bj_0/(knots_2[-1]-knots_2[-p2-2])*(omega_2[-2]/omega_2[-1])
+                        bj_y  = bj_0*by_right
                         # ...
                         comp_1          = +1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
                         comp_1         += -1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
@@ -449,15 +453,15 @@ def assemble_matrix_nitsche_ex02(
                         bi_0  = basis_2[ie2, il_2, 0, g2]
                         #...
                         bj_0  = basis_2[ie2, jl_2, 0, g2]
-                        bj_x  = -1* bj_0 * bx_left
-                        bj_y  = basis_2[ie2, jl_2, 1, g2]
+                        # bj_x  = -1* bj_0 * bx_left
+                        # bj_y  = basis_2[ie2, jl_2, 1, g2]
                         # ...
-                        comp_2          = +1 * ( F_2y[g2]*bj_x - F_2x[g2]*bj_y)/J_mat[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_2         += -1 * (-F_1y[g2]*bj_x + F_1x[g2]*bj_y)/J_mat[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        # comp_2          = +1 * ( F_2y[g2]*bj_x - F_2x[g2]*bj_y)/J_mat[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        # comp_2         += -1 * (-F_1y[g2]*bj_x + F_1x[g2]*bj_y)/J_mat[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         #...
                         wvol  = weights_2[ie2, g2]
-                        # ...
-                        v    +=  0.* ( bi_0*comp_2) * wvol - Kappa * bi_0 * bj_0 * wvol * sqrt(F_1y[g2]**2+ F_2y[g2]**2)
+                        # ... 0.* ( bi_0*comp_2) * wvol 
+                        v    += - Kappa * bi_0 * bj_0 * wvol * sqrt(F_1y[g2]**2+ F_2y[g2]**2)
 
                     matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2-i2]  += v
 
@@ -561,7 +565,7 @@ def assemble_matrix_nitsche_ex02(
                     v  = 0.0
                     for g2 in range(0, k2):
                         bi_0  = basis_2[ie2, il_2, 0, g2]
-                        bi_x  = bi_0 * bx_right
+                        bi_x  = -1.*bi_0 * bx_left
                         bi_y  = basis_2[ie2, il_2, 1, g2]
                         #...
                         bj_0  = basis_2[ie2, jl_2, 0, g2]
@@ -573,7 +577,7 @@ def assemble_matrix_nitsche_ex02(
                         # ...
                         v    +=  normalS * (comp_1 * bj_0)  * wvol - Kappa * bi_0 * bj_0 * wvol * sqrt(F_1y[g2]**2+ F_2y[g2]**2)
 
-                    matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2-i2]  += v
+                    matrix[p1, p2+i2, p1, p2+j2-i2]  += v
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
@@ -620,7 +624,7 @@ def assemble_matrix_nitsche_ex02(
                         bi_0    = basis_2[ie2, il_2, 0, g2]
                         #...
                         bj_0    = basis_2[ie2, jl_2, 0, g2]
-                        bj_x    = -1* bj_0 * bx_right
+                        bj_x    = bj_0 * bx_right
                         bj_y    = basis_2[ie2, jl_2, 1, g2]
                         # ...
                         comp_2  = -1 * ( F_2y[g2]*bj_x - F_2x[g2]*bj_y)/J_mat[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
@@ -629,9 +633,11 @@ def assemble_matrix_nitsche_ex02(
                         wvol    = weights_2[ie2, g2]
                         # ...
                         v      +=  normalS * ( bi_0*comp_2) * wvol
-                    matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2-i2]  += v
+                    matrix[p1, p2+i2, p1, p2+j2-i2]  += v
 
     if domain_nb == 3:
+        by_left  =  p2*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
+        by_right =  p2*(1/(knots_2[-1]-knots_2[-p2-2]))*(omega_2[-2]/omega_2[-1])
         # ...
         ie2      = 0
         i_span_2 = spans_2[ie2]
@@ -655,8 +661,8 @@ def assemble_matrix_nitsche_ex02(
                     coeff_m11= lcoeffs_m1[il_1, 1]
                     coeff_m22= lcoeffs_m2[il_1, 1]
                     
-                    F1y     +=  p2*(coeff_m11-coeff_m1) * bj_0*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
-                    F2y     +=  p2*(coeff_m22-coeff_m2) * bj_0*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
+                    F1y     +=  (coeff_m11-coeff_m1) * bj_0*by_left
+                    F2y     +=  (coeff_m22-coeff_m2) * bj_0*by_left
                     F1x     +=  coeff_m1 * bj_x
                     F2x     +=  coeff_m2 * bj_x
                 # ... compute the normal derivative
@@ -674,21 +680,21 @@ def assemble_matrix_nitsche_ex02(
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         # bi_x  = basis_1[ie1, il_1, 1, g1]
-                        # bi_y  = -1*p2*bi_0*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
+                        # bi_y  = -1*bi_0*by_left
                         #...
-                        bj_0  = basis_1[ie1, jl_1, 0, g1]
-                        bj_x  = basis_1[ie1, jl_1, 1, g1]
-                        bj_y  = -1*p2*bj_0*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
+                        # bj_0  = basis_1[ie1, jl_1, 0, g1]
+                        # bj_x  = basis_1[ie1, jl_1, 1, g1]
+                        # bj_y  = -1*bj_0*by_left
                         # ...
                         # comp_1          = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
                         # comp_1         += +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_2          = +1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
-                        comp_2         += -1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
+                        # comp_2          = +1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
+                        # comp_2         += -1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
                         # ...
                         wvol  = weights_1[ie1, g1]
-                        # ...
-                        v    +=  0.* ( bi_0*comp_2) * wvol - Kappa * bi_0 * bj_0 * wvol*sqrt(F1_1x[g1]**2+ F1_2x[g1]**2)
+                        # ... 0.* ( bi_0*comp_2) * wvol
+                        v    +=  - Kappa * bi_0 * bj_0 * wvol*sqrt(F1_1x[g1]**2+ F1_2x[g1]**2)
 
                     matrix[p1+i1, p2+spans_2[ne2-1], p1+j1-i1, p2] += v
         #... Assemble the boundary condition for Nitsche (x=right)
@@ -714,8 +720,8 @@ def assemble_matrix_nitsche_ex02(
                     coeff_m10= lcoeffs_m1[il_1, p2-1]
                     coeff_m20= lcoeffs_m2[il_1, p2-1]
                     
-                    F1y     +=  p2*(coeff_m1-coeff_m10) * bj_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
-                    F2y     +=  p2*(coeff_m2-coeff_m20) * bj_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
+                    F1y     += (coeff_m1-coeff_m10) * bj_0*by_right
+                    F2y     += (coeff_m2-coeff_m20) * bj_0*by_right
                     F1x     +=  coeff_m1 * bj_x
                     F2x     +=  coeff_m2 * bj_x
                 # ... compute the normal derivative
@@ -733,11 +739,11 @@ def assemble_matrix_nitsche_ex02(
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
-                        bi_y  = p2*bi_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
+                        bi_y  = bi_0*by_right
                         #...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
                         # bj_x  = basis_1[ie1, jl_1, 1, g1]
-                        # bj_y  = p2*bj_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
+                        # bj_y  = bj_0*by_right
                         # # ...
                         comp_1          = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
                         comp_1         += +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
@@ -750,6 +756,8 @@ def assemble_matrix_nitsche_ex02(
                         v    +=  normalS * (comp_1 * bj_0)  * wvol
                     matrix[p1+i1, p2+spans_2[ne2-1], p1+j1-i1, p2]  += v
     elif domain_nb == 4:
+        by_left  =  p2*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
+        by_right =  p2*(1/(knots_2[-1]-knots_2[-p2-2]))*(omega_2[-2]/omega_2[-1])
         #... Assemble the boundary condition for Nitsche (x=left)
         ie2      = 0
         i_span_2 = spans_2[ie2]
@@ -773,8 +781,8 @@ def assemble_matrix_nitsche_ex02(
                     coeff_m11= lcoeffs_m1[il_1, 1]
                     coeff_m22= lcoeffs_m2[il_1, 1]
                     
-                    F1y     +=  p2*(coeff_m11-coeff_m1) * bj_0*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
-                    F2y     +=  p2*(coeff_m22-coeff_m2) * bj_0*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
+                    F1y     +=  (coeff_m11-coeff_m1) * bj_0*by_left
+                    F2y     +=  (coeff_m22-coeff_m2) * bj_0*by_left
                     F1x     +=  coeff_m1 * bj_x
                     F2x     +=  coeff_m2 * bj_x
                 # ... compute the normal derivative
@@ -792,11 +800,11 @@ def assemble_matrix_nitsche_ex02(
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
-                        bi_y  = -1*p2*bi_0*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
+                        bi_y  = -1*bi_0*by_left
                         # ...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
                         # bj_x  = basis_1[ie1, jl_1, 1, g1]
-                        # bj_y  = -1*p2*bj_0*(1/(knots_2[p2+1]-knots_2[1]))*(omega_2[1]/omega_2[0])
+                        # bj_y  = -1*bj_0*by_left
                         # ...
                         comp_1          = +1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
                         comp_1         += -1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
@@ -832,8 +840,8 @@ def assemble_matrix_nitsche_ex02(
                     coeff_m10= lcoeffs_m1[il_1, p2-1]
                     coeff_m20= lcoeffs_m2[il_1, p2-1]
                     
-                    F1y     +=  p2*(coeff_m1-coeff_m10) * bj_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
-                    F2y     +=  p2*(coeff_m2-coeff_m20) * bj_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
+                    F1y     +=  (coeff_m1-coeff_m10) * bj_0*by_right
+                    F2y     +=  (coeff_m2-coeff_m20) * bj_0*by_right
                     F1x     +=  coeff_m1 * bj_x
                     F2x     +=  coeff_m2 * bj_x
                 # ... compute the normal derivative
@@ -851,11 +859,11 @@ def assemble_matrix_nitsche_ex02(
                     for g1 in range(0, k1):
                         bi_0    = basis_1[ie1, il_1, 0, g1]
                         # bi_x  = basis_1[ie1, il_1, 1, g1]
-                        # bi_y  = p2*bi_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
+                        # bi_y  = bi_0*by_right
                         #...
                         bj_0    = basis_1[ie1, jl_1, 0, g1]
                         bj_x    = basis_1[ie1, jl_1, 1, g1]
-                        bj_y    = p2*bj_0*(1/(knots_2[-1]-knots_2[p2-2]))*(omega_2[-2]/omega_2[-1])
+                        bj_y    = bj_0*by_right
                         # # ...
                         # comp_1 = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
                         # comp_1+= +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)

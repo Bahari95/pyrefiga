@@ -69,9 +69,10 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     n_basis                    = V.nbasis[0] * V.nbasis[1]
     M                          = zeros((n_basis*2,n_basis*2))
     #... computes coeffs for Nitsche's method
-    # stab                       = 4 * ( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
-    # m_h                        = (V.nbasis[0]*V.nbasis[1])
-    Kappa                      = 1e+3 #2. * stab*m_h
+    stab                       = 4 * ( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
+    m_h                        = (V.nbasis[0]*V.nbasis[1])
+    Kappa                      = 2. * stab*m_h
+    print("Kappa = ", Kappa)
     # ...
     normS                      = 0.5
 
@@ -136,7 +137,7 @@ args = parser.parse_args()
 # Parameters and initialization
 #------------------------------------------------------------------------------
 nbpts       = 100 # Number of points for plotting
-RefinNumber = 3   # Number of global mesh refinements
+RefinNumber = 2   # Number of global mesh refinements
 nelements   = 8  # Initial mesh size
 table       = zeros((RefinNumber+1,5))
 i           = 1
@@ -156,8 +157,8 @@ g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 # Load CAD geometry
 #------------------------------------------------------------------------------
 #geometry = '../fields/unitSquare.xml'
-geometry = '../fields/circle.xml'
-#geometry = '../fields/quart_annulus.xml'
+#geometry = '../fields/circle.xml'
+geometry = '../fields/quart_annulus.xml'
 #geometry = '../fields/annulus.xml'
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
@@ -237,7 +238,7 @@ for nbne in range(4,4+RefinNumber):
     V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,Nelements), nderiv = 1, omega = wm1, quad_degree = quad_degree)
     V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,Nelements), nderiv = 1, omega = wm2, quad_degree = quad_degree)
     Vh = TensorSpace(V1, V2)
-    print('#spces')
+    print('#spaces')
     # Update mapping vectors
     u11_mph         = StencilVector(Vh.vector_space)
     u12_mph         = StencilVector(Vh.vector_space)
