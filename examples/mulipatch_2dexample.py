@@ -69,9 +69,9 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     n_basis                    = V.nbasis[0] * V.nbasis[1]
     M                          = zeros((n_basis*2,n_basis*2))
     #... computes coeffs for Nitsche's method
-    stab                       = 4 * ( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
+    stab                       = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
     m_h                        = (V.nbasis[0]*V.nbasis[1])
-    Kappa                      = 2. * stab*m_h
+    Kappa                      = 2.*stab*m_h
     print("Kappa = ", Kappa)
     # ...
     normS                      = 0.5
