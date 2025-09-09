@@ -182,7 +182,7 @@ def assemble_matrix_nitsche_ex00(
 
                     matrix[p1, p2+i2, p1, p2+j2-i2]  += v
     elif domain_nb == 2:
-        bx_right = p1/(knots_1[-1]-knots_1[-p1-2])*(omega_1[-2]/omega_1[-1])
+        bx_right = p1/(knots_1[ne1+2*p1]-knots_1[ne1+p1-1])*(omega_1[ne1+p1-2]/omega_1[ne1+p1-1])
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
         i_span_1 = spans_1[ie1]
@@ -307,7 +307,7 @@ def assemble_matrix_nitsche_ex00(
 
                     matrix[p1+i1, p2, p1+j1-i1, p2]  += v
     elif domain_nb == 4:
-        by_right = p2/(knots_2[-1]-knots_2[-p2-2])*(omega_2[-2]/omega_2[-1])
+        by_right = p2/(knots_2[ne2+2*p2]-knots_2[ne2+p2-1])*(omega_2[ne2+p2-2]/omega_2[ne2+p2-1])
         #... Assemble the boundary condition for Nitsche (y=right)
         ie2      = ne2 -1
         i_span_2 = spans_2[ie2]
@@ -408,7 +408,7 @@ def assemble_matrix_nitsche_ex02(
     # ... build matrices
     if domain_nb == 1 :
         bx_left  = p1/(knots_1[p1+1]-knots_1[0])*omega_1[1]/omega_1[0]
-        bx_right = p1/(knots_1[-1]-knots_1[-p1-2])*omega_1[-2]/omega_1[-1]
+        bx_right = p1/(knots_1[ne1+2*p1]-knots_1[ne1+p1-1])*omega_1[ne1+p1-2]/omega_1[ne1+p1-1]
         # ...
         ie1      = 0
         i_span_1 = spans_1[ie1]
@@ -463,7 +463,7 @@ def assemble_matrix_nitsche_ex02(
                         # ... 0.* ( bi_0*comp_2) * wvol 
                         v    += - Kappa * bi_0 * bj_0 * wvol * sqrt(F_1y[g2]**2+ F_2y[g2]**2)
 
-                    matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2-i2]  += v
+                    matrix[p1, p2+i2, p1, p2+j2-i2]  += v
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
@@ -513,16 +513,16 @@ def assemble_matrix_nitsche_ex02(
                         #...
                         bj_0  = basis_2[ie2, jl_2, 0, g2]
                         # ...
-                        comp_1          = -1 * ( F_2y[g2]*bi_x - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += +1 * (-F_1y[g2]*bi_x + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = +1 * ( F_2y[g2]*bi_x - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += -1 * (-F_1y[g2]*bi_x + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         #...
                         wvol  = weights_2[ie2, g2]
                         # ...
                         v    +=  normalS * (comp_1 * bj_0)  * wvol
-                    matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2-i2]  += v
+                    matrix[p1, p2+i2, p1, p2+j2-i2]  += v
     elif domain_nb == 2:
         bx_left  = p1/(knots_1[p1+1]-knots_1[0])*omega_1[1]/omega_1[0]
-        bx_right = p1/(knots_1[-1]-knots_1[-p1-2])*omega_1[-2]/omega_1[-1]
+        bx_right = p1/(knots_1[ne1+2*p1]-knots_1[ne1+p1-1])*omega_1[ne1+p1-2]/omega_1[ne1+p1-1]
         # ...
         ie1      = 0
         i_span_1 = spans_1[ie1]
@@ -577,7 +577,7 @@ def assemble_matrix_nitsche_ex02(
                         # ...
                         v    +=  normalS * (comp_1 * bj_0)  * wvol - Kappa * bi_0 * bj_0 * wvol * sqrt(F_1y[g2]**2+ F_2y[g2]**2)
 
-                    matrix[p1, p2+i2, p1, p2+j2-i2]  += v
+                    matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2-i2]  += v
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
@@ -627,17 +627,17 @@ def assemble_matrix_nitsche_ex02(
                         bj_x    = bj_0 * bx_right
                         bj_y    = basis_2[ie2, jl_2, 1, g2]
                         # ...
-                        comp_2  = -1 * ( F_2y[g2]*bj_x - F_2x[g2]*bj_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_2 += +1 * (-F_1y[g2]*bj_x + F_1x[g2]*bj_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_2  = +1 * ( F_2y[g2]*bj_x - F_2x[g2]*bj_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_2 += -1 * (-F_1y[g2]*bj_x + F_1x[g2]*bj_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         #...
                         wvol    = weights_2[ie2, g2]
                         # ...
                         v      +=  normalS * ( bi_0*comp_2) * wvol
-                    matrix[p1, p2+i2, p1, p2+j2-i2]  += v
+                    matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2-i2]  += v
 
     if domain_nb == 3:
         by_left  =  p2*(1/(knots_2[p2+1]-knots_2[0]))*(omega_2[1]/omega_2[0])
-        by_right =  p2*(1/(knots_2[-1]-knots_2[-p2-2]))*(omega_2[-2]/omega_2[-1])
+        by_right =  p2*(1/(knots_2[ne2+2*p2]-knots_2[ne2+p2-1]))*(omega_2[ne2+p2-2]/omega_2[ne2+p2-1])
         # ...
         ie2      = 0
         i_span_2 = spans_2[ie2]
@@ -757,7 +757,7 @@ def assemble_matrix_nitsche_ex02(
                     matrix[p1+i1, p2+spans_2[ne2-1], p1+j1-i1, p2]  += v
     elif domain_nb == 4:
         by_left  =  p2*(1/(knots_2[p2+1]-knots_2[0]))*(omega_2[1]/omega_2[0])
-        by_right =  p2*(1/(knots_2[-1]-knots_2[-p2-2]))*(omega_2[-2]/omega_2[-1])
+        by_right =  p2*(1/(knots_2[ne2+2*p2]-knots_2[ne2+p2-1]))*(omega_2[ne2+p2-2]/omega_2[ne2+p2-1])
         #... Assemble the boundary condition for Nitsche (x=left)
         ie2      = 0
         i_span_2 = spans_2[ie2]
