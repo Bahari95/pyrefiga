@@ -18,12 +18,14 @@ from   pyrefiga                   import assemble_mass1D
 #..
 from   gallery_section_08      import assemble_vector_ex01
 from   gallery_section_08      import assemble_vector_ex02
+from   gallery_section_08      import assemble_vector_ex03
 from   gallery_section_08      import assemble_vectorbasis_ex02
 from   gallery_section_08      import assemble_Quality_ex01
 
 #..
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
 assemble_dirs        = compile_kernel(assemble_vector_ex02, arity=1)
+assemble_comp        = compile_kernel(assemble_vector_ex03, arity=1)
 assemble_Quality     = compile_kernel(assemble_Quality_ex01, arity=1)
 #==============================================================================
 #.. Assembling basis on the interface
@@ -57,45 +59,45 @@ args = parser.parse_args()
 #.......Poisson ALGORITHM
 def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None):
        
-       #...  find corners of the domain
-       corners    = np.asarray([V1.knots[0], V1.knots[-1], V2.knots[0], V2.knots[-1]])
-       if niter is None :
-          # ... Number of iterations
-          niter   = 30   #
-       if tol is None :
-          tol     = 1e-8  # 
-       # .. computes basis and sopans in adapted quadrature
-       Quad_adm   = quadratures_in_admesh(V, reparameterization = True)
-       #----------------------------------------------------------------------------------------------       
-       #..Stiffness and Mass matrix in 1D in the first deriction
-       K1         = assemble_stiffness1D(V1)
-       K1         = K1.tosparse()
-       K1         = csr_matrix(K1)
-       #___
-       M1         = assemble_mass1D(V1)
-       M1         = M1.tosparse()
-       M1         = csr_matrix(M1)
+      #...  find corners of the domain
+      corners    = np.asarray([V1.knots[0], V1.knots[-1], V2.knots[0], V2.knots[-1]])
+      if niter is None :
+         # ... Number of iterations
+         niter   = 30   #
+      if tol is None :
+         tol     = 1e-8  # 
+      # .. computes basis and sopans in adapted quadrature
+      Quad_adm   = quadratures_in_admesh(V, reparameterization = True)
+      #----------------------------------------------------------------------------------------------       
+      #..Stiffness and Mass matrix in 1D in the first deriction
+      K1         = assemble_stiffness1D(V1)
+      K1         = K1.tosparse()
+      K1         = csr_matrix(K1)
+      #___
+      M1         = assemble_mass1D(V1)
+      M1         = M1.tosparse()
+      M1         = csr_matrix(M1)
 
-       #..Stiffness and Mass matrix in 1D in the second deriction
-       K2         = assemble_stiffness1D(V2)
-       K2         = K2.tosparse()
-       K2         = csr_matrix(K2)
-       #___
-       M2         = assemble_mass1D(V2)
-       M2         = M2.tosparse()
-       M2         = csr_matrix(M2)
+      #..Stiffness and Mass matrix in 1D in the second deriction
+      K2         = assemble_stiffness1D(V2)
+      K2         = K2.tosparse()
+      K2         = csr_matrix(K2)
+      #___
+      M2         = assemble_mass1D(V2)
+      M2         = M2.tosparse()
+      M2         = csr_matrix(M2)
 
-       #...step 0.1
-       mats_1     = [M1, K1]
-       mats_2     = [M2, K2]
+      #...step 0.1
+      mats_1     = [M1, K1]
+      mats_2     = [M2, K2]
 
-       # ...Fast Solver
-       poisson    = Poisson(mats_1, mats_2, tau=1e-8) 
+      # ...Fast Solver
+      poisson    = Poisson(mats_1, mats_2, tau=1e-8) 
 
-       # ... for assembling residual
-       M_res      = kron(M1, M2)
-       # ... for Two or Multi grids
-       if x_2 is None :    
+      # ... for assembling residual
+      M_res      = kron(M1, M2)
+      # ... for Two or Multi grids
+      if x_2 is None :    
          u11     = StencilVector(V.vector_space)
          u12     = StencilVector(V.vector_space)
          u_sol   = StencilVector(V.vector_space)
@@ -111,7 +113,7 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None
          x12[:,-1]  = corners[3]
          # .../
          x_2     = zeros(V1.nbasis*V2.nbasis)
-       else           :     
+      else           :     
          u11          = StencilVector(V.vector_space)
          u12          = StencilVector(V.vector_space)
          u_sol        = StencilVector(V.vector_space)
@@ -136,8 +138,8 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None
          b             = rhs.toarray()
          x12[:,1:-1]  =  poisson.project(b).reshape(V.nbasis)[:,1:-1]
          u12.from_array(V, x12)      
-       #___ 
-       for i in range(niter):
+      #___ 
+      for i in range(niter):
            
          # ... computes spans and basis in adapted quadrature 
          spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11, u12)
@@ -170,7 +172,20 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None
          l2_residual   = sqrt(dx.dot(M_res.dot(dx)) )
          if l2_residual < tol and i>15:
             break
-       return u11, u12, x11, x12
+      # ... computes spans and basis in adapted quadrature 
+      spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11, u12)
+      #... Return solution
+      v11          = StencilVector(V.vector_space)
+      v12          = StencilVector(V.vector_space)
+      #... Project back to the fine mesh
+      rhs           = assemble_comp(V, fields = [u11_mpH],  value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
+      vx11          = poisson.project(rhs.toarray()).reshape(V.nbasis)
+      v11.from_array(V, vx11)
+      #___
+      rhs           = assemble_comp(V, fields = [u12_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
+      vx12           = poisson.project(rhs.toarray()).reshape(V.nbasis)
+      v12.from_array(V, vx12)            
+      return v11, v12, u11, u12, x11, x12
 
 # # .................................................................
 # ....................Using Two or Multi grid method for soving MAE
@@ -185,7 +200,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
    # ... Assembling mapping
    mp             = getGeometryMap(geometry,0)
    degree         = mp.degree # Use same degree as geometry
-   quad_degree    = max(degree[0],degree[1])*5+1 # Quadrature degree
+   quad_degree    = max(degree[0],degree[1])+1 # Quadrature degree
    mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
    if mp.nelements[0]*nb_ne < 16 and mp.nelements[1]*nb_ne <16 :
       print("nelements = ", mp.nelements[0]*nb_ne, mp.nelements[1]*nb_ne)
@@ -229,7 +244,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
       u12_mph.from_array(Vh, ymp)
 
       start            = time.time()
-      u11_pH, u12_pH, x11uh, x12uh     = bmae_solve(V1, V2, Vh, u11_mph, u12_mph)
+      v11_H, v12_H, u11_pH, u12_pH, x11uh, x12uh     = bmae_solve(V1, V2, Vh, u11_mph, u12_mph)
       MG_time         += time.time()- start
       #...
       Multipatchadx.append(x11uh)
@@ -242,16 +257,16 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
       V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,None, numElevate=nb_ne), nderiv = 1, omega = wm1, quad_degree = quad_degree)
       V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,None, numElevate=nb_ne), nderiv = 1, omega = wm2, quad_degree = quad_degree)
       Vh              = TensorSpace(V1, V2)
-      print( " nelements for patch", i, "=", V1.spans)
+      # print( " nelements for patch", i, "=", V1.spans)
       # .. computes basis and sopans in adapted quadrature
       Quad_adm         = quadratures_in_admesh(Vh, True)
       spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11_pH, u12_pH)
       Quality          = StencilVector(Vh.vector_space)
-      Quality          = assemble_Quality(Vh, fields=[u11_pH, u12_pH, u11_mph, u12_mph], value = [times, spans_ad1, spans_ad2, basis_ad1, basis_ad2],  out = Quality)
+      Quality          = assemble_Quality(Vh, fields=[u11_pH, u12_pH, u11_mph, u12_mph, v11_H, v12_H],knots = True, value = [times, spans_ad1, spans_ad2, basis_ad1, basis_ad2],  out = Quality)
       norm             = Quality.toarray()
       l2_Quality      += norm[0]**2
       l2_displacement += norm[1]**2
-      print(" The Volume for patch", i, "=", norm[2] )
+      print(" The Volume for patch", i, "comp =", norm[2], "appr=", norm[3], "bdr=", norm[4] )
 
    l2_Quality       = sqrt(l2_Quality     )
    l2_displacement  = sqrt(l2_displacement)
@@ -264,7 +279,7 @@ if True :
    # ... unit-square
    #geometry = '../fields/unit_square.xml'
 
-   geometry = '../fields/circle.xml'
+   geometry = '../fields/nice_geo.xml'
 
    # ... quarter annulus
    # geometry = '../fields/quart_annulus.xml'
@@ -333,7 +348,8 @@ print('..../!\...: min~max value of the Jacobian function =', np.min(det),'~', n
 #.. Analytic Density function 
 #rho = '1.+ 9./(1.+(10.*sqrt((x-0.-0.25*0.)**2+(y-0.)**2)*cos(arctan2(y-0.,x-0.-0.25*0.) -10.*((x-0.-0.25*0.)**2+(y-0.)**2)))**2)'
 #rho = '(1.+5./(1.+exp(100.*((x-0.)**2+(y-0.)**2-0.9))))'
-rho  = '5./(2.+np.cos(4.*np.pi*np.sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))'
+#rho  = '5./(2.+np.cos(4.*np.pi*np.sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))'
+rho  = '9./(2.+np.cos(10.*np.pi*np.sqrt((x)**2+(y+2.)**2)))'
 #rho = '1+5*np.exp(-100*np.abs((x-0.45)**2+(y-0.4)**2-0.09))+5.*np.exp(-100.*np.abs(x**2+y**2-0.2))+5.*np.exp(-100*np.abs((x+0.45)**2 +(y-0.4)**2-0.1))+7.*np.exp(-100.*np.abs(x**2+(y+1.25)**2-0.4))'
 
 #rho = '1+5.*np.exp(-50.*np.abs(x**2+y**2-0.5))'
