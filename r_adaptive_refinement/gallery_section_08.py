@@ -1,5 +1,8 @@
 __all__ = ['assemble_vector_ex01',
-           'assemble_vector_ex02'
+           'assemble_vector_ex02',
+           'assemble_vector_ex03',
+           'assemble_vector_ex04',
+           'assemble_Quality_ex01'
 ]
 from pyccel.decorators import types
 
@@ -66,7 +69,9 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #rho  = (1.+ 9./(1.+(10.*sqrt((x-0.-0.25*0.)**2+(y-0.)**2)*cos(arctan2(y-0.,x-0.-0.25*0.) -20.*((x-0.-0.25*0.)**2+(y-0.)**2)))**2) )
                     #rho   = (1. + 5./cosh( 5.*((x-sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2 + 5./cosh( 5.*((x+sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2)
                     #rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
-                    rho   = 9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
+                    #rho   = 9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
+                    rho   =  1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09))
+                    #rho   = 1.+9./cosh( 80.*((x + y) )**2 )
                     #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
                     #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
                     Crho += rho * wvol 
@@ -138,10 +143,12 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #rho  = Crho/(1.+5.*exp(-100.*abs((x-0.45)**2+(y-0.4)**2-0.1))+5.*exp(-100.*abs(x**2+y**2-0.2))+5.*exp(-100*abs((x+0.45)**2 +(y-0.4)**2-0.1)) +7.*exp(-100.*abs(x**2+(y+1.25)**2-0.4)) )
                     #rho  = Crho/(2.+sin(10.*pi*sqrt((x-0.6)**2+(y-0.6)**2)) )#0.8
                     #rho  = Crho/(1.+5./(1.+exp(100.*((x-0.5)**2+(y-0.5)**2-0.1))))
-                    #rho = Crho/(1.+ 9./(1.+(10.*sqrt((x-0.-0.25*0.)**2+(y-0.)**2)*cos(arctan2(y-0.,x-0.-0.25*0.) -20.*((x-0.-0.25*0.)**2+(y-0.)**2)))**2) )
+                    #rho  = Crho/(1.+ 9./(1.+(10.*sqrt((x-0.-0.25*0.)**2+(y-0.)**2)*cos(arctan2(y-0.,x-0.-0.25*0.) -20.*((x-0.-0.25*0.)**2+(y-0.)**2)))**2) )
                     #rho  = Crho/(1. + 5./cosh( 5.*((x-sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2 + 5./cosh( 5.*((x+sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2)
                     #rho  = Crho/(5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2))))
                     rho  = Crho/(9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2))))
+                    rho   =  Crho/(1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09)))
+                    #rho   = Crho/(1.+12./cosh( 80.*((x + y) )**2 ))
                     #rho   = Crho/(1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2)
                     #rho   = Crho/(1+10.*exp(-50.*abs(x**2+y**2-0.5)))
 
@@ -426,7 +433,6 @@ def assemble_vector_ex03(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
 
                     rhs[i1+p1,i2+p2] += v   
     # ...
-    
 # Assembles Quality of mesh adaptation
 #==============================================================================
 @types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'float[:]', 'float[:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:]')
@@ -560,7 +566,9 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     #rho  = (2.+sin(10.*pi*sqrt((x-0.6)**2+(y-0.6)**2)) )#0.8
                     #rho   = (1. + 5./cosh( 5.*((x-sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2 + 5./cosh( 5.*((x+sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2)
                     #rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
-                    rho   =  9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
+                    #rho   =  9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
+                    rho   =  1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09))
+                    #rho   = 1.+9./cosh( 80.*((x + y) )**2 )
                     #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
                     #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
                     if ie1 == 0 and ie2 == 0 and g1 == 0 and g2 == 0:
@@ -1127,3 +1135,235 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
             boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
     rhs[p1,p2+4] = sqrt(boundary_error)
     # ...
+
+# Assembles Quality of mesh adaptation
+#==============================================================================
+@types('int', 'int', 'int', 'int', 'int[:,:]', 'int[:,:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float[:]', 'float[:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float[:]', 'float[:]', 'double[:,:]')
+def assemble_vector_ex04(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, knots_1, knots_2, vector_u1, vector_u2, vector_v1, omega_1, omega_2, rhs):
+
+    from numpy import exp
+    from numpy import cos
+    from numpy import sin
+    from numpy import pi
+    from numpy import arctan2
+    from numpy import sqrt
+    from numpy import cosh
+    from numpy import zeros
+    from numpy import empty
+    # ... sizes
+    k1           = weights_1.shape[1]
+    k2           = weights_2.shape[1]
+    # ...
+    lvalues_u    = zeros((k1, k2))
+    # ...
+    lcoeffs_v1   = zeros((p1+1,p2+1))
+    # ___
+    lcoeffs_u1   = zeros((p1+1,p2+1))
+    lcoeffs_u2   = zeros((p1+1,p2+1))
+
+    #   ---Computes All basis in a new points    
+    degree         = p1
+    nders          = 0 # number of derivatives 
+    # ...
+    left           = empty( degree )
+    right          = empty( degree )
+    a              = empty( (       2, degree+1) )
+    ndu            = empty( (degree+1, degree+1) )
+    ders           = zeros( (     nders+1, degree+1) ) # output array
+    basis_ad1      = empty((ne1, ne2, p1+1, nders+1, k1, k2))
+    basis_ad2      = empty((ne1, ne2, p1+1, nders+1, k1, k2))
+    spans_ad1      = zeros((ne1, ne2, k1, k2)	, int)
+    spans_ad2      = zeros((ne1, ne2, k1, k2)	, int)
+    # ...
+    degree         = p2
+    left2          = empty( degree )
+    right2         = empty( degree )
+    a2             = empty( (       2, degree+1) )
+    ndu2           = empty( (degree+1, degree+1) )
+    ders2          = zeros( (     nders+1, degree+1) ) # output array
+    for ie1 in range(0, ne1):
+       for ie2 in range(0, ne2):
+          for g1 in range(0, k1):
+             for g2 in range(0, k2):
+                 degree   = p1
+                 i_span_1 = spans_1[ie1, g1]
+                 i_span_2 = spans_2[ie2, g2]
+                 lcoeffs_u1[ : , : ] = vector_u1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                 xq = 0.0
+                 for il_1 in range(0, p1+1):
+                    for il_2 in range(0, p2+1):
+                        bj_0    = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
+                        coeff_u1 = lcoeffs_u1[il_1,il_2]
+                        xq     += coeff_u1 * bj_0
+
+                 #span = find_span( knots, degree, xq )
+                 #~~~~~~~~~~~~~~~
+                 # Knot index at left/right boundary
+                 low  = degree
+                 high = len(knots_1)-1-degree
+                 # Check if point is exactly on left/right boundary, or outside domain
+                 if xq <= knots_1[low ]: 
+                      span = low
+                 elif xq >= knots_1[high]: 
+                      span = high-1
+                 else : 
+                   # Perform binary search
+                   span = (low+high)//2
+                   while xq < knots_1[span] or xq >= knots_1[span+1]:
+                      if xq < knots_1[span]:
+                          high = span
+                      else:
+                          low  = span
+                      span = (low+high)//2
+                 # ... 
+                 span_5   =  span
+                 # ...
+                 ndu[0,0] = 1.0
+                 for j in range(0,degree):
+                     left [j] = xq - knots_1[span-j]
+                     right[j] = knots_1[span+1+j] - xq
+                     saved    = 0.0
+                     for r in range(0,j+1):
+                         # compute inverse of knot differences and save them into lower triangular part of ndu
+                         ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
+                         # compute basis functions and save them into upper triangular part of ndu
+                         temp       = ndu[r,j] * ndu[j+1,r]
+                         ndu[r,j+1] = saved + right[r] * temp
+                         saved      = left[j-r] * temp
+                     ndu[j+1,j+1] = saved	
+               
+                 # Compute derivatives in 2D output array 'ders'
+                 ders[0,:] = ndu[:,degree]
+                 for r in range(0,degree+1):
+                     s1 = 0
+                     s2 = 1
+                     a[0,0] = 1.0
+                     for k in range(1,nders+1):
+                         d  = 0.0
+                         rk = r-k
+                         pk = degree-k
+                         if r >= k:
+                            a[s2,0] = a[s1,0] * ndu[pk+1,rk]
+                            d = a[s2,0] * ndu[rk,pk]
+                         j1 = 1   if (rk  > -1 ) else -rk
+                         j2 = k-1 if (r-1 <= pk) else degree-r
+                         for ij in range(j1,j2+1):
+                             a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
+                         for ij in range(j1,j2+1):
+                             d += a[s2,ij]* ndu[rk+ij,pk]
+                         if r <= pk:
+                            a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
+                            d += a[s2,k] * ndu[r,pk]
+                         ders[k,r] = d
+                         j  = s1
+                         s1 = s2
+                         s2 = j
+                 # ...first compute R1
+                 ders[0,:]     = ders[0,:] * omega_1[span-degree:span+1]
+                 sum_basisx    = sum(ders[0,:])
+                 ders[0,:]     = ders[0,:]/sum_basisx
+                 # ... Now for the second direction
+                 degree   = p2
+                 lcoeffs_u2[ : , : ] = vector_u2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                 xq = 0.0
+                 for il_1 in range(0, p1+1):
+                    for il_2 in range(0, p2+1):
+
+                        bj_0     = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
+                        coeff_u2 = lcoeffs_u2[il_1,il_2]
+                        xq      += coeff_u2 * bj_0
+                 #span = find_span( knots, degree, xq )
+                 #~~~~~~~~~~~~~~~
+                 # Knot index at left2/right2 boundary
+                 low  = degree
+                 high = len(knots_2)-1-degree
+                 # Check if point is exactly on left2/right2 boundary, or outside domain
+                 if xq <= knots_2[low ]: 
+                      span = low
+                 elif xq >= knots_2[high]: 
+                      span = high-1
+                 else : 
+                   # Perform binary search
+                   span = (low+high)//2
+                   while xq < knots_2[span] or xq >= knots_2[span+1]:
+                      if xq < knots_2[span]:
+                          high = span
+                      else:
+                          low  = span
+                      span = (low+high)//2
+                 # ... 
+                 span_6 = span
+                 # ...
+                 ndu2[0,0] = 1.0
+                 for j in range(0,degree):
+                     left2 [j] = xq - knots_2[span-j]
+                     right2[j] = knots_2[span+1+j] - xq
+                     saved    = 0.0
+                     for r in range(0,j+1):
+                         # compute inverse of knot differences and save them into lower triangular part of ndu2
+                         ndu2[j+1,r] = 1.0 / (right2[r] + left2[j-r])
+                         # compute basis functions and save them into upper triangular part of ndu2
+                         temp       = ndu2[r,j] * ndu2[j+1,r]
+                         ndu2[r,j+1] = saved + right2[r] * temp
+                         saved      = left2[j-r] * temp
+                     ndu2[j+1,j+1] = saved	
+               
+                 # Compute derivatives in 2D output array 'ders2'
+                 ders2[0,:] = ndu2[:,degree]
+                 for r in range(0,degree+1):
+                     s1 = 0
+                     s2 = 1
+                     a2[0,0] = 1.0
+                     for k in range(1,nders+1):
+                         d  = 0.0
+                         rk = r-k
+                         pk = degree-k
+                         if r >= k:
+                            a2[s2,0] = a2[s1,0] * ndu2[pk+1,rk]
+                            d = a2[s2,0] * ndu2[rk,pk]
+                         j1 = 1   if (rk  > -1 ) else -rk
+                         j2 = k-1 if (r-1 <= pk) else degree-r
+                         for ij in range(j1,j2+1):
+                             a2[s2,ij] = (a2[s1,ij] - a2[s1,ij-1]) * ndu2[pk+1,rk+ij]
+                         for ij in range(j1,j2+1):
+                             d += a2[s2,ij]* ndu2[rk+ij,pk]
+                         if r <= pk:
+                            a2[s2,k] = - a2[s1,k-1] * ndu2[pk+1,r]
+                            d += a2[s2,k] * ndu2[r,pk]
+                         ders2[k,r] = d
+                         j  = s1
+                         s1 = s2
+                         s2 = j
+                 # ...first compute R1
+                 ders2[0,:] = ders2[0,:] * omega_2[span-degree:span+1]
+                 sum_basisy = sum(ders2[0,:])
+                 ders2[0,:] = ders2[0,:]/sum_basisy
+                 #------------------   
+                 lcoeffs_v1[ : , : ]  =  vector_v1[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
+                 #...
+                 x     = 0.0                    
+                 for il_1 in range(0, p1+1):
+                    for il_2 in range(0, p2+1):
+                        coef_v1   = lcoeffs_v1[il_1,il_2]
+                        bi_0      = ders[0,il_1] * ders2[0,il_2]
+                        # ...
+                        x        +=  coef_v1*bi_0
+
+                 lvalues_u[g1,g2] = x
+          for il_1 in range(0, p1+1):
+            for il_2 in range(0, p2+1):
+                for g1 in range(0, k1):
+                    for g2 in range(0, k2):
+                        i_span_1 = spans_1[ie1, g1]
+                        i_span_2 = spans_2[ie2, g2]
+                        i1 = i_span_1 - p1 + il_1
+                        i2 = i_span_2 - p2 + il_2
+                        #...
+                        bi_0 = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 0, g2]
+                        #...
+                        wvol  = weights_1[ie1, g1]*weights_2[ie2, g2]
+                        # ...Dirichlet boundary conditions
+                        u     = lvalues_u[g1,g2]
+                        #..
+                        rhs[i1+p1,i2+p2] += bi_0 * u * wvol
+    # ...    

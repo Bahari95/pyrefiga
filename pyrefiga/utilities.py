@@ -171,7 +171,7 @@ def build_dirichlet(V, f, map = None, admap = None):
             else :
                 #-----------------------------------------------
                 #.. In the phyisacl domain with adaptive mapping               
-                n_dir        = V.nbasis[0] + V.nbasis[1]+100
+                n_dir        = V.nbasis[0]*10+10
 
                 Xmae         = sol_field_NURBS_2d((n_dir,n_dir),  admap[0], V.omega, V.knots, V.degree)[0]
                 Ymae         = sol_field_NURBS_2d((n_dir,n_dir),  admap[1], V.omega, V.knots, V.degree)[0]
