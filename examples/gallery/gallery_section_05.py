@@ -4,13 +4,10 @@ __all__ = ['assemble_matrix_ex11',
            'assemble_vector_ex21',
            'assemble_norm_ex02']
 
-from pyccel.decorators import types
-
 #... utilities of poisson equation
 #==============================================================================
 #---2 : A11
-@types( 'int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'float', 'double[:,:,:,:]')
-def assemble_matrix_ad_ex11(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, weights_1, weights_2,  points_1, points_2, vector_u, vector_w, mu, lanbda, matrix):
+def assemble_matrix_ad_ex11(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', mu:'float', lanbda:'float', matrix:'float64[:,:,:,:]'):
 
     # ... sizes
     from numpy import sqrt
@@ -104,9 +101,7 @@ def assemble_matrix_ad_ex11(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_
 
 #==============================================================================
 #---2 : A12
-@types( 'int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'float', 'double[:,:,:,:]')
-def assemble_matrix_ad_ex12(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, weights_1, weights_2,  points_1, points_2, vector_u, vector_w, mu, lanbda, matrix):
-
+def assemble_matrix_ad_ex12(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', mu:'float', lanbda:'float', matrix:'float64[:,:,:,:]'):
     # ... sizes
     from numpy import sqrt
     from numpy import zeros
@@ -199,8 +194,7 @@ def assemble_matrix_ad_ex12(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_
 
 #==============================================================================
 #---2 : rhs1
-@types( 'int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'double[:,:]')
-def assemble_vector_ex12(ne1, ne2, p1, p2, spans_1, spans_2, basis_1, basis_2, weights_1, weights_2, points_1, points_2, vector_u, vector_w, Tx, rhs):
+def assemble_vector_ex12(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', Tx:'float', rhs:'float64[:,:]'):
 
     from numpy import exp
     from numpy import cos
@@ -349,8 +343,7 @@ def assemble_vector_ex12(ne1, ne2, p1, p2, spans_1, spans_2, basis_1, basis_2, w
 
 #==============================================================================
 #---2 : rhs2
-@types( 'int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'double[:,:]')
-def assemble_vector_ex22(ne1, ne2, p1, p2, spans_1, spans_2, basis_1, basis_2, weights_1, weights_2, points_1, points_2, vector_u, vector_w, Tx, rhs):
+def assemble_vector_ex22(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', Tx:'float', rhs:'float64[:,:]'):
 
     from numpy import exp
     from numpy import cos
@@ -498,8 +491,7 @@ def assemble_vector_ex22(ne1, ne2, p1, p2, spans_1, spans_2, basis_1, basis_2, w
     # ...
 #==============================================================================
 #---2 : In adapted mesh
-@types( 'int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'float', 'float', 'double[:,:]')
-def assemble_norm_ex02(ne1, ne2, p1, p2, spans_1, spans_2, basis_1, basis_2, weights_1, weights_2, points_1, points_2, vector_u, vector_w, vector_1z, vector_2z,  mu, lanbda, Tx, rhs):
+def assemble_norm_ex02(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', vector_1z:'float64[:,:]', vector_2z:'float64[:,:]', mu:'float', lanbda:'float', Tx:'float', rhs:'float64[:,:]'):
 
     from numpy import exp
     from numpy import cos
