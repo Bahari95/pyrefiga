@@ -218,7 +218,7 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
 
             co = ET.SubElement(inner, 'coefs', geoDim='2')
             co.text = '\n' + '\n'.join(
-                ' '.join(f'{v:.20e}' for v in row) for row in gmap
+                ' '.join(f'{v:.3f}' for v in row) for row in gmap
             ) + '\n'
             co.tail = '\n'            
 
@@ -367,7 +367,7 @@ class getGeometryMap:
     def coefs(self):
         return self._coefs      
     
-    def Refinegrid(self, j_direct, Nelements, numElevate = 1):
+    def Refinegrid(self, j_direct, Nelements = None, numElevate = 1):
         assert(numElevate >= 1)
         #... refine the grid numElevate times
         if Nelements is None:

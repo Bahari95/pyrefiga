@@ -8,8 +8,8 @@ from pyccel.decorators import types
 
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]',  'float[:]', 'double[:,:]')
-def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_u, vector_w, vector_v1, vector_v2, spans_ad1, spans_ad2, basis_ad1, basis_ad2, corners, rhs):
+@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]',  'float[:]', 'double[:,:]')
+def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_u, vector_w, vector_v1, vector_v2, vector_v3, spans_ad1, spans_ad2, basis_ad1, basis_ad2, corners, rhs):
 
     from numpy import exp
     from numpy import cos
@@ -26,6 +26,7 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
     lcoeffs_w   = zeros((p1+1,p2+1))
     lcoeffs_v1  = zeros((p1+1,p2+1))
     lcoeffs_v2  = zeros((p1+1,p2+1))
+    lcoeffs_v3  = zeros((p1+1,p2+1))
     lvalues_u   = zeros((k1, k2))
     # ...
     lvalues_u1  = zeros((k1, k2))
@@ -45,6 +46,7 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
             
             lcoeffs_v1[ : , : ]  =  vector_v1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
             lcoeffs_v2[ : , : ]  =  vector_v2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_v3[ : , : ]  =  vector_v3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
             for g1 in range(0, k1):
                 for g2 in range(0, k2):
 
@@ -52,16 +54,19 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
 
                     x         = 0.0
                     y         = 0.0
+                    z         = 0.0
                     for il_1 in range(0, p1+1):
                           for il_2 in range(0, p2+1):
                               coef_v1   = lcoeffs_v1[il_1,il_2]
                               coef_v2   = lcoeffs_v2[il_1,il_2]
-                              
+                              coef_v3   = lcoeffs_v3[il_1,il_2]
+
                               bi_0      = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
                               # ...
                               x        +=  coef_v1*bi_0
                               y        +=  coef_v2*bi_0
-                    
+                              z        +=  coef_v3*bi_0
+
                     #.. Test 1
                     #rho  = (1.+5.*exp(-100.*abs((x-0.45)**2+(y-0.4)**2-0.1))+5.*exp(-100.*abs(x**2+y**2-0.2))+5.*exp(-100*abs((x+0.45)**2 +(y-0.4)**2-0.1)) +7.*exp(-100.*abs(x**2+(y+1.25)**2-0.4)) )
                     #rho  = (1.+5./(1.+exp(100.*((x-0.5)**2+(y-0.5)**2-0.1))))
@@ -71,7 +76,8 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
                     #rho   = 9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
                     #rho   =  1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09))
-                    rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
+                    #rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2+(z-0.)**2-1.05**2))
+                    rho   =  9./(2.+cos(2.*pi*sqrt((x)**2+(y+2.)**2+z**2)))
                     #rho   = 1.+9./cosh( 80.*((x + y) )**2 )
                     #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
                     #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
@@ -127,19 +133,23 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #------------------   
                     lcoeffs_v1[ : , : ]  =  vector_v1[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
                     lcoeffs_v2[ : , : ]  =  vector_v2[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
-                    
+                    lcoeffs_v3[ : , : ]  =  vector_v3[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
+
                     #x    = (2.0*x1-1.0)*sqrt(1.0-0.5*(2.0*x2-1.0)**2)
                     #y    = (2.0*x2-1.0)*sqrt(1.0-0.5*(2.0*x1-1.0)**2)
                     x     = 0.0
                     y     = 0.0
+                    z     = 0.0
                     for il_1 in range(0, p1+1):
                           for il_2 in range(0, p2+1):
                               coef_v1   = lcoeffs_v1[il_1,il_2]
                               coef_v2   = lcoeffs_v2[il_1,il_2]
+                              coef_v3   = lcoeffs_v3[il_1,il_2]
                               bi_0      = basis_ad1[ie1, ie2, il_1, 0, g1, g2]*basis_ad2[ie1, ie2, il_2, 0, g1, g2]
                               # ...
                               x        +=  coef_v1*bi_0
                               y        +=  coef_v2*bi_0
+                              z        +=  coef_v3*bi_0
                     #.. Test 1
                     #rho  = Crho/(1.+5.*exp(-100.*abs((x-0.45)**2+(y-0.4)**2-0.1))+5.*exp(-100.*abs(x**2+y**2-0.2))+5.*exp(-100*abs((x+0.45)**2 +(y-0.4)**2-0.1)) +7.*exp(-100.*abs(x**2+(y+1.25)**2-0.4)) )
                     #rho  = Crho/(2.+sin(10.*pi*sqrt((x-0.6)**2+(y-0.6)**2)) )#0.8
@@ -149,7 +159,7 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #rho  = Crho/(5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2))))
                     #rho  = Crho/(9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2))))
                     #rho   =  Crho/(1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09)))
-                    rho   = Crho/(1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2)))
+                    rho   = Crho/(9./(2.+cos(2.*pi*sqrt((x)**2+(y+2.)**2+z**2))))
                     #rho   = Crho/(1.+12./cosh( 80.*((x + y) )**2 ))
                     #rho   = Crho/(1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2)
                     #rho   = Crho/(1+10.*exp(-50.*abs(x**2+y**2-0.5)))
@@ -437,8 +447,8 @@ def assemble_vector_ex03(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
     # ...
 # Assembles Quality of mesh adaptation
 #==============================================================================
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'float[:]', 'float[:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:]')
-def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, knots_1, knots_2, vector_u, vector_w, vector_v1, vector_v2, vector_c1, vector_c2, times, spans_ad1, spans_ad2, basis_ad1, basis_ad2, rhs):
+@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'float[:]', 'float[:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:]')
+def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, knots_1, knots_2, vector_u, vector_w, vector_v1, vector_v2, vector_v3, vector_c1, vector_c2, vector_c3, times, spans_ad1, spans_ad2, basis_ad1, basis_ad2, rhs):
 
     from numpy import exp
     from numpy import cos
@@ -458,17 +468,21 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
     # ...
     lcoeffs_v1  = zeros((p1+1,p2+1))
     lcoeffs_v2  = zeros((p1+1,p2+1))
+    lcoeffs_v3  = zeros((p1+1,p2+1))
     # ...
     lcoeffs_u1  = zeros((p1+1,p2+1))
     lcoeffs_u2  = zeros((p1+1,p2+1))
+    lcoeffs_u3  = zeros((p1+1,p2+1))
     # ...
     lcoeffs_c1  = zeros((p1+1,p2+1))
     lcoeffs_c2  = zeros((p1+1,p2+1))
-
+    lcoeffs_c3  = zeros((p1+1,p2+1))
+    # ...
     Qual_l2      = 0.                                
     displacement = 0.
     area_comp    = 0.
     area_appr    = 0.
+    mapp_appr    = 0.
     cst          = 1.
     for ie1 in range(0, ne1):
         i_span_1 = spans_1[ie1]
@@ -483,9 +497,10 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     lcoeffs_w[ : , : ]   = vector_w[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                     lcoeffs_u1[ : , : ]  = vector_v1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                     lcoeffs_u2[ : , : ]  = vector_v2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                    lcoeffs_u3[ : , : ]  = vector_v3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                     lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                     lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-
+                    lcoeffs_c3[ : , : ]  = vector_c3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                     #... We compute firstly the span in new adapted points
                     span_5 = spans_ad1[ie1, ie2, g1, g2]
                     span_6 = spans_ad2[ie1, ie2, g1, g2]
@@ -493,9 +508,11 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     #------------------   
                     lcoeffs_v1[ : , : ]  =  vector_v1[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
                     lcoeffs_v2[ : , : ]  =  vector_v2[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
+                    lcoeffs_v3[ : , : ]  =  vector_v3[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
                     #...
                     x     = 0.0
                     y     = 0.0
+                    z     = 0.0
                     uhx   = 0.0
                     uhy   = 0.0
                     vhx   = 0.0
@@ -506,36 +523,49 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     I1y   = 0.0
                     I2x   = 0.0
                     I2y   = 0.0
+                    I3x   = 0.0
+                    I3y   = 0.0
                     #.
                     F1x   = 0.0
                     F1y   = 0.0
                     F2x   = 0.0
                     F2y   = 0.0                    
+                    F3x   = 0.0
+                    F3y   = 0.0                    
                     y1    = 0.0
                     y2    = 0.0
+                    y3    = 0.0
                     G1x   = 0.0
                     G1y   = 0.0
                     G2x   = 0.0
                     G2y   = 0.0
+                    G3x   = 0.0
+                    G3y   = 0.0
                     for il_1 in range(0, p1+1):
                           for il_2 in range(0, p2+1):
                                 coef_v1   = lcoeffs_v1[il_1,il_2]
                                 coef_v2   = lcoeffs_v2[il_1,il_2]
+                                coef_v3   = lcoeffs_v3[il_1,il_2]
                                 bi_0      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
                                 bi_x      = basis_ad1[ie1, ie2, il_1, 1, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
                                 bi_y      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 1, g1, g2]
                                 # ...in adapted points
                                 x        +=  coef_v1*bi_0
                                 y        +=  coef_v2*bi_0
+                                z        +=  coef_v3*bi_0
                                 F1x      +=  coef_v1*bi_x
                                 F1y      +=  coef_v1*bi_y
                                 F2x      +=  coef_v2*bi_x
                                 F2y      +=  coef_v2*bi_y
+                                F3x      +=  coef_v3*bi_x
+                                F3y      +=  coef_v3*bi_y
                                 # ...
                                 coeff_c1  = lcoeffs_c1[il_1,il_2]
                                 coeff_c2  = lcoeffs_c2[il_1,il_2]
+                                coeff_c3  = lcoeffs_c3[il_1,il_2]
                                 coeff_u1  = lcoeffs_u1[il_1,il_2]
                                 coeff_u2  = lcoeffs_u2[il_1,il_2]
+                                coeff_u3  = lcoeffs_u3[il_1,il_2]
                                 coeff_u   = lcoeffs_u[il_1,il_2]
                                 coeff_w   = lcoeffs_w[il_1,il_2]
                                 #...
@@ -545,10 +575,13 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                                 #... approximation of composite functions
                                 y1       +=  coeff_c1*bi_0
                                 y2       +=  coeff_c2*bi_0
+                                y3       +=  coeff_c3*bi_0
                                 G1x      +=  coeff_c1*bi_x
                                 G1y      +=  coeff_c1*bi_y
                                 G2x      +=  coeff_c2*bi_x
                                 G2y      +=  coeff_c2*bi_y
+                                G3x      +=  coeff_c3*bi_x
+                                G3y      +=  coeff_c3*bi_y
                                 #.. Initial mapping
                                 x1       += coeff_u1*bi_0
                                 x2       += coeff_u2*bi_0
@@ -556,6 +589,8 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                                 I1y      += coeff_u1*bi_y
                                 I2x      += coeff_u2*bi_x
                                 I2y      += coeff_u2*bi_y                                
+                                I3x      += coeff_u3*bi_x
+                                I3y      += coeff_u3*bi_y                                
                                 #.. optimal mapping
                                 uhx      += coeff_u*bi_x
                                 uhy      += coeff_u*bi_y
@@ -568,9 +603,9 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     #rho  = (2.+sin(10.*pi*sqrt((x-0.6)**2+(y-0.6)**2)) )#0.8
                     #rho   = (1. + 5./cosh( 5.*((x-sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2 + 5./cosh( 5.*((x+sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2)
                     #rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
-                    #rho   =  9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
+                    rho   =  9./(2.+cos(2.*pi*sqrt((x)**2+(y+2.)**2+z**2)))
                     #rho   =  1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09))
-                    rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
+                    #rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
                     #rho   = 1.+9./cosh( 80.*((x + y) )**2 )
                     #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
                     #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
@@ -580,564 +615,563 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     wvol   = weights_1[ie1, g1] * weights_2[ie2, g2]
                     v    += (rho*(uhx*vhy-uhy*vhx)-cst)**2 * wvol
                     w    += ((x-x1)**2+(y-x2)**2) * wvol
-                    F_2y = uhy*F2x+vhy*F2y #F'2y
-                    F_1x = uhx*F1x+vhx*F1y #F'1x
-                    F_1y = uhy*F1x+vhy*F1y #F'1y
-                    F_2x = uhx*F2x+vhx*F2y #F'2x
-                    area_comp +=  abs(I2y*I1x-I1y*I2x)* wvol - abs(F2y*F1x-F1y*F2x) *abs(uhx*vhy-uhy*vhx) * wvol
-                    area_appr +=  abs(I2y*I1x-I1y*I2x)* wvol - abs(G2y*G1x-G1y*G2x) * wvol                        
+                    #...
+                    area_comp +=  sqrt((I1x**2+I2x**2+I3x**2)*(I1y**2+I2y**2+I3y**2)-(I1x*I1y+I2x*I2y+I3x*I3y)**2)* wvol - sqrt((F1x**2+F2x**2+F3x**2)*(F1y**2+F2y**2+F3y**2)-(F1x*F1y+F2x*F2y+F3x*F3y)**2)*abs(uhx*vhy-uhy*vhx) * wvol
+                    area_appr +=  sqrt((I1x**2+I2x**2+I3x**2)*(I1y**2+I2y**2+I3y**2)-(I1x*I1y+I2x*I2y+I3x*I3y)**2)* wvol - sqrt((G1x**2+G2x**2+G3x**2)*(G1y**2+G2y**2+G3y**2)-(G1x*G1y+G2x*G2y+G3x*G3y)**2) * wvol
+                    mapp_appr += ((x-y1)**2+(y-y2)**2+(z-y3)**2) * wvol             
             Qual_l2      += v
             displacement += w
     rhs[p1,p2]   = sqrt(Qual_l2)
     rhs[p1,p2+1] = sqrt(displacement)
     rhs[p1,p2+2] = abs(area_comp)
     rhs[p1,p2+3] = abs(area_appr)
+    rhs[p1,p2+4] = sqrt(mapp_appr)
 
-    #---Computes All basis in a new points
-    nders          = 1
-    degree         = p1
-    #..
-    xx             = zeros(k1)
+    # #---Computes All basis in a new points
+    # nders          = 1
+    # degree         = p1
+    # #..
+    # xx             = zeros(k1)
 
-    left           = empty( degree )
-    right          = empty( degree )
-    a              = empty( (       2, degree+1) )
-    ndu            = empty( (degree+1, degree+1) )
-    ders           = zeros( (     nders+1, degree+1) ) # output array
-    basis1         = zeros( (ne1, degree+1, nders+1, k1))
-    for ie1 in range(ne1):
-        i_span_1 = spans_1[ie1]
-        lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, spans_2[0] : spans_2[0]+p2+1]
-        xx[:] = 0.0
-        for g1 in range(0, k1):
-            v = 0.0
-            for il_1 in range(0, p1+1):
-                #...
-                bi_0    = basis_1[ie1, il_1, 0, g1]
-                coef_u  = lcoeffs_u[il_1,0]
-                v      +=  coef_u*bi_0        
-            xx[g1] = v
-        for iq,xq in enumerate(xx):
-            #span = find_span( knots, degree, xq )
-            #~~~~~~~~~~~~~~~
-            # Knot index at left/right boundary
-            low  = degree
-            high = len(knots_1)-1-degree
-            # Check if point is exactly on left/right boundary, or outside domain
-            if xq <= knots_1[low ]: 
-                 span = low
-            elif xq >= knots_1[high]: 
-                 span = high-1
-            else : 
-              # Perform binary search
-              span = (low+high)//2
-              while xq < knots_1[span] or xq >= knots_1[span+1]:
-                 if xq < knots_1[span]:
-                     high = span
-                 else:
-                     low  = span
-                 span = (low+high)//2
-            ndu[0,0] = 1.0
-            for j in range(0,degree):
-                left [j] = xq - knots_1[span-j]
-                right[j] = knots_1[span+1+j] - xq
-                saved    = 0.0
-                for r in range(0,j+1):
-                    # compute inverse of knot differences and save them into lower triangular part of ndu
-                    ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
-                    # compute basis functions and save them into upper triangular part of ndu
-                    temp       = ndu[r,j] * ndu[j+1,r]
-                    ndu[r,j+1] = saved + right[r] * temp
-                    saved      = left[j-r] * temp
-                ndu[j+1,j+1] = saved	
+    # left           = empty( degree )
+    # right          = empty( degree )
+    # a              = empty( (       2, degree+1) )
+    # ndu            = empty( (degree+1, degree+1) )
+    # ders           = zeros( (     nders+1, degree+1) ) # output array
+    # basis1         = zeros( (ne1, degree+1, nders+1, k1))
+    # for ie1 in range(ne1):
+    #     i_span_1 = spans_1[ie1]
+    #     lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, spans_2[0] : spans_2[0]+p2+1]
+    #     xx[:] = 0.0
+    #     for g1 in range(0, k1):
+    #         v = 0.0
+    #         for il_1 in range(0, p1+1):
+    #             #...
+    #             bi_0    = basis_1[ie1, il_1, 0, g1]
+    #             coef_u  = lcoeffs_u[il_1,0]
+    #             v      +=  coef_u*bi_0        
+    #         xx[g1] = v
+    #     for iq,xq in enumerate(xx):
+    #         #span = find_span( knots, degree, xq )
+    #         #~~~~~~~~~~~~~~~
+    #         # Knot index at left/right boundary
+    #         low  = degree
+    #         high = len(knots_1)-1-degree
+    #         # Check if point is exactly on left/right boundary, or outside domain
+    #         if xq <= knots_1[low ]: 
+    #              span = low
+    #         elif xq >= knots_1[high]: 
+    #              span = high-1
+    #         else : 
+    #           # Perform binary search
+    #           span = (low+high)//2
+    #           while xq < knots_1[span] or xq >= knots_1[span+1]:
+    #              if xq < knots_1[span]:
+    #                  high = span
+    #              else:
+    #                  low  = span
+    #              span = (low+high)//2
+    #         ndu[0,0] = 1.0
+    #         for j in range(0,degree):
+    #             left [j] = xq - knots_1[span-j]
+    #             right[j] = knots_1[span+1+j] - xq
+    #             saved    = 0.0
+    #             for r in range(0,j+1):
+    #                 # compute inverse of knot differences and save them into lower triangular part of ndu
+    #                 ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
+    #                 # compute basis functions and save them into upper triangular part of ndu
+    #                 temp       = ndu[r,j] * ndu[j+1,r]
+    #                 ndu[r,j+1] = saved + right[r] * temp
+    #                 saved      = left[j-r] * temp
+    #             ndu[j+1,j+1] = saved	
 
-            # Compute derivatives in 2D output array 'ders'
-            ders[0,:] = ndu[:,degree]
-            for r in range(0,degree+1):
-                s1 = 0
-                s2 = 1
-                a[0,0] = 1.0
-                for k in range(1,nders+1):
-                    d  = 0.0
-                    rk = r-k
-                    pk = degree-k
-                    if r >= k:
-                       a[s2,0] = a[s1,0] * ndu[pk+1,rk]
-                       d = a[s2,0] * ndu[rk,pk]
-                    j1 = 1   if (rk  > -1 ) else -rk
-                    j2 = k-1 if (r-1 <= pk) else degree-r
-                    for ij in range(j1,j2+1):
-                        a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
-                    for ij in range(j1,j2+1):
-                        d += a[s2,ij]* ndu[rk+ij,pk]
-                    if r <= pk:
-                       a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
-                       d += a[s2,k] * ndu[r,pk]
-                    ders[k,r] = d
-                    j  = s1
-                    s1 = s2
-                    s2 = j
-            basis1[ie1,:,0,iq] = ders[0,:]
-        lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, spans_2[ne2-1] : spans_2[ne2-1]+p2+1]
-        xx[:] = 0.0
-        for g1 in range(0, k1):
-            v = 0.0
-            for il_1 in range(0, p1+1):
-                #...
-                bi_0    = basis_1[ie1, il_1, 0, g1]
-                coef_u  = lcoeffs_u[il_1,p2]
-                v      +=  coef_u*bi_0        
-            xx[g1] = v
-        for iq,xq in enumerate(xx):
-            #span = find_span( knots, degree, xq )
-            #~~~~~~~~~~~~~~~
-            # Knot index at left/right boundary
-            low  = degree
-            high = len(knots_1)-1-degree
-            # Check if point is exactly on left/right boundary, or outside domain
-            if xq <= knots_1[low ]: 
-                 span = low
-            elif xq >= knots_1[high]: 
-                 span = high-1
-            else : 
-              # Perform binary search
-              span = (low+high)//2
-              while xq < knots_1[span] or xq >= knots_1[span+1]:
-                 if xq < knots_1[span]:
-                     high = span
-                 else:
-                     low  = span
-                 span = (low+high)//2
-            ndu[0,0] = 1.0
-            for j in range(0,degree):
-                left [j] = xq - knots_1[span-j]
-                right[j] = knots_1[span+1+j] - xq
-                saved    = 0.0
-                for r in range(0,j+1):
-                    # compute inverse of knot differences and save them into lower triangular part of ndu
-                    ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
-                    # compute basis functions and save them into upper triangular part of ndu
-                    temp       = ndu[r,j] * ndu[j+1,r]
-                    ndu[r,j+1] = saved + right[r] * temp
-                    saved      = left[j-r] * temp
-                ndu[j+1,j+1] = saved	
+    #         # Compute derivatives in 2D output array 'ders'
+    #         ders[0,:] = ndu[:,degree]
+    #         for r in range(0,degree+1):
+    #             s1 = 0
+    #             s2 = 1
+    #             a[0,0] = 1.0
+    #             for k in range(1,nders+1):
+    #                 d  = 0.0
+    #                 rk = r-k
+    #                 pk = degree-k
+    #                 if r >= k:
+    #                    a[s2,0] = a[s1,0] * ndu[pk+1,rk]
+    #                    d = a[s2,0] * ndu[rk,pk]
+    #                 j1 = 1   if (rk  > -1 ) else -rk
+    #                 j2 = k-1 if (r-1 <= pk) else degree-r
+    #                 for ij in range(j1,j2+1):
+    #                     a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
+    #                 for ij in range(j1,j2+1):
+    #                     d += a[s2,ij]* ndu[rk+ij,pk]
+    #                 if r <= pk:
+    #                    a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
+    #                    d += a[s2,k] * ndu[r,pk]
+    #                 ders[k,r] = d
+    #                 j  = s1
+    #                 s1 = s2
+    #                 s2 = j
+    #         basis1[ie1,:,0,iq] = ders[0,:]
+    #     lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, spans_2[ne2-1] : spans_2[ne2-1]+p2+1]
+    #     xx[:] = 0.0
+    #     for g1 in range(0, k1):
+    #         v = 0.0
+    #         for il_1 in range(0, p1+1):
+    #             #...
+    #             bi_0    = basis_1[ie1, il_1, 0, g1]
+    #             coef_u  = lcoeffs_u[il_1,p2]
+    #             v      +=  coef_u*bi_0        
+    #         xx[g1] = v
+    #     for iq,xq in enumerate(xx):
+    #         #span = find_span( knots, degree, xq )
+    #         #~~~~~~~~~~~~~~~
+    #         # Knot index at left/right boundary
+    #         low  = degree
+    #         high = len(knots_1)-1-degree
+    #         # Check if point is exactly on left/right boundary, or outside domain
+    #         if xq <= knots_1[low ]: 
+    #              span = low
+    #         elif xq >= knots_1[high]: 
+    #              span = high-1
+    #         else : 
+    #           # Perform binary search
+    #           span = (low+high)//2
+    #           while xq < knots_1[span] or xq >= knots_1[span+1]:
+    #              if xq < knots_1[span]:
+    #                  high = span
+    #              else:
+    #                  low  = span
+    #              span = (low+high)//2
+    #         ndu[0,0] = 1.0
+    #         for j in range(0,degree):
+    #             left [j] = xq - knots_1[span-j]
+    #             right[j] = knots_1[span+1+j] - xq
+    #             saved    = 0.0
+    #             for r in range(0,j+1):
+    #                 # compute inverse of knot differences and save them into lower triangular part of ndu
+    #                 ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
+    #                 # compute basis functions and save them into upper triangular part of ndu
+    #                 temp       = ndu[r,j] * ndu[j+1,r]
+    #                 ndu[r,j+1] = saved + right[r] * temp
+    #                 saved      = left[j-r] * temp
+    #             ndu[j+1,j+1] = saved	
 
-            # Compute derivatives in 2D output array 'ders'
-            ders[0,:] = ndu[:,degree]
-            for r in range(0,degree+1):
-                s1 = 0
-                s2 = 1
-                a[0,0] = 1.0
-                for k in range(1,nders+1):
-                    d  = 0.0
-                    rk = r-k
-                    pk = degree-k
-                    if r >= k:
-                       a[s2,0] = a[s1,0] * ndu[pk+1,rk]
-                       d = a[s2,0] * ndu[rk,pk]
-                    j1 = 1   if (rk  > -1 ) else -rk
-                    j2 = k-1 if (r-1 <= pk) else degree-r
-                    for ij in range(j1,j2+1):
-                        a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
-                    for ij in range(j1,j2+1):
-                        d += a[s2,ij]* ndu[rk+ij,pk]
-                    if r <= pk:
-                       a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
-                       d += a[s2,k] * ndu[r,pk]
-                    ders[k,r] = d
-                    j  = s1
-                    s1 = s2
-                    s2 = j
-            basis1[ie1,:,1,iq] = ders[0,:]
-    degree         = p2
-    basis2         = zeros( (ne2, degree+1, nders+1, k2))
-    for ie2 in range(ne2):
-        i_span_2 = spans_2[ie2]
-        lcoeffs_w[ : , : ]   = vector_w[spans_1[0] : spans_1[0]+p1+1, i_span_2 : i_span_2+p2+1]
-        xx[:] = 0.0
-        for g2 in range(0, k2):
-            v = 0.0
-            for il_2 in range(0, p2+1):
-                #...
-                bi_0    = basis_2[ie2, il_2, 0, g2]
-                coef_w  = lcoeffs_w[0,il_2]
-                v      +=  coef_w*bi_0        
-            xx[g2] = v
-        for iq,xq in enumerate(xx):
-            #span = find_span( knots, degree, xq )
-            #~~~~~~~~~~~~~~~
-            # Knot index at left/right boundary
-            low  = degree
-            high = len(knots_2)-1-degree
-            # Check if point is exactly on left/right boundary, or outside domain
-            if xq <= knots_2[low ]: 
-                 span = low
-            elif xq >= knots_2[high]: 
-                 span = high-1
-            else : 
-              # Perform binary search
-              span = (low+high)//2
-              while xq < knots_2[span] or xq >= knots_2[span+1]:
-                 if xq < knots_2[span]:
-                     high = span
-                 else:
-                     low  = span
-                 span = (low+high)//2
-            ndu[0,0] = 1.0
-            for j in range(0,degree):
-                left [j] = xq - knots_2[span-j]
-                right[j] = knots_2[span+1+j] - xq
-                saved    = 0.0
-                for r in range(0,j+1):
-                    # compute inverse of knot differences and save them into lower triangular part of ndu
-                    ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
-                    # compute basis functions and save them into upper triangular part of ndu
-                    temp       = ndu[r,j] * ndu[j+1,r]
-                    ndu[r,j+1] = saved + right[r] * temp
-                    saved      = left[j-r] * temp
-                ndu[j+1,j+1] = saved	
+    #         # Compute derivatives in 2D output array 'ders'
+    #         ders[0,:] = ndu[:,degree]
+    #         for r in range(0,degree+1):
+    #             s1 = 0
+    #             s2 = 1
+    #             a[0,0] = 1.0
+    #             for k in range(1,nders+1):
+    #                 d  = 0.0
+    #                 rk = r-k
+    #                 pk = degree-k
+    #                 if r >= k:
+    #                    a[s2,0] = a[s1,0] * ndu[pk+1,rk]
+    #                    d = a[s2,0] * ndu[rk,pk]
+    #                 j1 = 1   if (rk  > -1 ) else -rk
+    #                 j2 = k-1 if (r-1 <= pk) else degree-r
+    #                 for ij in range(j1,j2+1):
+    #                     a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
+    #                 for ij in range(j1,j2+1):
+    #                     d += a[s2,ij]* ndu[rk+ij,pk]
+    #                 if r <= pk:
+    #                    a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
+    #                    d += a[s2,k] * ndu[r,pk]
+    #                 ders[k,r] = d
+    #                 j  = s1
+    #                 s1 = s2
+    #                 s2 = j
+    #         basis1[ie1,:,1,iq] = ders[0,:]
+    # degree         = p2
+    # basis2         = zeros( (ne2, degree+1, nders+1, k2))
+    # for ie2 in range(ne2):
+    #     i_span_2 = spans_2[ie2]
+    #     lcoeffs_w[ : , : ]   = vector_w[spans_1[0] : spans_1[0]+p1+1, i_span_2 : i_span_2+p2+1]
+    #     xx[:] = 0.0
+    #     for g2 in range(0, k2):
+    #         v = 0.0
+    #         for il_2 in range(0, p2+1):
+    #             #...
+    #             bi_0    = basis_2[ie2, il_2, 0, g2]
+    #             coef_w  = lcoeffs_w[0,il_2]
+    #             v      +=  coef_w*bi_0        
+    #         xx[g2] = v
+    #     for iq,xq in enumerate(xx):
+    #         #span = find_span( knots, degree, xq )
+    #         #~~~~~~~~~~~~~~~
+    #         # Knot index at left/right boundary
+    #         low  = degree
+    #         high = len(knots_2)-1-degree
+    #         # Check if point is exactly on left/right boundary, or outside domain
+    #         if xq <= knots_2[low ]: 
+    #              span = low
+    #         elif xq >= knots_2[high]: 
+    #              span = high-1
+    #         else : 
+    #           # Perform binary search
+    #           span = (low+high)//2
+    #           while xq < knots_2[span] or xq >= knots_2[span+1]:
+    #              if xq < knots_2[span]:
+    #                  high = span
+    #              else:
+    #                  low  = span
+    #              span = (low+high)//2
+    #         ndu[0,0] = 1.0
+    #         for j in range(0,degree):
+    #             left [j] = xq - knots_2[span-j]
+    #             right[j] = knots_2[span+1+j] - xq
+    #             saved    = 0.0
+    #             for r in range(0,j+1):
+    #                 # compute inverse of knot differences and save them into lower triangular part of ndu
+    #                 ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
+    #                 # compute basis functions and save them into upper triangular part of ndu
+    #                 temp       = ndu[r,j] * ndu[j+1,r]
+    #                 ndu[r,j+1] = saved + right[r] * temp
+    #                 saved      = left[j-r] * temp
+    #             ndu[j+1,j+1] = saved	
 
-            # Compute derivatives in 2D output array 'ders'
-            ders[0,:] = ndu[:,degree]
-            for r in range(0,degree+1):
-                s1 = 0
-                s2 = 1
-                a[0,0] = 1.0
-                for k in range(1,nders+1):
-                    d  = 0.0
-                    rk = r-k
-                    pk = degree-k
-                    if r >= k:
-                       a[s2,0] = a[s1,0] * ndu[pk+1,rk]
-                       d = a[s2,0] * ndu[rk,pk]
-                    j1 = 1   if (rk  > -1 ) else -rk
-                    j2 = k-1 if (r-1 <= pk) else degree-r
-                    for ij in range(j1,j2+1):
-                        a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
-                    for ij in range(j1,j2+1):
-                        d += a[s2,ij]* ndu[rk+ij,pk]
-                    if r <= pk:
-                       a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
-                       d += a[s2,k] * ndu[r,pk]
-                    ders[k,r] = d
-                    j  = s1
-                    s1 = s2
-                    s2 = j
-            basis2[ie2,:,0,iq] = ders[0,:]
-        lcoeffs_w[ : , : ]   = vector_w[spans_1[ne1-1] : spans_1[ne1-1]+p1+1, i_span_2 : i_span_2+p2+1]
-        xx[:] = 0.0
-        for g2 in range(0, k2):
-            v = 0.0
-            for il_2 in range(0, p2+1):
-                #...
-                bi_0    = basis_2[ie2, il_2, 0, g2]
-                coef_w  = lcoeffs_w[p1,il_2]
-                v      +=  coef_w*bi_0        
-            xx[g2] = v
-        for iq,xq in enumerate(xx):
-            #span = find_span( knots, degree, xq )
-            #~~~~~~~~~~~~~~~
-            # Knot index at left/right boundary
-            low  = degree
-            high = len(knots_2)-1-degree
-            # Check if point is exactly on left/right boundary, or outside domain
-            if xq <= knots_2[low ]: 
-                 span = low
-            elif xq >= knots_2[high]: 
-                 span = high-1
-            else : 
-              # Perform binary search
-              span = (low+high)//2
-              while xq < knots_2[span] or xq >= knots_2[span+1]:
-                 if xq < knots_2[span]:
-                     high = span
-                 else:
-                     low  = span
-                 span = (low+high)//2
-            ndu[0,0] = 1.0
-            for j in range(0,degree):
-                left [j] = xq - knots_2[span-j]
-                right[j] = knots_2[span+1+j] - xq
-                saved    = 0.0
-                for r in range(0,j+1):
-                    # compute inverse of knot differences and save them into lower triangular part of ndu
-                    ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
-                    # compute basis functions and save them into upper triangular part of ndu
-                    temp       = ndu[r,j] * ndu[j+1,r]
-                    ndu[r,j+1] = saved + right[r] * temp
-                    saved      = left[j-r] * temp
-                ndu[j+1,j+1] = saved	
+    #         # Compute derivatives in 2D output array 'ders'
+    #         ders[0,:] = ndu[:,degree]
+    #         for r in range(0,degree+1):
+    #             s1 = 0
+    #             s2 = 1
+    #             a[0,0] = 1.0
+    #             for k in range(1,nders+1):
+    #                 d  = 0.0
+    #                 rk = r-k
+    #                 pk = degree-k
+    #                 if r >= k:
+    #                    a[s2,0] = a[s1,0] * ndu[pk+1,rk]
+    #                    d = a[s2,0] * ndu[rk,pk]
+    #                 j1 = 1   if (rk  > -1 ) else -rk
+    #                 j2 = k-1 if (r-1 <= pk) else degree-r
+    #                 for ij in range(j1,j2+1):
+    #                     a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
+    #                 for ij in range(j1,j2+1):
+    #                     d += a[s2,ij]* ndu[rk+ij,pk]
+    #                 if r <= pk:
+    #                    a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
+    #                    d += a[s2,k] * ndu[r,pk]
+    #                 ders[k,r] = d
+    #                 j  = s1
+    #                 s1 = s2
+    #                 s2 = j
+    #         basis2[ie2,:,0,iq] = ders[0,:]
+    #     lcoeffs_w[ : , : ]   = vector_w[spans_1[ne1-1] : spans_1[ne1-1]+p1+1, i_span_2 : i_span_2+p2+1]
+    #     xx[:] = 0.0
+    #     for g2 in range(0, k2):
+    #         v = 0.0
+    #         for il_2 in range(0, p2+1):
+    #             #...
+    #             bi_0    = basis_2[ie2, il_2, 0, g2]
+    #             coef_w  = lcoeffs_w[p1,il_2]
+    #             v      +=  coef_w*bi_0        
+    #         xx[g2] = v
+    #     for iq,xq in enumerate(xx):
+    #         #span = find_span( knots, degree, xq )
+    #         #~~~~~~~~~~~~~~~
+    #         # Knot index at left/right boundary
+    #         low  = degree
+    #         high = len(knots_2)-1-degree
+    #         # Check if point is exactly on left/right boundary, or outside domain
+    #         if xq <= knots_2[low ]: 
+    #              span = low
+    #         elif xq >= knots_2[high]: 
+    #              span = high-1
+    #         else : 
+    #           # Perform binary search
+    #           span = (low+high)//2
+    #           while xq < knots_2[span] or xq >= knots_2[span+1]:
+    #              if xq < knots_2[span]:
+    #                  high = span
+    #              else:
+    #                  low  = span
+    #              span = (low+high)//2
+    #         ndu[0,0] = 1.0
+    #         for j in range(0,degree):
+    #             left [j] = xq - knots_2[span-j]
+    #             right[j] = knots_2[span+1+j] - xq
+    #             saved    = 0.0
+    #             for r in range(0,j+1):
+    #                 # compute inverse of knot differences and save them into lower triangular part of ndu
+    #                 ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
+    #                 # compute basis functions and save them into upper triangular part of ndu
+    #                 temp       = ndu[r,j] * ndu[j+1,r]
+    #                 ndu[r,j+1] = saved + right[r] * temp
+    #                 saved      = left[j-r] * temp
+    #             ndu[j+1,j+1] = saved	
 
-            # Compute derivatives in 2D output array 'ders'
-            ders[0,:] = ndu[:,degree]
-            for r in range(0,degree+1):
-                s1 = 0
-                s2 = 1
-                a[0,0] = 1.0
-                for k in range(1,nders+1):
-                    d  = 0.0
-                    rk = r-k
-                    pk = degree-k
-                    if r >= k:
-                       a[s2,0] = a[s1,0] * ndu[pk+1,rk]
-                       d = a[s2,0] * ndu[rk,pk]
-                    j1 = 1   if (rk  > -1 ) else -rk
-                    j2 = k-1 if (r-1 <= pk) else degree-r
-                    for ij in range(j1,j2+1):
-                        a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
-                    for ij in range(j1,j2+1):
-                        d += a[s2,ij]* ndu[rk+ij,pk]
-                    if r <= pk:
-                       a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
-                       d += a[s2,k] * ndu[r,pk]
-                    ders[k,r] = d
-                    j  = s1
-                    s1 = s2
-                    s2 = j
-            basis2[ie2,:,1,iq] = ders[0,:]
-    #... We compute the error at the boundary
-    boundary_error = 0.
-    for ie1 in range(0, ne1):
-        i_span_1 = spans_1[ie1]
-        ie2      = 0
-        i_span_2 = spans_2[ie2]
-        # ...
-        lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        #... We compute firstly the span in new adapted points
-        lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        for g1 in range(0, k1):
-            xq = 0.0
-            for il_1 in range(0, p1+1):
-                #...
-                bi_0    = basis_1[ie1, il_1, 0, g1]
-                coef_u  = lcoeffs_u[il_1,0]
-                xq     +=  coef_u*bi_0        
-            #~~~~~~~~~~~~~~~
-            # Knot index at left/right boundary
-            degree = p1
-            low  = degree
-            high = len(knots_1)-1-degree
-            # Check if point is exactly on left/right boundary, or outside domain
-            if xq <= knots_1[low ]: 
-                span = low
-            elif xq >= knots_1[high]: 
-                span = high-1
-            else : 
-                # Perform binary search
-                span = (low+high)//2
-                while xq < knots_1[span] or xq >= knots_1[span+1]:
-                    if xq < knots_1[span]:
-                        high = span
-                    else:
-                        low  = span
-                    span = (low+high)//2
+    #         # Compute derivatives in 2D output array 'ders'
+    #         ders[0,:] = ndu[:,degree]
+    #         for r in range(0,degree+1):
+    #             s1 = 0
+    #             s2 = 1
+    #             a[0,0] = 1.0
+    #             for k in range(1,nders+1):
+    #                 d  = 0.0
+    #                 rk = r-k
+    #                 pk = degree-k
+    #                 if r >= k:
+    #                    a[s2,0] = a[s1,0] * ndu[pk+1,rk]
+    #                    d = a[s2,0] * ndu[rk,pk]
+    #                 j1 = 1   if (rk  > -1 ) else -rk
+    #                 j2 = k-1 if (r-1 <= pk) else degree-r
+    #                 for ij in range(j1,j2+1):
+    #                     a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
+    #                 for ij in range(j1,j2+1):
+    #                     d += a[s2,ij]* ndu[rk+ij,pk]
+    #                 if r <= pk:
+    #                    a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
+    #                    d += a[s2,k] * ndu[r,pk]
+    #                 ders[k,r] = d
+    #                 j  = s1
+    #                 s1 = s2
+    #                 s2 = j
+    #         basis2[ie2,:,1,iq] = ders[0,:]
+    # #... We compute the error at the boundary
+    # boundary_error = 0.
+    # for ie1 in range(0, ne1):
+    #     i_span_1 = spans_1[ie1]
+    #     ie2      = 0
+    #     i_span_2 = spans_2[ie2]
+    #     # ...
+    #     lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     #... We compute firstly the span in new adapted points
+    #     lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     for g1 in range(0, k1):
+    #         xq = 0.0
+    #         for il_1 in range(0, p1+1):
+    #             #...
+    #             bi_0    = basis_1[ie1, il_1, 0, g1]
+    #             coef_u  = lcoeffs_u[il_1,0]
+    #             xq     +=  coef_u*bi_0        
+    #         #~~~~~~~~~~~~~~~
+    #         # Knot index at left/right boundary
+    #         degree = p1
+    #         low  = degree
+    #         high = len(knots_1)-1-degree
+    #         # Check if point is exactly on left/right boundary, or outside domain
+    #         if xq <= knots_1[low ]: 
+    #             span = low
+    #         elif xq >= knots_1[high]: 
+    #             span = high-1
+    #         else : 
+    #             # Perform binary search
+    #             span = (low+high)//2
+    #             while xq < knots_1[span] or xq >= knots_1[span+1]:
+    #                 if xq < knots_1[span]:
+    #                     high = span
+    #                 else:
+    #                     low  = span
+    #                 span = (low+high)//2
 
-            #------------------   
-            lcoeffs_v1[ : , : ]  =  vector_v1[span : span+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_v2[ : , : ]  =  vector_v2[span : span+p1+1, i_span_2 : i_span_2+p2+1]
-            #...
-            x     = 0.0
-            y     = 0.0
-            y1    = 0.0
-            y2    = 0.0
-            for il_1 in range(0, p1+1):
-                bi_0      = basis1[ie1, il_1, 0, g1]
-                # ...in adapted points
-                coef_v1   = lcoeffs_v1[il_1,0]
-                coef_v2   = lcoeffs_v2[il_1,0]
-                x        +=  coef_v1*bi_0
-                y        +=  coef_v2*bi_0
-                # ...
-                bi_0      = basis_1[ie1, il_1, 0, g1]
-                #... approximation of composite functions
-                coeff_c1  = lcoeffs_c1[il_1,0]
-                coeff_c2  = lcoeffs_c2[il_1,0]
-                y1       +=  coeff_c1*bi_0
-                y2       +=  coeff_c2*bi_0
-            wvol   = weights_1[ie1, g1]
-            boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
-        ie2      = ne2-1
-        i_span_2 = spans_2[ie2]
-        # ...
-        lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        #... We compute firstly the span in new adapted points
-        lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        for g1 in range(0, k1):
-            g2 = 0
-            xq = 0.0
-            for il_1 in range(0, p1+1):
-                #...
-                bi_0    = basis_1[ie1, il_1, 0, g1]
-                coef_u  = lcoeffs_u[il_1,p2]
-                xq    +=  coef_u*bi_0        
-            #~~~~~~~~~~~~~~~
-            # Knot index at left/right boundary
-            degree = p1
-            low  = degree
-            high = len(knots_1)-1-degree
-            # Check if point is exactly on left/right boundary, or outside domain
-            if xq <= knots_1[low ]: 
-                span = low
-            elif xq >= knots_1[high]: 
-                span = high-1
-            else : 
-                # Perform binary search
-                span = (low+high)//2
-                while xq < knots_1[span] or xq >= knots_1[span+1]:
-                    if xq < knots_1[span]:
-                        high = span
-                    else:
-                        low  = span
-                    span = (low+high)//2
+    #         #------------------   
+    #         lcoeffs_v1[ : , : ]  =  vector_v1[span : span+p1+1, i_span_2 : i_span_2+p2+1]
+    #         lcoeffs_v2[ : , : ]  =  vector_v2[span : span+p1+1, i_span_2 : i_span_2+p2+1]
+    #         #...
+    #         x     = 0.0
+    #         y     = 0.0
+    #         y1    = 0.0
+    #         y2    = 0.0
+    #         for il_1 in range(0, p1+1):
+    #             bi_0      = basis1[ie1, il_1, 0, g1]
+    #             # ...in adapted points
+    #             coef_v1   = lcoeffs_v1[il_1,0]
+    #             coef_v2   = lcoeffs_v2[il_1,0]
+    #             x        +=  coef_v1*bi_0
+    #             y        +=  coef_v2*bi_0
+    #             # ...
+    #             bi_0      = basis_1[ie1, il_1, 0, g1]
+    #             #... approximation of composite functions
+    #             coeff_c1  = lcoeffs_c1[il_1,0]
+    #             coeff_c2  = lcoeffs_c2[il_1,0]
+    #             y1       +=  coeff_c1*bi_0
+    #             y2       +=  coeff_c2*bi_0
+    #         wvol   = weights_1[ie1, g1]
+    #         boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
+    #     ie2      = ne2-1
+    #     i_span_2 = spans_2[ie2]
+    #     # ...
+    #     lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     #... We compute firstly the span in new adapted points
+    #     lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     for g1 in range(0, k1):
+    #         g2 = 0
+    #         xq = 0.0
+    #         for il_1 in range(0, p1+1):
+    #             #...
+    #             bi_0    = basis_1[ie1, il_1, 0, g1]
+    #             coef_u  = lcoeffs_u[il_1,p2]
+    #             xq    +=  coef_u*bi_0        
+    #         #~~~~~~~~~~~~~~~
+    #         # Knot index at left/right boundary
+    #         degree = p1
+    #         low  = degree
+    #         high = len(knots_1)-1-degree
+    #         # Check if point is exactly on left/right boundary, or outside domain
+    #         if xq <= knots_1[low ]: 
+    #             span = low
+    #         elif xq >= knots_1[high]: 
+    #             span = high-1
+    #         else : 
+    #             # Perform binary search
+    #             span = (low+high)//2
+    #             while xq < knots_1[span] or xq >= knots_1[span+1]:
+    #                 if xq < knots_1[span]:
+    #                     high = span
+    #                 else:
+    #                     low  = span
+    #                 span = (low+high)//2
 
-            #------------------   
-            lcoeffs_v1[ : , : ]  =  vector_v1[span : span+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_v2[ : , : ]  =  vector_v2[span : span+p1+1, i_span_2 : i_span_2+p2+1]
-            #...
-            x     = 0.0
-            y     = 0.0
-            y1    = 0.0
-            y2    = 0.0
-            for il_1 in range(0, p1+1):
-                #...
-                bi_0      = basis1[ie1, il_1, 1, g1]
-                # ...in adapted points
-                coef_v1   = lcoeffs_v1[il_1,p2]
-                coef_v2   = lcoeffs_v2[il_1,p2]
-                x        +=  coef_v1*bi_0
-                y        +=  coef_v2*bi_0
-                # ...
-                bi_0      = basis_1[ie1, il_1, 0, g1]
-                #... approximation of composite functions
-                coeff_c1  = lcoeffs_c1[il_1,p2]
-                coeff_c2  = lcoeffs_c2[il_1,p2]
-                y1       +=  coeff_c1*bi_0
-                y2       +=  coeff_c2*bi_0
-            wvol   = weights_1[ie1, g1]
-            boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
-    for ie2 in range(0, ne2):
-        ie1      = 0
-        i_span_1 = spans_1[ie1]
-        i_span_2 = spans_2[ie2]
-        g1       = k1
-        lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        #... We compute firstly the span in new adapted points
-        lcoeffs_w[ : , : ]   = vector_w[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        for g2 in range(0, k2):
-            xq = 0.0
-            for il_2 in range(0, p2+1):
-                #...
-                bi_0    = basis_2[ie2, il_2, 0, g2]
-                coef_w  = lcoeffs_w[0,il_2]
-                xq    +=  coef_w*bi_0        
-            #~~~~~~~~~~~~~~~
-            # Knot index at left/right boundary
-            degree = p2
-            low  = degree
-            high = len(knots_2)-1-degree
-            # Check if point is exactly on left/right boundary, or outside domain
-            if xq <= knots_2[low ]: 
-                span = low
-            elif xq >= knots_2[high]: 
-                span = high-1
-            else : 
-                # Perform binary search
-                span = (low+high)//2
-                while xq < knots_2[span] or xq >= knots_2[span+1]:
-                    if xq < knots_2[span]:
-                        high = span
-                    else:
-                        low  = span
-                    span = (low+high)//2
-            #------------------   
-            lcoeffs_v1[ : , : ]  =  vector_v1[i_span_1 : i_span_1+p1+1, span : span+p2+1]
-            lcoeffs_v2[ : , : ]  =  vector_v2[i_span_1 : i_span_1+p1+1, span : span+p2+1]
-            #...
-            x     = 0.0
-            y     = 0.0
-            y1    = 0.0
-            y2    = 0.0
-            for il_2 in range(0, p2+1):
+    #         #------------------   
+    #         lcoeffs_v1[ : , : ]  =  vector_v1[span : span+p1+1, i_span_2 : i_span_2+p2+1]
+    #         lcoeffs_v2[ : , : ]  =  vector_v2[span : span+p1+1, i_span_2 : i_span_2+p2+1]
+    #         #...
+    #         x     = 0.0
+    #         y     = 0.0
+    #         y1    = 0.0
+    #         y2    = 0.0
+    #         for il_1 in range(0, p1+1):
+    #             #...
+    #             bi_0      = basis1[ie1, il_1, 1, g1]
+    #             # ...in adapted points
+    #             coef_v1   = lcoeffs_v1[il_1,p2]
+    #             coef_v2   = lcoeffs_v2[il_1,p2]
+    #             x        +=  coef_v1*bi_0
+    #             y        +=  coef_v2*bi_0
+    #             # ...
+    #             bi_0      = basis_1[ie1, il_1, 0, g1]
+    #             #... approximation of composite functions
+    #             coeff_c1  = lcoeffs_c1[il_1,p2]
+    #             coeff_c2  = lcoeffs_c2[il_1,p2]
+    #             y1       +=  coeff_c1*bi_0
+    #             y2       +=  coeff_c2*bi_0
+    #         wvol   = weights_1[ie1, g1]
+    #         boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
+    # for ie2 in range(0, ne2):
+    #     ie1      = 0
+    #     i_span_1 = spans_1[ie1]
+    #     i_span_2 = spans_2[ie2]
+    #     g1       = k1
+    #     lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     #... We compute firstly the span in new adapted points
+    #     lcoeffs_w[ : , : ]   = vector_w[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     for g2 in range(0, k2):
+    #         xq = 0.0
+    #         for il_2 in range(0, p2+1):
+    #             #...
+    #             bi_0    = basis_2[ie2, il_2, 0, g2]
+    #             coef_w  = lcoeffs_w[0,il_2]
+    #             xq    +=  coef_w*bi_0        
+    #         #~~~~~~~~~~~~~~~
+    #         # Knot index at left/right boundary
+    #         degree = p2
+    #         low  = degree
+    #         high = len(knots_2)-1-degree
+    #         # Check if point is exactly on left/right boundary, or outside domain
+    #         if xq <= knots_2[low ]: 
+    #             span = low
+    #         elif xq >= knots_2[high]: 
+    #             span = high-1
+    #         else : 
+    #             # Perform binary search
+    #             span = (low+high)//2
+    #             while xq < knots_2[span] or xq >= knots_2[span+1]:
+    #                 if xq < knots_2[span]:
+    #                     high = span
+    #                 else:
+    #                     low  = span
+    #                 span = (low+high)//2
+    #         #------------------   
+    #         lcoeffs_v1[ : , : ]  =  vector_v1[i_span_1 : i_span_1+p1+1, span : span+p2+1]
+    #         lcoeffs_v2[ : , : ]  =  vector_v2[i_span_1 : i_span_1+p1+1, span : span+p2+1]
+    #         #...
+    #         x     = 0.0
+    #         y     = 0.0
+    #         y1    = 0.0
+    #         y2    = 0.0
+    #         for il_2 in range(0, p2+1):
 
-                bi_0      = basis2[ie2, il_2, 0, g2]
-                # ...in adapted points
-                coef_v1   = lcoeffs_v1[0,il_2]
-                coef_v2   = lcoeffs_v2[0,il_2]
-                x        +=  coef_v1*bi_0
-                y        +=  coef_v2*bi_0
-                # ...
-                bi_0      = basis_2[ie2, il_2, 0, g2]
-                #... approximation of composite functions
-                coeff_c1  = lcoeffs_c1[0,il_2]
-                coeff_c2  = lcoeffs_c2[0,il_2]
-                y1       +=  coeff_c1*bi_0
-                y2       +=  coeff_c2*bi_0
-            wvol   = weights_2[ie2, g2]
-            boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
-        ie1      = ne1-1
-        i_span_1 = spans_1[ie1]
-        i_span_2 = spans_2[ie2]
-        lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        #... We compute firstly the span in new adapted points
-        lcoeffs_w[ : , : ]   = vector_w[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-        for g2 in range(0, k2):
-            xq = 0.0
-            for il_2 in range(0, p2+1):
-                #...
-                bi_0    = basis_2[ie2, il_2, 0, g2]
-                coef_w  = lcoeffs_w[p1,il_2]
-                xq    +=  coef_w*bi_0        
-            #~~~~~~~~~~~~~~~
-            # Knot index at left/right boundary
-            degree = p2
-            low  = degree
-            high = len(knots_2)-1-degree
-            # Check if point is exactly on left/right boundary, or outside domain
-            if xq <= knots_2[low ]: 
-                span = low
-            elif xq >= knots_2[high]: 
-                span = high-1
-            else : 
-                # Perform binary search
-                span = (low+high)//2
-                while xq < knots_2[span] or xq >= knots_2[span+1]:
-                    if xq < knots_2[span]:
-                        high = span
-                    else:
-                        low  = span
-                    span = (low+high)//2
-            #------------------   
-            lcoeffs_v1[ : , : ]  =  vector_v1[i_span_1 : i_span_1+p1+1, span : span+p2+1]
-            lcoeffs_v2[ : , : ]  =  vector_v2[i_span_1 : i_span_1+p1+1, span : span+p2+1]
-            #...
-            x     = 0.0
-            y     = 0.0
-            y1    = 0.0
-            y2    = 0.0
-            il_1  = 0
-            for il_2 in range(0, p2+1):
+    #             bi_0      = basis2[ie2, il_2, 0, g2]
+    #             # ...in adapted points
+    #             coef_v1   = lcoeffs_v1[0,il_2]
+    #             coef_v2   = lcoeffs_v2[0,il_2]
+    #             x        +=  coef_v1*bi_0
+    #             y        +=  coef_v2*bi_0
+    #             # ...
+    #             bi_0      = basis_2[ie2, il_2, 0, g2]
+    #             #... approximation of composite functions
+    #             coeff_c1  = lcoeffs_c1[0,il_2]
+    #             coeff_c2  = lcoeffs_c2[0,il_2]
+    #             y1       +=  coeff_c1*bi_0
+    #             y2       +=  coeff_c2*bi_0
+    #         wvol   = weights_2[ie2, g2]
+    #         boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
+    #     ie1      = ne1-1
+    #     i_span_1 = spans_1[ie1]
+    #     i_span_2 = spans_2[ie2]
+    #     lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     #... We compute firstly the span in new adapted points
+    #     lcoeffs_w[ : , : ]   = vector_w[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+    #     for g2 in range(0, k2):
+    #         xq = 0.0
+    #         for il_2 in range(0, p2+1):
+    #             #...
+    #             bi_0    = basis_2[ie2, il_2, 0, g2]
+    #             coef_w  = lcoeffs_w[p1,il_2]
+    #             xq    +=  coef_w*bi_0        
+    #         #~~~~~~~~~~~~~~~
+    #         # Knot index at left/right boundary
+    #         degree = p2
+    #         low  = degree
+    #         high = len(knots_2)-1-degree
+    #         # Check if point is exactly on left/right boundary, or outside domain
+    #         if xq <= knots_2[low ]: 
+    #             span = low
+    #         elif xq >= knots_2[high]: 
+    #             span = high-1
+    #         else : 
+    #             # Perform binary search
+    #             span = (low+high)//2
+    #             while xq < knots_2[span] or xq >= knots_2[span+1]:
+    #                 if xq < knots_2[span]:
+    #                     high = span
+    #                 else:
+    #                     low  = span
+    #                 span = (low+high)//2
+    #         #------------------   
+    #         lcoeffs_v1[ : , : ]  =  vector_v1[i_span_1 : i_span_1+p1+1, span : span+p2+1]
+    #         lcoeffs_v2[ : , : ]  =  vector_v2[i_span_1 : i_span_1+p1+1, span : span+p2+1]
+    #         #...
+    #         x     = 0.0
+    #         y     = 0.0
+    #         y1    = 0.0
+    #         y2    = 0.0
+    #         il_1  = 0
+    #         for il_2 in range(0, p2+1):
 
-                bi_0      = basis2[ie2, il_2, 1, g2]
-                # ...in adapted points
-                coef_v1   = lcoeffs_v1[p1,il_2]
-                coef_v2   = lcoeffs_v2[p1,il_2]
-                x        +=  coef_v1*bi_0
-                y        +=  coef_v2*bi_0
-                # ...
-                bi_0      = basis_2[ie2, il_2, 0, g2]
-                #... approximation of composite functions
-                coeff_c1  = lcoeffs_c1[p1,il_2]
-                coeff_c2  = lcoeffs_c2[p1,il_2]
-                y1       +=  coeff_c1*bi_0
-                y2       +=  coeff_c2*bi_0
-            wvol   = weights_2[ie2, g2]
-            boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
-    rhs[p1,p2+4] = sqrt(boundary_error)
-    # ...
+    #             bi_0      = basis2[ie2, il_2, 1, g2]
+    #             # ...in adapted points
+    #             coef_v1   = lcoeffs_v1[p1,il_2]
+    #             coef_v2   = lcoeffs_v2[p1,il_2]
+    #             x        +=  coef_v1*bi_0
+    #             y        +=  coef_v2*bi_0
+    #             # ...
+    #             bi_0      = basis_2[ie2, il_2, 0, g2]
+    #             #... approximation of composite functions
+    #             coeff_c1  = lcoeffs_c1[p1,il_2]
+    #             coeff_c2  = lcoeffs_c2[p1,il_2]
+    #             y1       +=  coeff_c1*bi_0
+    #             y2       +=  coeff_c2*bi_0
+    #         wvol   = weights_2[ie2, g2]
+    #         boundary_error += ((x-y1)**2+(y-y2)**2) * wvol
+    # rhs[p1,p2+5] = sqrt(boundary_error)
+    # # ...
 
 # Assembles Quality of mesh adaptation
 #==============================================================================

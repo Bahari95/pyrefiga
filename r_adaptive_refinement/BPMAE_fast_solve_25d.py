@@ -15,12 +15,14 @@ from   pyrefiga                    import getGeometryMap
 #... import matrix assembly kernels
 from   pyrefiga                   import assemble_stiffness1D
 from   pyrefiga                   import assemble_mass1D
+# ... for visualization
+from   pyrefiga                    import paraview_nurbsAdMeshMultipatch, paraview_nurbsSolutionMultipatch
 #..
-from   gallery_section_08      import assemble_vector_ex01
-from   gallery_section_08      import assemble_vector_ex02
-from   gallery_section_08      import assemble_vector_ex04
-from   gallery_section_08      import assemble_vectorbasis_ex02
-from   gallery_section_08      import assemble_Quality_ex01
+from   gallery_section_18      import assemble_vector_ex01
+from   gallery_section_18      import assemble_vector_ex02
+from   gallery_section_18      import assemble_vector_ex04
+from   gallery_section_18      import assemble_vectorbasis_ex02
+from   gallery_section_18      import assemble_Quality_ex01
 
 #..
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
@@ -57,7 +59,7 @@ args = parser.parse_args()
 
 #==============================================================================
 #.......Poisson ALGORITHM
-def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None, quad_degree = None):
+def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, u13_mpH, x_2 = None, tol = None, niter = None, quad_degree = None):
        
       #...  find corners of the domain
       corners    = np.asarray([V1.knots[0], V1.knots[-1], V2.knots[0], V2.knots[-1]])
@@ -145,7 +147,7 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None
          spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11, u12)
          #---Assembles a right hand side of Poisson equation
          rhs          = StencilVector(V.vector_space)
-         rhs          = assemble_rhs(V, fields = [u11, u12, u11_mpH, u12_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2, corners], out= rhs)
+         rhs          = assemble_rhs(V, fields = [u11, u12, u11_mpH, u12_mpH, u13_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2, corners], out= rhs)
          b            = rhs.toarray()
          # ... Solve first system
          x2           = poisson.solve(b)
@@ -176,37 +178,43 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None
       # ... computes spans and basis in adapted quadrature 
       # spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11, u12)
       # Create spline spaces for each direction
-      grids = np.linspace(0, 1, V1.nelements*1+1)
+      grids = np.linspace(0, 1, V1.nelements*5+1)
       Vs1   = SplineSpace(degree=V.degree[0], grid = V.grid[0], nderiv = 1, omega = V.omega[0], sharing_grid = grids, quad_degree = quad_degree)
       Vs2   = SplineSpace(degree=V.degree[1], grid = V.grid[1], nderiv = 1, omega = V.omega[1], sharing_grid = grids, quad_degree = quad_degree)
       Vh            = TensorSpace(Vs1, Vs2)
       #... Return solution
       v11           = StencilVector(V.vector_space)
       v12           = StencilVector(V.vector_space)
+      v13           = StencilVector(V.vector_space)
       #... Project back to the fine mesh
       # rhs           = assemble_comp(V, fields = [u11_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
       rhs           = assemble_comp(Vh, fields = [u11, u12, u11_mpH], knots= True, value = [V1.omega, V2.omega])
       vx11          = poisson.project(rhs.toarray()).reshape(V.nbasis)
-      from pyrefiga import build_dirichlet
-      f_exact       = ['x+0.*y']
-      x_d = build_dirichlet(V, f_exact, map = (u11_mpH.toarray().reshape(V.nbasis), u12_mpH.toarray().reshape(V.nbasis)), admap=( x11, x12, V, V) )[0]
-      vx11[0,:]   = x_d[0,:]
-      vx11[-1,:]  = x_d[-1,:]
-      vx11[:, 0]  = x_d[:, 0]
-      vx11[:,-1]  = x_d[:,-1]
+      # from pyrefiga import build_dirichlet
+      # f_exact       = ['x+0.*y']
+      # x_d = build_dirichlet(V, f_exact, map = (u11_mpH.toarray().reshape(V.nbasis), u12_mpH.toarray().reshape(V.nbasis)), admap=( x11, x12, V, V) )[0]
+      # vx11[0,:]   = x_d[0,:]
+      # vx11[-1,:]  = x_d[-1,:]
+      # vx11[:, 0]  = x_d[:, 0]
+      # vx11[:,-1]  = x_d[:,-1]
       v11.from_array(V, vx11)
       #___
       # rhs           = assemble_comp(V, fields = [u12_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
       rhs            = assemble_comp(Vh, fields = [u11, u12, u12_mpH], knots= True, value = [V1.omega, V2.omega])
       vx12           = poisson.project(rhs.toarray()).reshape(V.nbasis)
-      f_exact = ['0.*x+y']
-      x_d = build_dirichlet(V, f_exact, map = (u11_mpH.toarray().reshape(V.nbasis), u12_mpH.toarray().reshape(V.nbasis)), admap=( x11, x12, V, V) )[0]
-      vx12[0,:]   = x_d[0,:]
-      vx12[-1,:]  = x_d[-1,:]
-      vx12[:, 0]  = x_d[:, 0]
-      vx12[:,-1]  = x_d[:,-1]
+      # f_exact = ['0.*x+y']
+      # x_d = build_dirichlet(V, f_exact, map = (u11_mpH.toarray().reshape(V.nbasis), u12_mpH.toarray().reshape(V.nbasis)), admap=( x11, x12, V, V) )[0]
+      # vx12[0,:]   = x_d[0,:]
+      # vx12[-1,:]  = x_d[-1,:]
+      # vx12[:, 0]  = x_d[:, 0]
+      # vx12[:,-1]  = x_d[:,-1]
       v12.from_array(V, vx12)            
-      return v11, v12, vx11, vx12, u11, u12, x11, x12
+      #___
+      # rhs           = assemble_comp(V, fields = [u12_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
+      rhs            = assemble_comp(Vh, fields = [u11, u12, u13_mpH], knots= True, value = [V1.omega, V2.omega])
+      vx13           = poisson.project(rhs.toarray()).reshape(V.nbasis)
+      v13.from_array(V, vx13)      
+      return v11, v12, v13, vx11, vx12, vx13, u11, u12, x11, x12
 
 # # .................................................................
 # ....................Using Two or Multi grid method for soving MAE
@@ -242,6 +250,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
    MultipatchVh    = []
    Multipatchmpx   = []
    Multipatchmpy   = []
+   Multipatchmpz   = []
    Multipatchadx   = []
    Multipatchady   = []
    l2_Quality      = 0.
@@ -251,31 +260,32 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
       mp              = getGeometryMap(geometry,i)
       mp.nurbs_check  = True # Activate NURBS if geometry uses NURBS
       # ... Assembling mapping
-      weight, xmp, ymp = mp.RefineGeometryMap(numElevate=nb_ne)
-      # ... Assembling mapping
-      # wm1, wm2         = weight[:,0], weight[0,:]   
+      weight, xmp, ymp, zmp   = mp.RefineGeometryMap(numElevate=nb_ne)
       #.....
-      Multipatchmpx.append(xmp)
-      Multipatchmpy.append(ymp)
       MultipatchVh.append(Vh)
       # ...
       u11_mph         = StencilVector(Vh.vector_space)
       u12_mph         = StencilVector(Vh.vector_space)
+      u13_mph         = StencilVector(Vh.vector_space)
       u11_mph.from_array(Vh, xmp)
       u12_mph.from_array(Vh, ymp)
+      u13_mph.from_array(Vh, zmp)
 
       start            = time.time()
-      v11_H, v12_H, vx11uh, vx12uh, u11_pH, u12_pH, x11uh, x12uh     = bmae_solve(V1, V2, Vh, u11_mph, u12_mph, quad_degree = quad_degree)
+      v11_H, v12_H, v13_H, vx11uh, vx12uh, vx13uh, u11_pH, u12_pH, x11uh, x12uh     = bmae_solve(V1, V2, Vh, u11_mph, u12_mph, u13_mph, quad_degree = quad_degree)
       MG_time         += time.time()- start
-      from pyrefiga import save_geometry_to_xml
-      print('weights =', Vh.omega)
-      Gmap  = np.zeros((V1.nbasis*V2.nbasis,2))
-      Gmap[:,0] = v11_H.toarray()[:]
-      Gmap[:,1] = v12_H.toarray()[:]
-      save_geometry_to_xml(Vh, Gmap, locname = "figs/admapping_patch")
+      # from pyrefiga import save_geometry_to_xml
+      # print('weights =', Vh.omega)
+      # Gmap  = np.zeros((V1.nbasis*V2.nbasis,2))
+      # Gmap[:,0] = v11_H.toarray()[:]
+      # Gmap[:,1] = v12_H.toarray()[:]
+      # save_geometry_to_xml(Vh, Gmap, locname = "figs/admapping_patch")
       #...
-      Multipatchadx.append(vx11uh)
-      Multipatchady.append(vx12uh)
+      Multipatchadx.append(x11uh)
+      Multipatchady.append(x12uh)
+      Multipatchmpx.append(vx11uh)
+      Multipatchmpy.append(vx12uh)
+      Multipatchmpz.append(vx13uh)
       if check :
          print("		Mapping for patch", i, "computed in", round(MG_time, 3), "seconds")
       # ...
@@ -289,7 +299,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
       Quad_adm         = quadratures_in_admesh(Vh, True)
       spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11_pH, u12_pH)
       Quality          = StencilVector(Vh.vector_space)
-      Quality          = assemble_Quality(Vh, fields=[u11_pH, u12_pH, u11_mph, u12_mph, v11_H, v12_H],knots = True, value = [times, spans_ad1, spans_ad2, basis_ad1, basis_ad2],  out = Quality)
+      Quality          = assemble_Quality(Vh, fields=[u11_pH, u12_pH, u11_mph, u12_mph, u13_mph, v11_H, v12_H, v13_H],knots = True, value = [times, spans_ad1, spans_ad2, basis_ad1, basis_ad2],  out = Quality)
       norm             = Quality.toarray()
       l2_Quality      += norm[0]**2
       l2_displacement += norm[1]**2
@@ -297,7 +307,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
 
    l2_Quality       = sqrt(l2_Quality     )
    l2_displacement  = sqrt(l2_displacement)
-   return Vh.nelements, l2_Quality, MG_time, l2_displacement, Multipatchadx, Multipatchady, Multipatchmpx, Multipatchmpy, MultipatchVh,norm[2], norm[3], norm[4]
+   return Vh.nelements, l2_Quality, MG_time, l2_displacement, Multipatchadx, Multipatchady, Multipatchmpx, Multipatchmpy, Multipatchmpz, MultipatchVh,norm[2], norm[3], norm[4]
 
 # # ........................................................
 # ....................For generating tables
@@ -306,7 +316,7 @@ if True :
    # ... unit-square
    #geometry = '../fields/unit_square.xml'
 
-   geometry = '../fields/circle.xml'
+   # geometry = '../fields/circle.xml'
 
    # ... quarter annulus
    #geometry = '../fields/quart_annulus.xml'
@@ -315,6 +325,7 @@ if True :
    #geometry = '../fields/lake.xml'
 
    # geometry = '../fields/elasticity.xml'
+   geometry = '../fields/egg.xml'
 
    #geometry = '../fields/nice_geo.xml'   
    # ... new discretization for plot
@@ -326,14 +337,14 @@ if True :
    print("		\hline")
    print("		$\#$cells & CPU-time (s) & Qual &$\min~\\text{Jac}(\PsiPsi)$ &$\max ~\\text{Jac}(\PsiPsi)$ \\\\")
    print("		\hline")
-   for ne in range(3,4):
+   for ne in range(3,6):
 
       nb_ne = 2**ne
       nelements, l2_Quality, MG_time, l2_displacement, MPadx, MPady, MPmpx, MPmpy, MPmpz, MPVh,norm2, norm3, norm4 = Bahari_solver(nb_ne, geometry= geometry)
-      table[0,ne-4] = (MPVh[0].degree[0]+MPVh[0].nelements[0])*(MPVh[0].degree[0]+MPVh[0].nelements[1])
-      table[1,ne-4] = norm2
-      table[2,ne-4] = norm3
-      table[3,ne-4] = norm4
+      table[0,ne-3] = (MPVh[0].degree[0]+MPVh[0].nelements[0])*(MPVh[0].degree[0]+MPVh[0].nelements[1])
+      table[1,ne-3] = norm2
+      table[2,ne-3] = norm3
+      table[3,ne-3] = norm4
       # #---Compute a mapping
       # uxx = np.zeros((len(MPVh)*nbpts, nbpts))
       # uyy = np.zeros((len(MPVh)*nbpts, nbpts))
@@ -379,7 +390,7 @@ if True :
 #rho  = '9./(2.+np.cos(10.*np.pi*np.sqrt((x)**2+(y+2.)**2)))'
 #rho   = '1.+9.*np.exp(-10.*np.abs((x-0.5-0.0*np.cos(2.*np.pi*0.))**2-(y-0.5-0.5 *np.sin(2.*np.pi*0.))**2- 0.09))'
 
-rho   = '1.+5.*np.exp(-0.25*np.abs((x-0.)**2+(y-0.)**2-1.05**2))'
+rho   = '9./(2.+np.cos(2.*np.pi*np.sqrt((x)**2+(y+2.)**2+z**2)))'
 #rho = '1+5*np.exp(-100*np.abs((x-0.45)**2+(y-0.4)**2-0.09))+5.*np.exp(-100.*np.abs(x**2+y**2-0.2))+5.*np.exp(-100*np.abs((x+0.45)**2 +(y-0.4)**2-0.1))+7.*np.exp(-100.*np.abs(x**2+(y+1.25)**2-0.4))'
 
 #rho = '1+5.*np.exp(-50.*np.abs(x**2+y**2-0.5))'
@@ -391,12 +402,12 @@ rho   = '1.+5.*np.exp(-0.25*np.abs((x-0.)**2+(y-0.)**2-1.05**2))'
 
 # ... test butterfly
 #rho       = lambda x,y : 2.+np.sin(10.*np.pi*np.sqrt((x-0.6)**2+(y-0.6)**2)) 
-from   pyrefiga                    import paraview_nurbsAdMeshMultipatch, paraview_nurbsSolutionMultipatch
+
 functions = [
     {"name": "density", "expression": rho},
 ]
 #paraview_nurbsAdMeshMultipatch(nbpts, MPVh, MPmpx, MPmpy, MPadx, MPady, functions = functions)
-paraview_nurbsSolutionMultipatch(nbpts, MPVh, MPadx, MPady, functions = functions, filename = "figs/admultipatch_multiblock")
+paraview_nurbsSolutionMultipatch(nbpts, MPVh, MPmpx, MPmpy, zmp = MPmpz, functions = functions, filename = "figs/admultipatch_multiblock")
 #------------------------------------------------------------------------------
 # Show or close plots depending on argument
 if args.plot :

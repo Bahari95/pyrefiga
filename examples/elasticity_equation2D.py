@@ -124,7 +124,7 @@ args = parser.parse_args()
 #------------------------------------------------------------------------------
 # Problem parameters and mesh refinement
 nbpts           = 100
-RefinNumber     = 2
+RefinNumber     = 3
 
 En              = 1e5
 nu              = 0.3
@@ -135,12 +135,11 @@ lanbda          = 2.*lanbda_3d*mu/(lanbda_3d+2.*mu)
 
 order_cv        = 0. # Convergence order
 
-Nelements      = (16, 16) # Initial number of elements
-
 #------------------------------------------------------------------------------
 # Geometry mapping and mesh refinement loop
 start          = time.time()
 mp             = getGeometryMap('../fields/elasticity.xml', 0)
+
 mp.nurbs_check = True # Use NURBS mapping
 degree         = mp.degree
 quad_degree    = max(degree[0],degree[1])+3
@@ -151,14 +150,15 @@ print("		\hline")
 print("		$\#$cells &  CPU-time (s) & $l^2$-err-r & order \\\\")
 print("		\hline")
 for nb_ne in range(4,RefinNumber+4):
-    nelements       =  2**nb_ne
-    Nelements       = (nelements,nelements)
+    grids1 = mp.Refinegrid(0, numElevate = nb_ne)
+    grids2 = mp.Refinegrid(1, numElevate = nb_ne)
+    Nelements       = (len(grids1)-1, len(grids2)-1)
     # Refine geometry and get weights and control points
-    weight, xmp, ymp  = mp.RefineGeometryMap(Nelements=Nelements)
+    weight, xmp, ymp  = mp.RefineGeometryMap(numElevate = nb_ne)
     wm1, wm2 = weight[:,0], weight[0,:] 
 
-    V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0, Nelements), omega = wm1, nderiv = 1, quad_degree = quad_degree)
-    V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1, Nelements), omega = wm2, nderiv = 1, quad_degree = quad_degree)
+    V1 = SplineSpace(degree=degree[0], grid = grids1, omega = wm1, nderiv = 1, quad_degree = quad_degree)
+    V2 = SplineSpace(degree=degree[1], grid = grids2, omega = wm2, nderiv = 1, quad_degree = quad_degree)
     Vh = TensorSpace(V1, V2)
 
     u11_pH       = StencilVector(Vh.vector_space)
