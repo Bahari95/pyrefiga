@@ -1,7 +1,7 @@
 #=====================================================================================
 # ... The Hdiv mapping space can be selected independently of the initial mapping space.
 #=====================================================================================
-def assemble_basis_spans_in_adquadrature(ne1:'int', ne2:'int', ne3:'int', ne4:'int', ne5:'int', ne6:'int', p1:'int', p2:'int', p3:'int', p4:'int', p5:'int', p6:'int', spans_1:'int[:]', spans_2:'int[:]',  spans_3:'int[:]', spans_4:'int[:]', basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', basis_3:'float[:,:,:,:]', basis_4:'float[:,:,:,:]', basis_5:'float[:,:,:,:]', basis_6:'float[:,:,:,:]', weights_1:'float[:,:]', weights_2:'float[:,:]', weights_3:'float[:,:]', weights_4:'float[:,:]', weights_5:'float[:,:]', weights_6:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', points_3:'float[:,:]', points_4:'float[:,:]', points_5:'float[:,:]', points_6:'float[:,:]', knots_1:'float[:]', knots_2:'float[:]', knots_3:'float[:]', knots_4:'float[:]', knots_5:'float[:]', knots_6:'float[:]', vector_u:'float[:,:]', vector_w:'float[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float[:,:,:,:,:,:]', basis_ad2:'float[:,:,:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature(ne1:'int', ne2:'int', ne3:'int', ne4:'int', ne5:'int', ne6:'int', p1:'int', p2:'int', p3:'int', p4:'int', p5:'int', p6:'int', spans_1:'int[:]', spans_2:'int[:]',  spans_3:'int[:]', spans_4:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]', basis_4:'float64[:,:,:,:]', basis_5:'float64[:,:,:,:]', basis_6:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', weights_4:'float64[:,:]', weights_5:'float64[:,:]', weights_6:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', points_3:'float64[:,:]', points_4:'float64[:,:]', points_5:'float64[:,:]', points_6:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', knots_4:'float64[:]', knots_5:'float64[:]', knots_6:'float64[:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -226,7 +226,7 @@ def assemble_basis_spans_in_adquadrature(ne1:'int', ne2:'int', ne3:'int', ne4:'i
 # ... L2-B-spline space for Hdiv mapping is the same as for initial mapping.
 #===========================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_basis_spans_in_adquadrature_same_space(ne1:'int', ne2:'int', ne3:'int', ne4:'int', p1:'int', p2:'int', p3:'int', p4:'int', spans_1:'int[:]', spans_2:'int[:]',  spans_3:'int[:]', spans_4:'int[:]', basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', basis_3:'float[:,:,:,:]', basis_4:'float[:,:,:,:]', weights_1:'float[:,:]', weights_2:'float[:,:]', weights_3:'float[:,:]', weights_4:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', points_3:'float[:,:]', points_4:'float[:,:]', knots_1:'float[:]', knots_2:'float[:]', knots_3:'float[:]', knots_4:'float[:]', vector_u:'float[:,:]', vector_w:'float[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float[:,:,:,:,:,:]', basis_ad2:'float[:,:,:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature_same_space(ne1:'int', ne2:'int', ne3:'int', ne4:'int', p1:'int', p2:'int', p3:'int', p4:'int', spans_1:'int[:]', spans_2:'int[:]',  spans_3:'int[:]', spans_4:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]', basis_4:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', weights_4:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', points_3:'float64[:,:]', points_4:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', knots_4:'float64[:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -450,7 +450,7 @@ def assemble_basis_spans_in_adquadrature_same_space(ne1:'int', ne2:'int', ne3:'i
 # ... L2-B-spline space for Gradien mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_basis_spans_in_adquadrature_gradmap(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', weights_1:'float[:,:]', weights_2:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', knots_1:'float[:]', knots_2:'float[:]', vector_u:'float[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float[:,:,:,:,:,:]', basis_ad2:'float[:,:,:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature_gradmap(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', vector_u:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -666,7 +666,7 @@ def assemble_basis_spans_in_adquadrature_gradmap(ne1:'int', ne2:'int', p1:'int',
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_basis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float[:,:,:,:]', weights_1:'float[:,:]', points_1:'float[:,:]', knots_1:'float[:]', vector_u:'float[:]',  spans_ad:'int[:,:]', basis_ad:'float[:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', points_1:'float64[:,:]', knots_1:'float64[:]', vector_u:'float64[:]',  spans_ad:'int[:,:]', basis_ad:'float64[:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -781,7 +781,7 @@ def assemble_basis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'i
 # ... L2-B-spline space for L^2 mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', weights_1:'float[:,:]', weights_2:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', knots_1:'float[:]', knots_2:'float[:]', vector_u1:'float[:,:]', vector_u2:'float[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float[:,:,:,:,:,:]', basis_ad2:'float[:,:,:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -997,7 +997,7 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping. in 3D
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', basis_3:'float[:,:,:,:]',  weights_1:'float[:,:]', weights_2:'float[:,:]', weights_3:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', points_3:'float[:,:]', knots_1:'float[:]', knots_2:'float[:]', knots_3:'float[:]', vector_u1:'float[:,:,:]', vector_u2:'float[:,:,:]', vector_u3:'float[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float[:,:,:,:,:,:,:,:]', basis_ad2:'float[:,:,:,:,:,:,:,:]', basis_ad3:'float[:,:,:,:,:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', points_3:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', vector_u1:'float64[:,:,:]', vector_u2:'float64[:,:,:]', vector_u3:'float64[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:,:,:]', basis_ad3:'float64[:,:,:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -1308,7 +1308,7 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
                                 r = r * (degree-i_ders)
 # assembles stiffness matrix 1D
 #==============================================================================
-def assemble_stiffnessmatrix1D(ne:'int', degree:'int', spans:'int[:]', basis:'float[:,:,:,:]', weights:'float[:,:]', points:'float[:,:]',  matrix:'float[:,:]'):
+def assemble_stiffnessmatrix1D(ne:'int', degree:'int', spans:'int[:]', basis:'float64[:,:,:,:]', weights:'float64[:,:]', points:'float64[:,:]',  matrix:'float64[:,:]'):
 
     # ... sizes
     k1 = weights.shape[1]
@@ -1335,7 +1335,7 @@ def assemble_stiffnessmatrix1D(ne:'int', degree:'int', spans:'int[:]', basis:'fl
 
 # assembles mass matrix 1D
 #=============================================================================================
-def assemble_massmatrix1D(ne:'int', degree:'int', spans:'int[:]', basis:'float[:,:,:,:]', weights:'float[:,:]', points:'float[:,:]',  matrix:'float[:,:]'):
+def assemble_massmatrix1D(ne:'int', degree:'int', spans:'int[:]', basis:'float64[:,:,:,:]', weights:'float64[:,:]', points:'float64[:,:]',  matrix:'float64[:,:]'):
 
     # ... sizes
     k1 = weights.shape[1]
@@ -1361,7 +1361,7 @@ def assemble_massmatrix1D(ne:'int', degree:'int', spans:'int[:]', basis:'float[:
                             matrix[degree+i1, degree+ i2-i1]  += v
     # ...
 
-def assemble_matrix_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', weights_1:'float[:,:]', weights_2:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', matrix:'float[:,:]'):
+def assemble_matrix_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', matrix:'float64[:,:]'):
 
     # ... sizes
     k1 = weights_1.shape[1]
@@ -1389,7 +1389,7 @@ def assemble_matrix_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[
                             matrix[i1+p1,i2+p2]  += v
     # ...
 
-def assemble_matrix_ex02(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', weights_1:'float[:,:]', weights_2:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', matrix:'float[:,:]'):
+def assemble_matrix_ex02(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', matrix:'float64[:,:]'):
 
     # ... sizes
     k1 = weights_1.shape[1]

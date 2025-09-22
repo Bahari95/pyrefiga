@@ -8,7 +8,7 @@ from pyccel.decorators import types
 
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]',  'float[:]', 'double[:,:]')
+@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'float64[:,:,:,:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]',  'float64[:,:]',  'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'int[:,:,:,:]', 'int[:,:,:,:]', 'float64[:,:,:,:,:,:]', 'float64[:,:,:,:,:,:]',  'float64[:]', 'float64[:,:]')
 def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_u, vector_w, vector_v1, vector_v2, spans_ad1, spans_ad2, basis_ad1, basis_ad2, corners, rhs):
 
     from numpy import exp
@@ -71,8 +71,8 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
                     #rho   = 9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
                     #rho   =  1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09))
-                    rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
-                    #rho   = 1.+9./cosh( 80.*((x + y) )**2 )
+                    #rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
+                    rho   = 1.+12./cosh( 80.*((x + y) )**2 )
                     #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
                     #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
                     Crho += rho * wvol 
@@ -149,8 +149,8 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #rho  = Crho/(5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2))))
                     #rho  = Crho/(9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2))))
                     #rho   =  Crho/(1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09)))
-                    rho   = Crho/(1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2)))
-                    #rho   = Crho/(1.+12./cosh( 80.*((x + y) )**2 ))
+                    #rho   = Crho/(1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2)))
+                    rho   = Crho/(1.+12./cosh( 80.*((x + y) )**2 ))
                     #rho   = Crho/(1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2)
                     #rho   = Crho/(1+10.*exp(-50.*abs(x**2+y**2-0.5)))
 
@@ -225,7 +225,7 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
 
 #==============================================================================
 #
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'double[:,:]', 'int','double[:,:]')
+@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'float64[:,:,:,:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]',  'float64[:,:]',  'float64[:,:]', 'float64[:,:]', 'int','float64[:,:]')
 def assemble_vector_ex02(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2,  vector_v, dx, rhs):
 
     from numpy import zeros
@@ -285,7 +285,7 @@ def assemble_vector_ex02(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
 
     #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int[:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'float[:]', 'float', 'double[:]')
+@types('int', 'int', 'int[:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:]', 'float64', 'float64[:]')
 def assemble_vectorbasis_ex02(ne1, p1, spans_1,  basis_1,  weights_1, points_1,  knots_1, ovlp_value, rhs):
     from numpy import zeros
     from numpy import empty
@@ -374,7 +374,7 @@ def assemble_vectorbasis_ex02(ne1, p1, spans_1,  basis_1,  weights_1, points_1, 
 
 # Assembles Quality of mesh adaptation
 #==============================================================================
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:]')
+@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'float64[:,:,:,:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'int[:,:,:,:]', 'int[:,:,:,:]', 'float64[:,:,:,:,:,:]', 'float64[:,:,:,:,:,:]', 'float64[:,:]')
 def assemble_vector_ex03(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_v1, spans_ad1, spans_ad2, basis_ad1, basis_ad2, rhs):
 
     from numpy import exp
@@ -437,8 +437,20 @@ def assemble_vector_ex03(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
     # ...
 # Assembles Quality of mesh adaptation
 #==============================================================================
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]', 'float[:]', 'float[:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:]')
-def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, knots_1, knots_2, vector_u, vector_w, vector_v1, vector_v2, vector_c1, vector_c2, times, spans_ad1, spans_ad2, basis_ad1, basis_ad2, rhs):
+def assemble_Quality_ex01(
+    ne1: 'int', ne2: 'int', p1: 'int', p2: 'int',
+    spans_1: 'int[:]', spans_2: 'int[:]',
+    basis_1: 'float64[:,:,:,:]', basis_2: 'float64[:,:,:,:]',
+    weights_1: 'float64[:,:]', weights_2: 'float64[:,:]',
+    points_1: 'float64[:,:]', points_2: 'float64[:,:]',
+    knots_1: 'float64[:]', knots_2: 'float64[:]',
+    vector_u: 'float64[:,:]', vector_w: 'float64[:,:]',
+    vector_v1: 'float64[:,:]', vector_v2: 'float64[:,:]',
+    vector_c1: 'float64[:,:]', vector_c2: 'float64[:,:]',
+    times: 'float', spans_ad1: 'int[:,:,:,:]', spans_ad2: 'int[:,:,:,:]',
+    basis_ad1: 'float64[:,:,:,:,:,:]', basis_ad2: 'float64[:,:,:,:,:,:]',
+    rhs: 'float64[:,:]'
+):
 
     from numpy import exp
     from numpy import cos
@@ -467,6 +479,7 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
 
     Qual_l2      = 0.                                
     displacement = 0.
+    area_exact   = 0.
     area_comp    = 0.
     area_appr    = 0.
     cst          = 1.
@@ -474,17 +487,20 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
         i_span_1 = spans_1[ie1]
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
-            v = 0.0
-            w = 0.0
+
+            lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_w[ : , : ]   = vector_w[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_u1[ : , : ]  = vector_v1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_u2[ : , : ]  = vector_v2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            v             = 0.0
+            w             = 0.0
+            warea_exact   = 0.0
+            warea_comp    = 0.0
+            warea_appr    = 0.0
             for g1 in range(0, k1):
                 for g2 in range(0, k2):
-
-                    lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-                    lcoeffs_w[ : , : ]   = vector_w[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-                    lcoeffs_u1[ : , : ]  = vector_v1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-                    lcoeffs_u2[ : , : ]  = vector_v2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-                    lcoeffs_c1[ : , : ]  = vector_c1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-                    lcoeffs_c2[ : , : ]  = vector_c2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
 
                     #... We compute firstly the span in new adapted points
                     span_5 = spans_ad1[ie1, ie2, g1, g2]
@@ -493,20 +509,21 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     #------------------   
                     lcoeffs_v1[ : , : ]  =  vector_v1[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
                     lcoeffs_v2[ : , : ]  =  vector_v2[span_5 : span_5+p1+1, span_6 : span_6+p2+1]
-                    #...
+                    # ...
                     x     = 0.0
                     y     = 0.0
                     uhx   = 0.0
                     uhy   = 0.0
                     vhx   = 0.0
                     vhy   = 0.0
+                    # ...
                     x1    = 0.0
                     x2    = 0.0
                     I1x   = 0.0
                     I1y   = 0.0
                     I2x   = 0.0
                     I2y   = 0.0
-                    #.
+                    # ...
                     F1x   = 0.0
                     F1y   = 0.0
                     F2x   = 0.0
@@ -519,18 +536,20 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     G2y   = 0.0
                     for il_1 in range(0, p1+1):
                           for il_2 in range(0, p2+1):
+
+                                bj_0      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
+                                bj_x      = basis_ad1[ie1, ie2, il_1, 1, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
+                                bj_y      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 1, g1, g2]
+                                # ..
                                 coef_v1   = lcoeffs_v1[il_1,il_2]
                                 coef_v2   = lcoeffs_v2[il_1,il_2]
-                                bi_0      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
-                                bi_x      = basis_ad1[ie1, ie2, il_1, 1, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
-                                bi_y      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 1, g1, g2]
                                 # ...in adapted points
-                                x        +=  coef_v1*bi_0
-                                y        +=  coef_v2*bi_0
-                                F1x      +=  coef_v1*bi_x
-                                F1y      +=  coef_v1*bi_y
-                                F2x      +=  coef_v2*bi_x
-                                F2y      +=  coef_v2*bi_y
+                                x        +=  coef_v1*bj_0
+                                y        +=  coef_v2*bj_0
+                                F1x      +=  coef_v1*bj_x
+                                F1y      +=  coef_v1*bj_y
+                                F2x      +=  coef_v2*bj_x
+                                F2y      +=  coef_v2*bj_y
                                 # ...
                                 coeff_c1  = lcoeffs_c1[il_1,il_2]
                                 coeff_c2  = lcoeffs_c2[il_1,il_2]
@@ -570,8 +589,8 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     #rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
                     #rho   =  9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
                     #rho   =  1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09))
-                    rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
-                    #rho   = 1.+9./cosh( 80.*((x + y) )**2 )
+                    #rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
+                    rho   = 1.+12./cosh( 80.*((x + y) )**2 )
                     #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
                     #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
                     if ie1 == 0 and ie2 == 0 and g1 == 0 and g2 == 0:
@@ -584,19 +603,23 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
                     F_1x = uhx*F1x+vhx*F1y #F'1x
                     F_1y = uhy*F1x+vhy*F1y #F'1y
                     F_2x = uhx*F2x+vhx*F2y #F'2x
-                    area_comp +=  abs(I2y*I1x-I1y*I2x)* wvol - abs(F2y*F1x-F1y*F2x) *abs(uhx*vhy-uhy*vhx) * wvol
-                    area_appr +=  abs(I2y*I1x-I1y*I2x)* wvol - abs(G2y*G1x-G1y*G2x) * wvol                        
+                    warea_exact +=  (I2y*I1x-I1y*I2x) * wvol
+                    warea_comp  +=  (F_2y*F_1x-F_1y*F_2x) * wvol
+                    warea_appr  +=  (G2y*G1x-G1y*G2x) * wvol                        
             Qual_l2      += v
             displacement += w
+            area_exact  += warea_exact
+            area_comp   += warea_comp 
+            area_appr   += warea_appr 
     rhs[p1,p2]   = sqrt(Qual_l2)
     rhs[p1,p2+1] = sqrt(displacement)
-    rhs[p1,p2+2] = abs(area_comp)
-    rhs[p1,p2+3] = abs(area_appr)
+    rhs[p1,p2+2] = abs(abs(area_comp)-abs(area_exact))
+    rhs[p1,p2+3] = abs(abs(area_appr)-abs(area_exact))
 
     #---Computes All basis in a new points
     nders          = 1
     degree         = p1
-    #..
+    # ...
     xx             = zeros(k1)
 
     left           = empty( degree )
@@ -1141,7 +1164,7 @@ def assemble_Quality_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,
 
 # Assembles Quality of mesh adaptation
 #==============================================================================
-@types('int', 'int', 'int', 'int', 'int[:,:]', 'int[:,:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float[:]', 'float[:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float[:]', 'float[:]', 'double[:,:]')
+@types('int', 'int', 'int', 'int', 'int[:,:]', 'int[:,:]', 'float64[:,:,:,:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:]', 'float64[:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:]', 'float64[:]', 'float64[:,:]')
 def assemble_vector_ex04(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, knots_1, knots_2, vector_u1, vector_u2, vector_v1, omega_1, omega_2, rhs):
 
     from numpy import exp

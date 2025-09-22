@@ -179,7 +179,7 @@ def compile_kernel(core, arity, pyccel=True):
     assert(arity in [0,1,2])
 
     if pyccel:
-        core = epyccel(core, accelerators = '--openmp') #libs = ["/usr/lib/gcc/x86_64-linux-gnu/9", "-gfortran", "-lm"] )#, language = 'c')
+        core = epyccel(core) #, accelerators = '--openmp' libs = ["/usr/lib/gcc/x86_64-linux-gnu/9", "-gfortran", "-lm"] )#, language = 'c')
 
     if arity == 2:
         return partial(assemble_matrix, core)
@@ -312,7 +312,7 @@ def apply_dirichlet(V, x, dirichlet = None, eliminate = False):
 
         if isinstance(x, StencilMatrix):
             if V.dim == 1:
-                print('warning /!\ there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
+                print('warning ! there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
                 n1 = V.nbasis
 
                 # ... resetting bnd dof to 0
@@ -418,7 +418,7 @@ def apply_dirichlet(V, x, dirichlet = None, eliminate = False):
 
         elif isinstance(x, StencilVector):
             if V.dim == 1:
-                print('warning /!\ there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
+                print('warning ! there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
                 n1 = V.nbasis
 
                 x[0] = 0.
@@ -469,7 +469,7 @@ def apply_dirichlet(V, x, dirichlet = None, eliminate = False):
     else :
         if isinstance(x, StencilMatrix):
             if V.dim == 1:
-                print('warning /!\ there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
+                print('warning ! there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
                 n1 = V.nbasis
 
                 # ... resetting bnd dof to 0
@@ -564,7 +564,7 @@ def apply_dirichlet(V, x, dirichlet = None, eliminate = False):
 
         elif isinstance(x, StencilVector):
             if V.dim == 1:
-                print('warning /!\ there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
+                print('warning ! there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
                 n1 = V.nbasis
 
                 x[0] = 0.
@@ -1175,7 +1175,7 @@ def apply_zeros(V, x, app_zeros = None):
 
         if isinstance(x, StencilMatrix):
             if V.dim == 1:
-                print('warning /!\ there is no specific case for 1D: app_zeros is applied in both sides of the interval') 
+                print('warning ! there is no specific case for 1D: app_zeros is applied in both sides of the interval') 
                 n1 = V.nbasis
 
                 # ... resetting bnd dof to 0
@@ -1231,7 +1231,7 @@ def apply_zeros(V, x, app_zeros = None):
     else :
         if isinstance(x, StencilMatrix):
             if V.dim == 1:
-                print('warning /!\ there is no specific case for 1D: app_zeros is applied in both sides of the interval') 
+                print('warning ! there is no specific case for 1D: app_zeros is applied in both sides of the interval') 
                 n1 = V.nbasis
 
                 # ... resetting bnd dof to 0

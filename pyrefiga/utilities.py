@@ -121,7 +121,7 @@ def build_dirichlet(V, f, map = None, admap = None):
             elif admap is None :
                 #-------------------------------------------------
                 #.. In the phyisacl domain without adaptive mapping               
-                n_dir        = V.nbasis[0] + V.nbasis[1]+100
+                n_dir        = V.nbasis[0]*10+10
                 sX           = pyccel_sol_field_2d((n_dir,n_dir),  map[0] , V.knots, V.degree)[0]
                 sY           = pyccel_sol_field_2d((n_dir,n_dir),  map[1] , V.knots, V.degree)[0]
 
@@ -133,7 +133,7 @@ def build_dirichlet(V, f, map = None, admap = None):
             else :
                 #-----------------------------------------------
                 #.. In the phyisacl domain with adaptive mapping               
-                n_dir        = V.nbasis[0] + V.nbasis[1]+100
+                n_dir        = V.nbasis[0]*10+10
 
                 Xmae         = pyccel_sol_field_2d((n_dir,n_dir),  admap[0] , admap[2].knots, admap[2].degree)[0]
                 Ymae         = pyccel_sol_field_2d((n_dir,n_dir),  admap[1] , admap[3].knots, admap[3].degree)[0]
@@ -159,7 +159,7 @@ def build_dirichlet(V, f, map = None, admap = None):
             elif admap is None :
                 #-------------------------------------------------
                 #.. In the phyisacl domain without adaptive mapping               
-                n_dir        = V.nbasis[0] + V.nbasis[1]+100
+                n_dir        = V.nbasis[0]*10+10
                 sX           = sol_field_NURBS_2d((n_dir,n_dir),  map[0], V.omega, V.knots, V.degree)[0]
                 sY           = sol_field_NURBS_2d((n_dir,n_dir),  map[1], V.omega, V.knots, V.degree)[0]
 
@@ -171,7 +171,7 @@ def build_dirichlet(V, f, map = None, admap = None):
             else :
                 #-----------------------------------------------
                 #.. In the phyisacl domain with adaptive mapping               
-                n_dir        = V.nbasis[0]*10+10
+                n_dir        = V.nbasis[0]*10+1000
 
                 Xmae         = sol_field_NURBS_2d((n_dir,n_dir),  admap[0], V.omega, V.knots, V.degree)[0]
                 Ymae         = sol_field_NURBS_2d((n_dir,n_dir),  admap[1], V.omega, V.knots, V.degree)[0]
@@ -218,7 +218,7 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
 
             co = ET.SubElement(inner, 'coefs', geoDim='2')
             co.text = '\n' + '\n'.join(
-                ' '.join(f'{v:.3f}' for v in row) for row in gmap
+                ' '.join(f'{float(v):.6f}' for v in row) for row in gmap
             ) + '\n'
             co.tail = '\n'            
 
@@ -250,7 +250,7 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
         
         # Add coefficients (control points)
         coefs      = ET.SubElement(basis_inner, 'coefs', geoDim='2')
-        coefs.text = '\n' + '\n'.join(' '.join(f'{v:.20e}' for v in row) for row in Gmap) + '\n'
+        coefs.text = '\n' + '\n'.join(' '.join(f'{v:.6f}' for v in row) for row in Gmap) + '\n'
 
         # Close inner Basis element properly
         basis_inner.tail = '\n'

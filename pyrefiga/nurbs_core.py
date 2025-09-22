@@ -2,7 +2,7 @@
 # Author: M. BAHARI
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def nurbs_ders_on_quad_grid(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float[:,:,:,:]', weights_1:'float[:,:]', points_1:'float[:,:]', knots_1:'float[:]', omega:'float[:]', nders:'int'):
+def nurbs_ders_on_quad_grid(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', points_1:'float64[:,:]', knots_1:'float64[:]', omega:'float64[:]', nders:'int'):
     # Assemble NURBS basis functions and their derivatives at quadrature points for 1D elements.
 
     # Parameters
@@ -13,15 +13,15 @@ def nurbs_ders_on_quad_grid(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'floa
     #     Degree of the NURBS basis.
     # spans_1 : int[:]
     #     Output vector to store the knot span index for each element.
-    # basis_1 : float[:,:,:,:]
+    # basis_1 : float64[:,:,:,:]
     #     Output array to store basis functions and their derivatives at quadrature points.
-    # weights_1 : float[:,:]
+    # weights_1 : float64[:,:]
     #     Weights for NURBS basis functions.
-    # points_1 : float[:,:]
+    # points_1 : float64[:,:]
     #     Quadrature points for each element.
-    # knots_1 : float[:]
+    # knots_1 : float64[:]
     #     Knot vector.
-    # omega : float[:]
+    # omega : float64[:]
     #     Weights for NURBS basis functions.
     # nders : int
     #     Number of derivatives to compute.
@@ -119,7 +119,7 @@ def nurbs_ders_on_quad_grid(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'floa
                     for j_ders in range(0,i_ders):
                         basis_1[ie1, :, i_ders, g1] -= (j_ders+1)*basis_1[ie1, :, j_ders, g1] * sum(ders[i_ders-j_ders,:])/sum_basisx
                     r = r * (degree-i_ders)
-def nurbs_ders_on_shared_quad_grid(ne1:'int', p1:'int', spans_1:'int[:,:]', basis_1:'float[:,:,:,:]', weights_1:'float[:,:]', points_1:'float[:,:]', knots_1:'float[:]', omega:'float[:]', nders:'int'):
+def nurbs_ders_on_shared_quad_grid(ne1:'int', p1:'int', spans_1:'int[:,:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', points_1:'float64[:,:]', knots_1:'float64[:]', omega:'float64[:]', nders:'int'):
     # Assemble NURBS basis functions and their derivatives at quadrature points for 1D elements.
 
     # Parameters
@@ -130,15 +130,15 @@ def nurbs_ders_on_shared_quad_grid(ne1:'int', p1:'int', spans_1:'int[:,:]', basi
     #     Degree of the NURBS basis.
     # spans_1 : int[:]
     #     Output vector to store the knot span index for each element.
-    # basis_1 : float[:,:,:,:]
+    # basis_1 : float64[:,:,:,:]
     #     Output array to store basis functions and their derivatives at quadrature points.
-    # weights_1 : float[:,:]
+    # weights_1 : float64[:,:]
     #     Weights for NURBS basis functions.
-    # points_1 : float[:,:]
+    # points_1 : float64[:,:]
     #     Quadrature points for each element.
-    # knots_1 : float[:]
+    # knots_1 : float64[:]
     #     Knot vector.
-    # omega : float[:]
+    # omega : float64[:]
     #     Weights for NURBS basis functions.
     # nders : int
     #     Number of derivatives to compute.
@@ -241,7 +241,7 @@ def nurbs_ders_on_shared_quad_grid(ne1:'int', p1:'int', spans_1:'int[:,:]', basi
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float[:,:,:,:]', weights_1:'float[:,:]', points_1:'float[:,:]', knots_1:'float[:]', omega:'float[:]', vector_u:'float[:]',  spans_ad:'int[:,:]', basis_ad:'float[:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', points_1:'float64[:,:]', knots_1:'float64[:]', omega:'float64[:]', vector_u:'float64[:]',  spans_ad:'int[:,:]', basis_ad:'float64[:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -359,7 +359,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans
 # ... L2-B-spline space for L^2 mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', weights_1:'float[:,:]', weights_2:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', knots_1:'float[:]', knots_2:'float[:]', omega_1:'float[:]', omega_2:'float[:]', vector_u1:'float[:,:]', vector_u2:'float[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float[:,:,:,:,:,:]', basis_ad2:'float[:,:,:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -372,36 +372,6 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
     # ___
     lcoeffs_u1   = zeros((p1+1,p2+1))
     lcoeffs_u2   = zeros((p1+1,p2+1))
-    # ... Initialization
-    points1    = zeros((ne1, ne2, k1, k2))
-    points2    = zeros((ne1, ne2, k1, k2))
-
-    # ... Assemble a new points by a new map
-    for ie1 in range(0, ne1):
-        i_span_1 = spans_1[ie1]
-        for ie2 in range(0, ne2):
-            i_span_2 = spans_2[ie2]
-
-            lcoeffs_u1[ : , : ] = vector_u1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_u2[ : , : ] = vector_u2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            for g1 in range(0, k1):
-                for g2 in range(0, k2):
-
-                    sx = 0.0
-                    sy = 0.0
-                    for il_1 in range(0, p1+1):
-                          for il_2 in range(0, p2+1):
-
-                              bj_0    = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
-
-                              coeff_u1 = lcoeffs_u1[il_1,il_2]
-                              coeff_u2 = lcoeffs_u2[il_1,il_2]
-
-                              sx     += coeff_u1 * bj_0
-                              sy     += coeff_u2 * bj_0
-                              
-                    points1[ie1, ie2, g1, g2] = sx
-                    points2[ie1, ie2, g1, g2] = sy
 
     #   ---Computes All basis in a new points
     degree         = p1
@@ -412,11 +382,21 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
     ndu            = empty( (degree+1, degree+1) )
     ders           = zeros( (     nders+1, degree+1) ) # output array
     for ie1 in range(0, ne1):
+       i_span_1 = spans_1[ie1]
        for ie2 in range(0, ne2):
+          i_span_2 = spans_2[ie2]
+
+          lcoeffs_u1[ : , : ] = vector_u1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
           for g1 in range(0, k1):
              for g2 in range(0, k2):
-                 xq = points1[ie1, ie2, g1, g2]
+                 #xq = points1[ie1, ie2, g1, g2]
+                 xq = 0.0
+                 for il_1 in range(0, p1+1):
+                    for il_2 in range(0, p2+1):
 
+                        bj_0    = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
+                        coeff_u1 = lcoeffs_u1[il_1,il_2]
+                        xq     += coeff_u1 * bj_0
                  #span = find_span( knots, degree, xq )
                  #~~~~~~~~~~~~~~~
                  # Knot index at left/right boundary
@@ -479,6 +459,21 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
                          j  = s1
                          s1 = s2
                          s2 = j
+                 #  r          = degree
+                 #  ders[1,:] = ders[1,:] * r
+                 #  basis_ad1[ie1, ie2, :, 0, g1, g2] = ders[0,:]
+                 #  basis_ad1[ie1, ie2, :, 1, g1, g2] = ders[1,:]
+                 #  #...
+                 #  basis_ad1[ie1, ie2, :, 0, g1, g2]  = basis_ad1[ie1, ie2, :, 0, g1, g2] * omega_1[span-degree:span+1]
+                 #  sum_basisx    = sum(basis_ad1[ie1, ie2, :, 0, g1, g2])
+                 #  basis_ad1[ie1, ie2, :, 0, g1, g2]  = basis_ad1[ie1, ie2, :, 0, g1, g2]/sum_basisx
+                 #  #..
+                 #  if nders >= 1:
+                 #     basis_ad1[ie1, ie2, :, 1, g1, g2] = basis_ad1[ie1, ie2, :, 1, g1, g2] * omega_1[span-degree:span+1]
+                 #     sum_dbasisx   = sum(basis_ad1[ie1, ie2, :, 1, g1, g2])
+                 #     #...                        
+                 #     basis_ad1[ie1, ie2, :, 1, g1, g2]  = (basis_ad1[ie1, ie2, :, 1, g1, g2] - basis_ad1[ie1, ie2, :, 0, g1, g2]*sum_dbasisx)
+                 #     basis_ad1[ie1, ie2, :, 1, g1, g2] /= sum_basisx
                  # ...first compute R1
                  ders[0,:]     = ders[0,:] * omega_1[span-degree:span+1]
                  sum_basisx    = sum(ders[0,:])
@@ -499,10 +494,21 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
     ndu2           = empty( (degree+1, degree+1) )
     ders2          = zeros( (     nders+1, degree+1) ) # output array
     for ie1 in range(0, ne1):
+       i_span_1 = spans_1[ie1]
        for ie2 in range(0, ne2):
+          i_span_2 = spans_2[ie2]
+
+          lcoeffs_u2[ : , : ] = vector_u2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
           for g1 in range(0, k1):
              for g2 in range(0, k2):
-                 xq = points2[ie1, ie2, g1, g2]
+                 #xq = points1[ie1, ie2, g1, g2]
+                 xq = 0.0
+                 for il_1 in range(0, p1+1):
+                    for il_2 in range(0, p2+1):
+
+                        bj_0     = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
+                        coeff_u2 = lcoeffs_u2[il_1,il_2]
+                        xq      += coeff_u2 * bj_0
 
                  #span = find_span( knots, degree, xq )
                  #~~~~~~~~~~~~~~~
@@ -582,7 +588,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping. in 3D
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float[:,:,:,:]', basis_2:'float[:,:,:,:]', basis_3:'float[:,:,:,:]',  weights_1:'float[:,:]', weights_2:'float[:,:]', weights_3:'float[:,:]', points_1:'float[:,:]', points_2:'float[:,:]', points_3:'float[:,:]', knots_1:'float[:]', knots_2:'float[:]', knots_3:'float[:]', omega_1:'float[:]', omega_2:'float[:]', omega_3:'float[:]', vector_u1:'float[:,:,:]', vector_u2:'float[:,:,:]', vector_u3:'float[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float[:,:,:,:,:,:,:,:]', basis_ad2:'float[:,:,:,:,:,:,:,:]', basis_ad3:'float[:,:,:,:,:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', points_3:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', omega_3:'float64[:]', vector_u1:'float64[:,:,:]', vector_u2:'float64[:,:,:]', vector_u3:'float64[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:,:,:]', basis_ad3:'float64[:,:,:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
