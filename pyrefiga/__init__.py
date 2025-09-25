@@ -103,4 +103,4 @@ from pyrefiga.api import (assemble_matrix, assemble_vector, assemble_scalar, com
 from pyrefiga.nurbs_utilities import(sol_field_NURBS_2d, sol_field_NURBS_3d, 
                                       prolongate_NURBS_mapping, least_square_NURBspline,
                                       paraview_nurbsAdMeshMultipatch, paraview_nurbsSolutionMultipatch,
-                                      ViewGeo)
+                                      ViewGeo,least_square_2dNURBspline,collocation_2dNURBspline)

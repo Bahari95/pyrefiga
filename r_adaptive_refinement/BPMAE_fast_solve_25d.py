@@ -175,44 +175,42 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, u13_mpH, x_2 = None, tol = None, nit
          if l2_residual < tol and i>15:
             break
       #... End of iterations working on projecting the composition back to one mapping (reparameterization)
-      # ... computes spans and basis in adapted quadrature 
-      # spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11, u12)
-      # Create spline spaces for each direction
-      grids = np.linspace(0, 1, V1.nelements*5+1)
-      Vs1   = SplineSpace(degree=V.degree[0], grid = V.grid[0], nderiv = 1, omega = V.omega[0], sharing_grid = grids, quad_degree = quad_degree)
-      Vs2   = SplineSpace(degree=V.degree[1], grid = V.grid[1], nderiv = 1, omega = V.omega[1], sharing_grid = grids, quad_degree = quad_degree)
-      Vh            = TensorSpace(Vs1, Vs2)
-      #... Return solution
       v11           = StencilVector(V.vector_space)
       v12           = StencilVector(V.vector_space)
       v13           = StencilVector(V.vector_space)
-      #... Project back to the fine mesh
-      # rhs           = assemble_comp(V, fields = [u11_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
-      rhs           = assemble_comp(Vh, fields = [u11, u12, u11_mpH], knots= True, value = [V1.omega, V2.omega])
-      vx11          = poisson.project(rhs.toarray()).reshape(V.nbasis)
-      # from pyrefiga import build_dirichlet
-      # f_exact       = ['x+0.*y']
-      # x_d = build_dirichlet(V, f_exact, map = (u11_mpH.toarray().reshape(V.nbasis), u12_mpH.toarray().reshape(V.nbasis)), admap=( x11, x12, V, V) )[0]
-      # vx11[0,:]   = x_d[0,:]
-      # vx11[-1,:]  = x_d[-1,:]
-      # vx11[:, 0]  = x_d[:, 0]
-      # vx11[:,-1]  = x_d[:,-1]
+      # ... computes spans and basis in adapted quadrature 
+      # spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11, u12)
+      # Create spline spaces for each direction
+      # grids = np.linspace(0, 1, V1.nelements*4+1)
+      # Vs1   = SplineSpace(degree=V.degree[0], grid = V.grid[0], nderiv = 1, omega = V.omega[0], sharing_grid = grids, quad_degree = quad_degree)
+      # Vs2   = SplineSpace(degree=V.degree[1], grid = V.grid[1], nderiv = 1, omega = V.omega[1], sharing_grid = grids, quad_degree = quad_degree)
+      # Vh            = TensorSpace(Vs1, Vs2)
+      # #... Project back to the fine mesh
+      # rhs           = assemble_comp(Vh, fields = [u11, u12, u11_mpH], knots= True, value = [V1.omega, V2.omega])
+      # vx11          = poisson.project(rhs.toarray()).reshape(V.nbasis)
+      # #___
+      # rhs            = assemble_comp(Vh, fields = [u11, u12, u12_mpH], knots= True, value = [V1.omega, V2.omega])
+      # vx12           = poisson.project(rhs.toarray()).reshape(V.nbasis)
+      # #___
+      # rhs            = assemble_comp(Vh, fields = [u11, u12, u13_mpH], knots= True, value = [V1.omega, V2.omega])
+      # vx13           = poisson.project(rhs.toarray()).reshape(V.nbasis)
+      from pyrefiga import least_square_2dNURBspline
+      nbpts = 1000
+      xmp   = u11_mpH.toarray().reshape(V.nbasis)
+      ymp   = u12_mpH.toarray().reshape(V.nbasis)
+      zmp   = u13_mpH.toarray().reshape(V.nbasis)
+      sx    = sol_field_NURBS_2d((nbpts, nbpts), x11, V.omega, V.knots, V.degree)[0]
+      sy    = sol_field_NURBS_2d((nbpts, nbpts), x12, V.omega, V.knots, V.degree)[0]
+      #---Compute a image by initial mapping
+      x     = sol_field_NURBS_2d((None, None), xmp, V.omega, V.knots, V.degree, meshes=(sx, sy))[0]
+      y     = sol_field_NURBS_2d((None, None), ymp, V.omega, V.knots, V.degree, meshes=(sx, sy))[0]
+      z     = sol_field_NURBS_2d((None, None), zmp, V.omega, V.knots, V.degree, meshes=(sx, sy))[0]
+      #---Compute a least square approximation of the image
+      vx11  = least_square_2dNURBspline(V.degree[0], V.degree[1], V.knots[0], V.knots[1], V.omega[0], V.omega[1], x)
+      vx12  = least_square_2dNURBspline(V.degree[0], V.degree[1], V.knots[0], V.knots[1], V.omega[0], V.omega[1], y)
+      vx13  = least_square_2dNURBspline(V.degree[0], V.degree[1], V.knots[0], V.knots[1], V.omega[0], V.omega[1], z)
       v11.from_array(V, vx11)
-      #___
-      # rhs           = assemble_comp(V, fields = [u12_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
-      rhs            = assemble_comp(Vh, fields = [u11, u12, u12_mpH], knots= True, value = [V1.omega, V2.omega])
-      vx12           = poisson.project(rhs.toarray()).reshape(V.nbasis)
-      # f_exact = ['0.*x+y']
-      # x_d = build_dirichlet(V, f_exact, map = (u11_mpH.toarray().reshape(V.nbasis), u12_mpH.toarray().reshape(V.nbasis)), admap=( x11, x12, V, V) )[0]
-      # vx12[0,:]   = x_d[0,:]
-      # vx12[-1,:]  = x_d[-1,:]
-      # vx12[:, 0]  = x_d[:, 0]
-      # vx12[:,-1]  = x_d[:,-1]
       v12.from_array(V, vx12)            
-      #___
-      # rhs           = assemble_comp(V, fields = [u12_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
-      rhs            = assemble_comp(Vh, fields = [u11, u12, u13_mpH], knots= True, value = [V1.omega, V2.omega])
-      vx13           = poisson.project(rhs.toarray()).reshape(V.nbasis)
       v13.from_array(V, vx13)      
       return v11, v12, v13, vx11, vx12, vx13, u11, u12, x11, x12
 
@@ -229,7 +227,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
    # ... Assembling mapping
    mp             = getGeometryMap(geometry,0)
    degree         = mp.degree # Use same degree as geometry
-   quad_degree    = max(degree[0],degree[1])*2+1 # Quadrature degree
+   quad_degree    = max(degree[0],degree[1])*6+1 # Quadrature degree
    mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
    if mp.nelements[0]*nb_ne < 16 and mp.nelements[1]*nb_ne <16 :
       print("nelements = ", mp.nelements[0]*nb_ne, mp.nelements[1]*nb_ne)
@@ -246,7 +244,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
    #...=====================
    #.. second patch
    #...=====================
-   nb_patches      = 1
+   nb_patches      = 17
    MultipatchVh    = []
    Multipatchmpx   = []
    Multipatchmpy   = []
@@ -255,7 +253,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
    Multipatchady   = []
    l2_Quality      = 0.
    l2_displacement = 0.
-   for i in range(0,nb_patches):
+   for i in [nb_patches]:
       # ... Assembling mapping
       mp              = getGeometryMap(geometry,i)
       mp.nurbs_check  = True # Activate NURBS if geometry uses NURBS
@@ -325,8 +323,9 @@ if True :
    #geometry = '../fields/lake.xml'
 
    # geometry = '../fields/elasticity.xml'
-   geometry = '../fields/egg.xml'
-
+   #geometry = '../fields/egg.xml'
+   
+   geometry = '/home/bahari/Desktop/MPrIGA/fields/teapot.xml'
    #geometry = '../fields/nice_geo.xml'   
    # ... new discretization for plot
    
@@ -337,14 +336,14 @@ if True :
    print("		\hline")
    print("		$\#$cells & CPU-time (s) & Qual &$\min~\\text{Jac}(\PsiPsi)$ &$\max ~\\text{Jac}(\PsiPsi)$ \\\\")
    print("		\hline")
-   for ne in range(3,6):
+   for ne in range(4,8):
 
       nb_ne = 2**ne
       nelements, l2_Quality, MG_time, l2_displacement, MPadx, MPady, MPmpx, MPmpy, MPmpz, MPVh,norm2, norm3, norm4 = Bahari_solver(nb_ne, geometry= geometry)
-      table[0,ne-3] = (MPVh[0].degree[0]+MPVh[0].nelements[0])*(MPVh[0].degree[0]+MPVh[0].nelements[1])
-      table[1,ne-3] = norm2
-      table[2,ne-3] = norm3
-      table[3,ne-3] = norm4
+      table[0,ne-4] = (MPVh[0].degree[0]+MPVh[0].nelements[0])*(MPVh[0].degree[0]+MPVh[0].nelements[1])
+      table[1,ne-4] = norm2
+      table[2,ne-4] = norm3
+      table[3,ne-4] = norm4
       # #---Compute a mapping
       # uxx = np.zeros((len(MPVh)*nbpts, nbpts))
       # uyy = np.zeros((len(MPVh)*nbpts, nbpts))
@@ -390,7 +389,7 @@ if True :
 #rho  = '9./(2.+np.cos(10.*np.pi*np.sqrt((x)**2+(y+2.)**2)))'
 #rho   = '1.+9.*np.exp(-10.*np.abs((x-0.5-0.0*np.cos(2.*np.pi*0.))**2-(y-0.5-0.5 *np.sin(2.*np.pi*0.))**2- 0.09))'
 
-rho   = '9./(2.+np.cos(2.*np.pi*np.sqrt((x)**2+(y+2.)**2+z**2)))'
+rho   = '12./(2.+np.cos(5.*np.pi*np.sqrt((x)**2+(y+2.)**2+z**2)))'
 #rho = '1+5*np.exp(-100*np.abs((x-0.45)**2+(y-0.4)**2-0.09))+5.*np.exp(-100.*np.abs(x**2+y**2-0.2))+5.*np.exp(-100*np.abs((x+0.45)**2 +(y-0.4)**2-0.1))+7.*np.exp(-100.*np.abs(x**2+(y+1.25)**2-0.4))'
 
 #rho = '1+5.*np.exp(-50.*np.abs(x**2+y**2-0.5))'

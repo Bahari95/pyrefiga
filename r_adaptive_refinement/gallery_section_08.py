@@ -69,10 +69,10 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #rho  = (1.+ 9./(1.+(10.*sqrt((x-0.-0.25*0.)**2+(y-0.)**2)*cos(arctan2(y-0.,x-0.-0.25*0.) -20.*((x-0.-0.25*0.)**2+(y-0.)**2)))**2) )
                     #rho   = (1. + 5./cosh( 5.*((x-sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2 + 5./cosh( 5.*((x+sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2)
                     #rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
-                    #rho   = 9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
+                    rho   = 9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
                     #rho   =  1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09))
                     #rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
-                    rho   = 1.+12./cosh( 80.*((x + y) )**2 )
+                    #rho   = 1.+12./cosh( 80.*((x + y) )**2 )
                     #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
                     #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
                     Crho += rho * wvol 
@@ -147,10 +147,10 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     #rho  = Crho/(1.+ 9./(1.+(10.*sqrt((x-0.-0.25*0.)**2+(y-0.)**2)*cos(arctan2(y-0.,x-0.-0.25*0.) -20.*((x-0.-0.25*0.)**2+(y-0.)**2)))**2) )
                     #rho  = Crho/(1. + 5./cosh( 5.*((x-sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2 + 5./cosh( 5.*((x+sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2)
                     #rho  = Crho/(5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2))))
-                    #rho  = Crho/(9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2))))
+                    rho  = Crho/(9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2))))
                     #rho   =  Crho/(1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09)))
                     #rho   = Crho/(1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2)))
-                    rho   = Crho/(1.+12./cosh( 80.*((x + y) )**2 ))
+                    #rho   = Crho/(1.+12./cosh( 80.*((x + y) )**2 ))
                     #rho   = Crho/(1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2)
                     #rho   = Crho/(1+10.*exp(-50.*abs(x**2+y**2-0.5)))
 
@@ -447,7 +447,8 @@ def assemble_Quality_ex01(
     vector_u: 'float64[:,:]', vector_w: 'float64[:,:]',
     vector_v1: 'float64[:,:]', vector_v2: 'float64[:,:]',
     vector_c1: 'float64[:,:]', vector_c2: 'float64[:,:]',
-    times: 'float', spans_ad1: 'int[:,:,:,:]', spans_ad2: 'int[:,:,:,:]',
+    times: 'float', omega_1: 'float64[:]', omega_2: 'float64[:]',
+    spans_ad1: 'int[:,:,:,:]', spans_ad2: 'int[:,:,:,:]',
     basis_ad1: 'float64[:,:,:,:,:,:]', basis_ad2: 'float64[:,:,:,:,:,:]',
     rhs: 'float64[:,:]'
 ):
@@ -535,51 +536,51 @@ def assemble_Quality_ex01(
                     G2x   = 0.0
                     G2y   = 0.0
                     for il_1 in range(0, p1+1):
-                          for il_2 in range(0, p2+1):
+                        for il_2 in range(0, p2+1):
 
-                                bj_0      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
-                                bj_x      = basis_ad1[ie1, ie2, il_1, 1, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
-                                bj_y      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 1, g1, g2]
-                                # ..
-                                coef_v1   = lcoeffs_v1[il_1,il_2]
-                                coef_v2   = lcoeffs_v2[il_1,il_2]
-                                # ...in adapted points
-                                x        +=  coef_v1*bj_0
-                                y        +=  coef_v2*bj_0
-                                F1x      +=  coef_v1*bj_x
-                                F1y      +=  coef_v1*bj_y
-                                F2x      +=  coef_v2*bj_x
-                                F2y      +=  coef_v2*bj_y
-                                # ...
-                                coeff_c1  = lcoeffs_c1[il_1,il_2]
-                                coeff_c2  = lcoeffs_c2[il_1,il_2]
-                                coeff_u1  = lcoeffs_u1[il_1,il_2]
-                                coeff_u2  = lcoeffs_u2[il_1,il_2]
-                                coeff_u   = lcoeffs_u[il_1,il_2]
-                                coeff_w   = lcoeffs_w[il_1,il_2]
-                                #...
-                                bi_0      = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 0, g2]
-                                bi_x      = basis_1[ie1, il_1, 1, g1] * basis_2[ie2, il_2, 0, g2]
-                                bi_y      = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 1, g2]
-                                #... approximation of composite functions
-                                y1       +=  coeff_c1*bi_0
-                                y2       +=  coeff_c2*bi_0
-                                G1x      +=  coeff_c1*bi_x
-                                G1y      +=  coeff_c1*bi_y
-                                G2x      +=  coeff_c2*bi_x
-                                G2y      +=  coeff_c2*bi_y
-                                #.. Initial mapping
-                                x1       += coeff_u1*bi_0
-                                x2       += coeff_u2*bi_0
-                                I1x      += coeff_u1*bi_x
-                                I1y      += coeff_u1*bi_y
-                                I2x      += coeff_u2*bi_x
-                                I2y      += coeff_u2*bi_y                                
-                                #.. optimal mapping
-                                uhx      += coeff_u*bi_x
-                                uhy      += coeff_u*bi_y
-                                vhx      += coeff_w*bi_x
-                                vhy      += coeff_w*bi_y
+                            bj_0      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
+                            bj_x      = basis_ad1[ie1, ie2, il_1, 1, g1, g2] * basis_ad2[ie1, ie2, il_2, 0, g1, g2]
+                            bj_y      = basis_ad1[ie1, ie2, il_1, 0, g1, g2] * basis_ad2[ie1, ie2, il_2, 1, g1, g2]
+                            # ...
+                            coef_v1   = lcoeffs_v1[il_1,il_2]
+                            coef_v2   = lcoeffs_v2[il_1,il_2]
+                            # ...in adapted points
+                            x        +=  coef_v1*bj_0
+                            y        +=  coef_v2*bj_0
+                            F1x      +=  coef_v1*bj_x
+                            F1y      +=  coef_v1*bj_y
+                            F2x      +=  coef_v2*bj_x
+                            F2y      +=  coef_v2*bj_y
+                            # ...
+                            coeff_c1  = lcoeffs_c1[il_1,il_2]
+                            coeff_c2  = lcoeffs_c2[il_1,il_2]
+                            coeff_u1  = lcoeffs_u1[il_1,il_2]
+                            coeff_u2  = lcoeffs_u2[il_1,il_2]
+                            coeff_u   = lcoeffs_u[il_1,il_2]
+                            coeff_w   = lcoeffs_w[il_1,il_2]
+                            #...
+                            bi_0      = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 0, g2]
+                            bi_x      = basis_1[ie1, il_1, 1, g1] * basis_2[ie2, il_2, 0, g2]
+                            bi_y      = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 1, g2]
+                            #... approximation of composite functions
+                            y1       +=  coeff_c1*bi_0
+                            y2       +=  coeff_c2*bi_0
+                            G1x      +=  coeff_c1*bi_x
+                            G1y      +=  coeff_c1*bi_y
+                            G2x      +=  coeff_c2*bi_x
+                            G2y      +=  coeff_c2*bi_y
+                            #.. Initial mapping
+                            x1       += coeff_u1*bi_0
+                            x2       += coeff_u2*bi_0
+                            I1x      += coeff_u1*bi_x
+                            I1y      += coeff_u1*bi_y
+                            I2x      += coeff_u2*bi_x
+                            I2y      += coeff_u2*bi_y                                
+                            #.. optimal mapping
+                            uhx      += coeff_u*bi_x
+                            uhy      += coeff_u*bi_y
+                            vhx      += coeff_w*bi_x
+                            vhy      += coeff_w*bi_y
                     #.. Test 1
                     #rho   = 1.+5.*exp(-100.*abs((x-0.45)**2+(y-0.4)**2-0.1))+5.*exp(-100.*abs(x**2+y**2-0.2))+5.*exp(-100*abs((x+0.45)**2 +(y-0.4)**2-0.1)) +7.*exp(-100.*abs(x**2+(y+1.25)**2-0.4)) 
                     # Test 5
@@ -587,10 +588,10 @@ def assemble_Quality_ex01(
                     #rho  = (2.+sin(10.*pi*sqrt((x-0.6)**2+(y-0.6)**2)) )#0.8
                     #rho   = (1. + 5./cosh( 5.*((x-sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2 + 5./cosh( 5.*((x+sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2)
                     #rho   =  5./(2.+cos(4.*pi*sqrt((x-0.5-0.25*0.)**2+(y-0.5)**2)))
-                    #rho   =  9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
+                    rho   =  9./(2.+cos(10.*pi*sqrt((x)**2+(y+2.)**2)))
                     #rho   =  1.+9.*exp(-10.*abs((x-0.5-0.0*cos(2.*pi*0.))**2-(y-0.5-0.5 *sin(2.*pi*0.))**2- 0.09))
                     #rho   =  1.+5.*exp(-0.25*abs((x-0.)**2+(y-0.)**2-1.05**2))
-                    rho   = 1.+12./cosh( 80.*((x + y) )**2 )
+                    #rho   = 1.+12./cosh( 80.*((x + y) )**2 )
                     #rho   = 1.+5./cosh(40.*(2./(y**2-x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-x*(x-1)**2+1.)-2.))**2
                     #rho   = 1+10.*exp(-50.*abs(x**2+y**2-0.5))
                     if ie1 == 0 and ie2 == 0 and g1 == 0 and g2 == 0:
@@ -599,23 +600,36 @@ def assemble_Quality_ex01(
                     wvol   = weights_1[ie1, g1] * weights_2[ie2, g2]
                     v    += (rho*(uhx*vhy-uhy*vhx)-cst)**2 * wvol
                     w    += ((x-x1)**2+(y-x2)**2) * wvol
-                    F_2y = uhy*F2x+vhy*F2y #F'2y
-                    F_1x = uhx*F1x+vhx*F1y #F'1x
-                    F_1y = uhy*F1x+vhy*F1y #F'1y
-                    F_2x = uhx*F2x+vhx*F2y #F'2x
-                    warea_exact +=  (I2y*I1x-I1y*I2x) * wvol
-                    warea_comp  +=  (F_2y*F_1x-F_1y*F_2x) * wvol
-                    warea_appr  +=  (G2y*G1x-G1y*G2x) * wvol                        
+                    # DF components: F1x, F1y, F2x, F2y  (columns F1=(F1x,F1y), F2=(F2x,F2y))
+                    # DU components: uhx, uhy, vhx, vhy  (DU = [[uhx, uhy],[vhx, vhy]])
+
+                    # new composed Jacobian J' = DF * DU
+                    # F_1x =  F1x*uhx + F2x*vhx   # entry (0,0)
+                    # F_1y =  F1y*uhx + F2y*vhx   # entry (1,0)
+                    # F_2x =  F1x*uhy + F2x*vhy   # entry (0,1)
+                    # F_2y =  F1y*uhy + F2y*vhy   # entry (1,1)
+                    # F_2y = uhy*F2x+vhy*F2y #F'2y
+                    # F_1x = uhx*F1x+vhx*F1y #F'1x
+                    # F_1y = uhy*F1x+vhy*F1y #F'1y
+                    # F_2x = uhx*F2x+vhx*F2y #F'2x
+                    det_DF   = F2y*F1x - F1y*F2x
+                    det_DU   = uhx*vhy - uhy*vhx
+                    det_prod = abs(det_DF) * abs(det_DU)
+                    # det_comp = (F_2y * F_1x - F_1y * F_2x)
+                    # these two should be equal (within roundoff)
+                    warea_exact +=  abs(I2y*I1x-I1y*I2x) * wvol
+                    warea_comp  +=  det_prod * wvol
+                    warea_appr  +=  abs(G2y*G1x-G1y*G2x) * wvol                        
             Qual_l2      += v
             displacement += w
-            area_exact  += warea_exact
-            area_comp   += warea_comp 
-            area_appr   += warea_appr 
+            area_exact   += warea_exact
+            area_comp    += warea_comp 
+            area_appr    += warea_appr 
     rhs[p1,p2]   = sqrt(Qual_l2)
     rhs[p1,p2+1] = sqrt(displacement)
-    rhs[p1,p2+2] = abs(abs(area_comp)-abs(area_exact))
-    rhs[p1,p2+3] = abs(abs(area_appr)-abs(area_exact))
-
+    rhs[p1,p2+2] = abs((area_comp)-(area_exact))
+    rhs[p1,p2+3] = abs((area_appr)-(area_exact))
+    rhs[p1,p2+5] = abs(area_exact)
     #---Computes All basis in a new points
     nders          = 1
     degree         = p1
@@ -700,7 +714,8 @@ def assemble_Quality_ex01(
                     j  = s1
                     s1 = s2
                     s2 = j
-            basis1[ie1,:,0,iq] = ders[0,:]
+            basis1[ie1,:,0,iq] = ders[0,:]*omega_1[span-degree:span+1]
+            basis1[ie1,:,0,iq] /= sum(basis1[ie1,:,0,iq])
         lcoeffs_u[ : , : ]   = vector_u[i_span_1 : i_span_1+p1+1, spans_2[ne2-1] : spans_2[ne2-1]+p2+1]
         xx[:] = 0.0
         for g1 in range(0, k1):
@@ -771,7 +786,8 @@ def assemble_Quality_ex01(
                     j  = s1
                     s1 = s2
                     s2 = j
-            basis1[ie1,:,1,iq] = ders[0,:]
+            basis1[ie1,:,1,iq] = ders[0,:]*omega_1[span-degree:span+1]
+            basis1[ie1,:,1,iq] /= sum(basis1[ie1,:,1,iq])
     degree         = p2
     basis2         = zeros( (ne2, degree+1, nders+1, k2))
     for ie2 in range(ne2):
@@ -846,7 +862,8 @@ def assemble_Quality_ex01(
                     j  = s1
                     s1 = s2
                     s2 = j
-            basis2[ie2,:,0,iq] = ders[0,:]
+            basis2[ie2,:,0,iq] = ders[0,:]*omega_2[span-degree:span+1]
+            basis2[ie2,:,0,iq] /= sum(basis2[ie2,:,0,iq])
         lcoeffs_w[ : , : ]   = vector_w[spans_1[ne1-1] : spans_1[ne1-1]+p1+1, i_span_2 : i_span_2+p2+1]
         xx[:] = 0.0
         for g2 in range(0, k2):
@@ -917,7 +934,8 @@ def assemble_Quality_ex01(
                     j  = s1
                     s1 = s2
                     s2 = j
-            basis2[ie2,:,1,iq] = ders[0,:]
+            basis2[ie2,:,1,iq] = ders[0,:]*omega_2[span-degree:span+1]
+            basis2[ie2,:,1,iq] /= sum(basis2[ie2,:,1,iq])
     #... We compute the error at the boundary
     boundary_error = 0.
     for ie1 in range(0, ne1):

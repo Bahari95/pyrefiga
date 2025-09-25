@@ -108,16 +108,27 @@ def nurbs_ders_on_quad_grid(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'floa
                         s1 = s2
                         s2 = j
                 # ...first compute R1
-                ders[0,:]     = ders[0,:] * omega[span-degree:span+1]
+                for il_1 in range(0, p1+1):
+                   ders[0,il_1]     = ders[0,il_1] * omega[span-degree+il_1]
                 sum_basisx    = sum(ders[0,:])
                 basis_1[ie1, :, 0, g1] = ders[0,:]/sum_basisx
                 r = degree
                 for i_ders in range(1,nders+1):
                     # Multiply derivatives by correct factors
-                    ders[i_ders,:] = ders[i_ders,:] * r * omega[span-degree:span+1]
+                    for il_1 in range(0, p1+1):
+                       ders[i_ders,il_1] = ders[i_ders,il_1] * r * omega[span-degree+il_1]
                     basis_1[ie1, :, i_ders, g1] = ders[i_ders,:]/sum_basisx
                     for j_ders in range(0,i_ders):
-                        basis_1[ie1, :, i_ders, g1] -= (j_ders+1)*basis_1[ie1, :, j_ders, g1] * sum(ders[i_ders-j_ders,:])/sum_basisx
+                        sum_basistmp = sum(ders[i_ders-j_ders,:])/sum_basisx
+                        num = 1
+                        den = 1
+                        m_jders = j_ders + 1
+                        for t in range(m_jders):
+                            num *= (i_ders - t)
+                            den *= (t + 1)
+                        comb_ij = num // den
+                        for il_1 in range(0, p1+1):
+                            basis_1[ie1, il_1, i_ders, g1] -= comb_ij*basis_1[ie1, il_1, j_ders, g1] * sum_basistmp
                     r = r * (degree-i_ders)
 def nurbs_ders_on_shared_quad_grid(ne1:'int', p1:'int', spans_1:'int[:,:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', points_1:'float64[:,:]', knots_1:'float64[:]', omega:'float64[:]', nders:'int'):
     # Assemble NURBS basis functions and their derivatives at quadrature points for 1D elements.
@@ -225,16 +236,27 @@ def nurbs_ders_on_shared_quad_grid(ne1:'int', p1:'int', spans_1:'int[:,:]', basi
                         s1 = s2
                         s2 = j
                 # ...first compute R1
-                ders[0,:]     = ders[0,:] * omega[span-degree:span+1]
+                for il_1 in range(0, p1+1):
+                   ders[0,il_1]     = ders[0,il_1] * omega[span-degree+il_1]
                 sum_basisx    = sum(ders[0,:])
                 basis_1[ie1, :, 0, g1] = ders[0,:]/sum_basisx
                 r = degree
                 for i_ders in range(1,nders+1):
                     # Multiply derivatives by correct factors
-                    ders[i_ders,:] = ders[i_ders,:] * r * omega[span-degree:span+1]
+                    for il_1 in range(0, p1+1):
+                        ders[i_ders,il_1] = ders[i_ders,il_1] * r * omega[span-degree+il_1]
                     basis_1[ie1, :, i_ders, g1] = ders[i_ders,:]/sum_basisx
                     for j_ders in range(0,i_ders):
-                        basis_1[ie1, :, i_ders, g1] -= (j_ders+1)*basis_1[ie1, :, j_ders, g1] * sum(ders[i_ders-j_ders,:])/sum_basisx
+                        sum_basistmp = sum(ders[i_ders-j_ders,:])/sum_basisx
+                        num = 1
+                        den = 1
+                        m_jders = j_ders + 1
+                        for t in range(m_jders):
+                            num *= (i_ders - t)
+                            den *= (t + 1)
+                        comb_ij = num // den
+                        for il_1 in range(0, p1+1):
+                            basis_1[ie1, il_1, i_ders, g1] -= comb_ij*basis_1[ie1, il_1, j_ders, g1] * sum_basistmp
                     r = r * (degree-i_ders)
 
 #==============================================================================
@@ -344,16 +366,27 @@ def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans
                         s1 = s2
                         s2 = j
                 # ...first compute R1
-                ders[0,:]     = ders[0,:] * omega[span-degree:span+1]
+                for il_1 in range(0, p1+1):
+                    ders[0,il_1]     = ders[0,il_1] * omega[span-degree+il_1]
                 sum_basisx    = sum(ders[0,:])
                 basis_ad[ie1, :, 0, g1] = ders[0,:]/sum_basisx
                 r = degree
                 for i_ders in range(1,nders+1):
                     # Multiply derivatives by correct factors
-                    ders[i_ders,:] = ders[i_ders,:] * r * omega[span-degree:span+1]
+                    for il_1 in range(0, p1+1):
+                        ders[i_ders,il_1] = ders[i_ders,il_1] * r * omega[span-degree+il_1]
                     basis_ad[ie1, :, i_ders, g1] = ders[i_ders,:]/sum_basisx
                     for j_ders in range(0,i_ders):
-                        basis_ad[ie1, :, i_ders, g1] -= (j_ders+1)*basis_ad[ie1, :, j_ders, g1] * sum(ders[i_ders-j_ders,:])/sum_basisx
+                        sum_basistmp = sum(ders[i_ders-j_ders,:])/sum_basisx
+                        num = 1
+                        den = 1
+                        m_jders = j_ders + 1
+                        for t in range(m_jders):
+                            num *= (i_ders - t)
+                            den *= (t + 1)
+                        comb_ij = num // den
+                        for il_1 in range(0, p1+1):
+                            basis_ad[ie1, il_1, i_ders, g1] -= comb_ij*basis_ad[ie1, il_1, j_ders, g1] * sum_basistmp
                     r = r * (degree-i_ders)
 #==============================================================================
 # ... L2-B-spline space for L^2 mapping is the same as for initial mapping.
@@ -475,17 +508,29 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
                  #     basis_ad1[ie1, ie2, :, 1, g1, g2]  = (basis_ad1[ie1, ie2, :, 1, g1, g2] - basis_ad1[ie1, ie2, :, 0, g1, g2]*sum_dbasisx)
                  #     basis_ad1[ie1, ie2, :, 1, g1, g2] /= sum_basisx
                  # ...first compute R1
-                 ders[0,:]     = ders[0,:] * omega_1[span-degree:span+1]
+                 for il_1 in range(0, p1+1):
+                    ders[0,il_1]     = ders[0,il_1] * omega_1[span-degree+il_1]
                  sum_basisx    = sum(ders[0,:])
                  basis_ad1[ie1, ie2, :, 0, g1, g2] = ders[0,:]/sum_basisx
                  r = degree
                  for i_ders in range(1,nders+1):
                     # Multiply derivatives by correct factors
-                    ders[i_ders,:] = ders[i_ders,:] * r * omega_1[span-degree:span+1]
+                    for il_1 in range(0, p1+1):
+                       ders[i_ders,il_1] = ders[i_ders,il_1] * r * omega_1[span-degree+il_1]
                     basis_ad1[ie1, ie2,  :, i_ders, g1, g2] = ders[i_ders,:]/sum_basisx
                     for j_ders in range(0,i_ders):
-                        basis_ad1[ie1, ie2,  :, i_ders, g1, g2] -= (j_ders+1)*basis_ad1[ie1, ie2,  :, j_ders, g1, g2] * sum(ders[i_ders-j_ders,:])/sum_basisx
+                        sum_basistmp = sum(ders[i_ders-j_ders,:])/sum_basisx
+                        num = 1
+                        den = 1
+                        m_jders = j_ders + 1
+                        for t in range(m_jders):
+                            num *= (i_ders - t)
+                            den *= (t + 1)
+                        comb_ij = num // den
+                        for il_1 in range(0, p1+1):
+                          basis_ad1[ie1, ie2,  il_1, i_ders, g1, g2] -= comb_ij*basis_ad1[ie1, ie2,  il_1, j_ders, g1, g2] * sum_basistmp
                     r = r * (degree-i_ders)
+
     degree         = p2
     # ...
     left2          = empty( degree )
@@ -573,16 +618,27 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
                          s1 = s2
                          s2 = j
                  # ...first compute R1
-                 ders2[0,:]     = ders2[0,:] * omega_2[span-degree:span+1]
+                 for il_2 in range(0, p2+1):
+                    ders2[0,il_2]     = ders2[0,il_2] * omega_2[span-degree+il_2]
                  sum_basisx    = sum(ders2[0,:])
                  basis_ad2[ie1, ie2, :, 0, g1, g2] = ders2[0,:]/sum_basisx
                  r = degree
                  for i_ders in range(1,nders+1):
                     # Multiply derivatives by correct factors
-                    ders2[i_ders,:] = ders2[i_ders,:] * r * omega_2[span-degree:span+1]
+                    for il_2 in range(0, p2+1):
+                       ders2[i_ders,il_2] = ders2[i_ders,il_2] * r * omega_2[span-degree+il_2]
                     basis_ad2[ie1, ie2,  :, i_ders, g1, g2] = ders2[i_ders,:]/sum_basisx
                     for j_ders in range(0,i_ders):
-                        basis_ad2[ie1, ie2,  :, i_ders, g1, g2] -= (j_ders+1)*basis_ad2[ie1, ie2,  :, j_ders, g1, g2] * sum(ders2[i_ders-j_ders,:])/sum_basisx
+                        sum_basistmp = sum(ders2[i_ders-j_ders,:])/sum_basisx
+                        num = 1
+                        den = 1
+                        m_jders = j_ders + 1
+                        for t in range(m_jders):
+                            num *= (i_ders - t)
+                            den *= (t + 1)
+                        comb_ij = num // den
+                        for il_2 in range(0, p2+1):
+                           basis_ad2[ie1, ie2,  il_2, i_ders, g1, g2] -= comb_ij*basis_ad2[ie1, ie2,  il_2, j_ders, g1, g2] * sum_basistmp
                     r = r * (degree-i_ders)
 #==============================================================================
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping. in 3D
@@ -720,16 +776,27 @@ def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'
                                     s1 = s2
                                     s2 = j
                             # ...first compute R1
-                            ders[0,:]     = ders[0,:] * omega_1[span-degree:span+1]
+                            for il_1 in range(0, p1+1):
+                                ders[0,il_1]     = ders[0,il_1] * omega_1[span-degree+il_1]
                             sum_basisx    = sum(ders[0,:])
                             basis_ad1[ie1, ie2, ie3, :, 0, g1, g2, g3] = ders[0,:]/sum_basisx
                             r = degree
                             for i_ders in range(1,nders+1):
                                 # Multiply derivatives by correct factors
-                                ders[i_ders,:] = ders[i_ders,:] * r * omega_1[span-degree:span+1]
+                                for il_1 in range(0, p1+1):
+                                    ders[i_ders,il_1] = ders[i_ders,il_1] * r * omega_1[span-degree+il_1]
                                 basis_ad1[ie1, ie2, ie3, :, i_ders, g1, g2, g3] = ders[i_ders,:]/sum_basisx
                                 for j_ders in range(0,i_ders):
-                                    basis_ad1[ie1, ie2, ie3, :, i_ders, g1, g2, g3] -= (j_ders+1)*basis_ad1[ie1, ie2, ie3, :, j_ders, g1, g2, g3] * sum(ders[i_ders-j_ders,:])/sum_basisx
+                                    sum_basistmp = sum(ders[i_ders-j_ders,:])/sum_basisx
+                                    num = 1
+                                    den = 1
+                                    m_jders = j_ders + 1
+                                    for t in range(m_jders):
+                                        num *= (i_ders - t)
+                                        den *= (t + 1)
+                                    comb_ij = num // den
+                                    for il_1 in range(0, p1+1):
+                                        basis_ad1[ie1, ie2, ie3, il_1, i_ders, g1, g2, g3] -= comb_ij*basis_ad1[ie1, ie2, ie3, il_1, j_ders, g1, g2, g3] * sum_basistmp
                                 r = r * (degree-i_ders)
     degree         = p2
     #...
@@ -809,16 +876,27 @@ def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'
                                     s1 = s2
                                     s2 = j
                             # ...first compute R1
-                            ders2[0,:]     = ders2[0,:] * omega_2[span-degree:span+1]
+                            for il_2 in range(0, p2+1):
+                                ders2[0,il_2]     = ders2[0,il_2] * omega_2[span-degree+il_2]
                             sum_basisx    = sum(ders2[0,:])
                             basis_ad2[ie1, ie2, ie3, :, 0, g1, g2, g3] = ders2[0,:]/sum_basisx
                             r = degree
                             for i_ders in range(1,nders+1):
                                 # Multiply derivatives by correct factors
-                                ders2[i_ders,:] = ders2[i_ders,:] * r * omega_2[span-degree:span+1]
+                                for il_2 in range(0, p2+1):
+                                    ders2[i_ders,il_2] = ders2[i_ders,il_2] * r * omega_2[span-degree+il_2]
                                 basis_ad2[ie1, ie2, ie3, :, i_ders, g1, g2, g3] = ders2[i_ders,:]/sum_basisx
                                 for j_ders in range(0,i_ders):
-                                    basis_ad2[ie1, ie2, ie3, :, i_ders, g1, g2, g3] -= (j_ders+1)*basis_ad2[ie1, ie2, ie3, :, j_ders, g1, g2, g3] * sum(ders2[i_ders-j_ders,:])/sum_basisx
+                                    sum_basistmp = sum(ders2[i_ders-j_ders,:])/sum_basisx
+                                    num = 1
+                                    den = 1
+                                    m_jders = j_ders + 1
+                                    for t in range(m_jders):
+                                        num *= (i_ders - t)
+                                        den *= (t + 1)
+                                    comb_ij = num // den
+                                    for il_2 in range(0, p2+1):
+                                        basis_ad2[ie1, ie2, ie3, il_2, i_ders, g1, g2, g3] -= comb_ij*basis_ad2[ie1, ie2, ie3, il_2, j_ders, g1, g2, g3] * sum_basistmp
                                 r = r * (degree-i_ders)
     degree         = p3
     #...
@@ -898,14 +976,25 @@ def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'
                                     s1 = s2
                                     s2 = j
                             # ...first compute R1
-                            ders3[0,:]     = ders3[0,:] * omega_3[span-degree:span+1]
+                            for il_3 in range(0, p3+1):
+                                ders3[0,il_3]     = ders3[0,il_3] * omega_3[span-degree+il_3]
                             sum_basisx    = sum(ders3[0,:])
                             basis_ad3[ie1, ie2, ie3, :, 0, g1, g2, g3] = ders3[0,:]/sum_basisx
                             r = degree
                             for i_ders in range(1,nders+1):
                                 # Multiply derivatives by correct factors
-                                ders3[i_ders,:] = ders3[i_ders,:] * r * omega_3[span-degree:span+1]
+                                for il_3 in range(0, p3+1):
+                                    ders3[i_ders,il_3] = ders3[i_ders,il_3] * r * omega_3[span-degree+il_3]
                                 basis_ad3[ie1, ie2, ie3, :, i_ders, g1, g2, g3] = ders3[i_ders,:]/sum_basisx
                                 for j_ders in range(0,i_ders):
-                                    basis_ad3[ie1, ie2, ie3, :, i_ders, g1, g2, g3] -= (j_ders+1)*basis_ad3[ie1, ie2, ie3, :, j_ders, g1, g2, g3] * sum(ders3[i_ders-j_ders,:])/sum_basisx
+                                    sum_basistmp = sum(ders3[i_ders-j_ders,:])/sum_basisx
+                                    num = 1
+                                    den = 1
+                                    m_jders = j_ders + 1
+                                    for t in range(m_jders):
+                                        num *= (i_ders - t)
+                                        den *= (t + 1)
+                                    comb_ij = num // den
+                                    for il_3 in range(0, p3+1):
+                                        basis_ad3[ie1, ie2, ie3, il_3, i_ders, g1, g2, g3] -= comb_ij*basis_ad3[ie1, ie2, ie3, il_3, j_ders, g1, g2, g3] * sum_basistmp
                                 r = r * (degree-i_ders)
