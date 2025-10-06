@@ -401,7 +401,7 @@ def plot_MeshMultipatch(nbpts, V, xmp, ymp, cp = True, savefig = None, plot = Tr
    return 0
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def plot_FunctMultipatch(nbpts, V, xmp, ymp, Func, cp = True, savefig = None, plot = True): 
+def plot_FunctMultipatch(nbpts, V, xmp, ymp, functions, cp = True, savefig = None, plot = True): 
    """
    Plot the function in the whole domain
    """
@@ -414,7 +414,7 @@ def plot_FunctMultipatch(nbpts, V, xmp, ymp, Func, cp = True, savefig = None, pl
       #---Compute a mesh
       F1.append(pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0])
       F2.append(pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0])
-      values.append(Func(F1[i], F2[i]))
+      values.append(functions(F1[i], F2[i]))
 
    # --- Compute Global Color Levels ---
    u_min  = min(np.min(values[0]), np.min(values[1]))
@@ -517,7 +517,7 @@ def plot_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, cp = True, savefig = Non
 #----------------------------------------------------------------------------------------------------------------------------------------
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = None, solution = None, Func = None, output_path = "figs/admultipatch_multiblock.vtm", plot = True): 
+def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = None, solution = None, functions = None, output_path = "figs/admultipatch_multiblock.vtm", plot = True): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -542,7 +542,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
          {"name": "velocity", "data": yuh = list},   # e.g., velocity field control points
          # Add more solution fields as needed
       ]
-   Func : callable, optional
+   functions : callable, optional
        Analytic function to evaluate on the mesh (signature depends on dimension).
    output_path : str, optional
        Path to save the output VTM file (default: "figs/admultipatch_multiblock.vtm").
@@ -562,7 +562,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
    #F3 = [] 
    if zmp is None:
       if solution is None:
-         if Func is None:
+         if functions is None:
             for i in range(numPaches):
                #... computes adaptive mesh
                sx, sxx, sxy = pyccel_sol_field_2d((nbpts, nbpts), xad[i], V[i].knots, V[i].degree)[0:3]
@@ -598,7 +598,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
                # ... image bu analytic function
-               fnc  = Func(x, y)
+               fnc  = functions(x, y)
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
@@ -615,7 +615,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                multiblock[f"patch_{i}"] = grid
 
       else:
-         if Func is None:
+         if functions is None:
             for i in range(numPaches):
                #... computes adaptive mesh
                sx, sxx, sxy = pyccel_sol_field_2d((nbpts, nbpts), xad[i], V[i].knots, V[i].degree)[0:3]
@@ -655,7 +655,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
                # ... image bu analytic function
-               fnc  = Func(x, y)
+               fnc  = functions(x, y)
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
@@ -677,7 +677,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
    else:
       if zad is None :
          if solution is None:
-            if Func is None:
+            if functions is None:
                for i in range(numPaches):
                   #... computes adaptive mesh
                   sx, sxx, sxy = pyccel_sol_field_2d((nbpts, nbpts), xad[i], V[i].knots, V[i].degree)[0:3]
@@ -712,7 +712,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                   z = pyccel_sol_field_2d((None, None), zmp[i], V[i].knots, V[i].degree, meshes=(sx, sy))[0]
                   # .... 
                   # ... image bu analytic function
-                  fnc  = Func(x, y, z)
+                  fnc  = functions(x, y, z)
                   #...
                   points = np.stack((x, y, z), axis=-1)
 
@@ -727,7 +727,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                   multiblock[f"patch_{i}"] = grid
 
          else:
-            if Func is None:
+            if functions is None:
                for i in range(numPaches):
                   #... computes adaptive mesh
                   sx = pyccel_sol_field_2d((nbpts, nbpts), xad[i], V[i].knots, V[i].degree)[0]
@@ -762,7 +762,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                   z = pyccel_sol_field_2d((None, None), zmp[i], V[i].knots, V[i].degree, meshes=(sx, sy))[0]
                   # .... 
                   # ... image bu analytic function
-                  fnc  = Func(x, y, z)
+                  fnc  = functions(x, y, z)
                   #...
                   points = np.stack((x, y, z), axis=-1)
 
@@ -781,7 +781,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                   multiblock[f"patch_{i}"] = grid
       else: #... zad
          if solution is None:
-            if Func is None:
+            if functions is None:
                for i in range(numPaches):
                   #... computes adaptive mesh
                   sx, uxx, uxy, uxz = pyccel_sol_field_3d((nbpts, nbpts, nbpts), xad[i], V[i].knots, V[i].degree)[0:4]
@@ -817,7 +817,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                   z           = pyccel_sol_field_3d((nbpts, nbpts, nbpts), zmp[i], V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
                   # .... 
                   # ... image by analytic function
-                  fnc  = Func(x, y, z)
+                  fnc  = functions(x, y, z)
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -832,7 +832,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                   multiblock[f"patch_{i}"] = grid
 
          else:
-            if Func is None:
+            if functions is None:
                for i in range(numPaches):
                   #... computes adaptive mesh
                   sx          = pyccel_sol_field_3d((nbpts, nbpts, nbpts), xad[i], V[i].knots, V[i].degree)[0]
@@ -869,7 +869,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
                   z           = pyccel_sol_field_3d((nbpts, nbpts, nbpts), zmp[i], V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
                   # .... 
                   # ... image bu analytic function
-                  fnc  = Func(x, y, z)
+                  fnc  = functions(x, y, z)
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -892,7 +892,7 @@ def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = No
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None, Func = None, output_path = "figs/multipatch_solution.vtm", plot = True): 
+def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None, functions = None, output_path = "figs/multipatch_solution.vtm", plot = True): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -908,7 +908,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
        List of control points for the initial mapping in z direction (for 3D).
    solution : list, optional
        List of solution control points for each patch.
-   Func : callable, optional
+   functions : callable, optional
        Analytic function to evaluate on the mesh (signature depends on dimension).
    output_path : str, optional
        Path to save the output VTM file (default: "figs/multipatch_solution.vtm").
@@ -926,7 +926,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
    multiblock = pv.MultiBlock()
    if zmp is None:
       if solution is None:
-         if Func is None:
+         if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
                x, F1x, F1y = pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0:3]
@@ -954,7 +954,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
                # ... image bu analytic function
-               fnc  = Func(x, y)
+               fnc  = functions(x, y)
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
@@ -971,7 +971,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                multiblock[f"patch_{i}"] = grid
 
       else:
-         if Func is None:
+         if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
                x, F1x, F1y = pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0:3]
@@ -1003,7 +1003,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
                # ... image bu analytic function
-               fnc  = Func(x, y)
+               fnc  = functions(x, y)
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
@@ -1024,7 +1024,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                multiblock[f"patch_{i}"] = grid
    elif V[0].dim == 3: #.. z is not none 3D case
       if solution is None:
-         if Func is None:
+         if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
                x, uxx, uxy, uxz = pyccel_sol_field_3d((nbpts, nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0:4]
@@ -1051,7 +1051,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                y = pyccel_sol_field_3d((nbpts, nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0]
                z = pyccel_sol_field_3d((nbpts, nbpts, nbpts), zmp[i], V[i].knots, V[i].degree)[0]
                # ... image bu analytic function
-               fnc  = Func(x, y, z)
+               fnc  = functions(x, y, z)
                # .... 
                points = np.stack((x, y, z), axis=-1)
 
@@ -1067,7 +1067,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                multiblock[f"patch_{i}"] = grid
 
       else:
-         if Func is None:
+         if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
                x = pyccel_sol_field_3d((nbpts, nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0]
@@ -1096,7 +1096,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                y = pyccel_sol_field_3d((nbpts, nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0]
                z = pyccel_sol_field_3d((nbpts, nbpts, nbpts), zmp[i], V[i].knots, V[i].degree)[0]
                # ... image bu analytic function
-               fnc  = Func(x, y, z)
+               fnc  = functions(x, y, z)
                # .... 
                points = np.stack((x, y, z), axis=-1)
 
@@ -1116,7 +1116,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                multiblock[f"patch_{i}"] = grid
    else: #.. z is not none
       if solution is None:
-         if Func is None:
+         if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
                x, F1x, F1y = pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0:3]
@@ -1143,7 +1143,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                y = pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0]
                z = pyccel_sol_field_2d((nbpts, nbpts), zmp[i], V[i].knots, V[i].degree)[0]
                # ... image bu analytic function
-               fnc  = Func(x, y, z)
+               fnc  = functions(x, y, z)
                #...
                points = np.stack((x, y, z), axis=-1)
 
@@ -1159,7 +1159,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                multiblock[f"patch_{i}"] = grid
 
       else:
-         if Func is None:
+         if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
                x = pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0]
@@ -1188,7 +1188,7 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
                y = pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0]
                z = pyccel_sol_field_2d((nbpts, nbpts), zmp[i], V[i].knots, V[i].degree)[0]
                # ... image bu analytic function
-               fnc  = Func(x, y, z)
+               fnc  = functions(x, y, z)
                #...
                points = np.stack((x, y, z), axis=-1)
 

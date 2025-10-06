@@ -12,7 +12,8 @@ from pyrefiga import TensorSpace
 from pyrefiga import StencilMatrix
 from pyrefiga import StencilVector
 from pyrefiga import pyccel_sol_field_2d
-
+from pyrefiga import assemble_mass1D
+# ...
 import matplotlib                   as     mpl
 import matplotlib.pyplot            as     plt
 from   mpl_toolkits.axes_grid1      import make_axes_locatable
@@ -23,15 +24,13 @@ from   matplotlib.ticker            import LinearLocator, FormatStrFormatter
 import time
 
 # .. for the initialisation
-from examples.gallery.gallery_section_09 import assemble_massmatrix1D
-from examples.gallery.gallery_section_09 import assemble_vector_ex01 #---1 : Projection L2
+from gallery.gallery_section_09 import assemble_vector_ex01 #---1 : Projection L2
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
-assemble_mass1D      = compile_kernel( assemble_massmatrix1D, arity=2)
 
 # ---. for cahn-haliard
-from examples.gallery.gallery_section_09 import assemble_matrix_ex03 
-from examples.gallery.gallery_section_09 import assemble_vector_ex03
-from examples.gallery.gallery_section_09 import assemble_norm_ex01 
+from gallery.gallery_section_09 import assemble_matrix_ex03 
+from gallery.gallery_section_09 import assemble_vector_ex03
+from gallery.gallery_section_09 import assemble_norm_ex01 
 
 assemble2_stiffness = compile_kernel(assemble_matrix_ex03, arity=2)
 assemble2_rhs       = compile_kernel(assemble_vector_ex03, arity=1)
@@ -110,8 +109,9 @@ def Cahn_Hliard_solve(V1, V2, V, u, xh, dt, alpha, N_iter = None):
           # ---
           b          = -1.*rhs
           #--Solve a linear system
-          lu         = sla.splu(csc_matrix(M))
-          d_thx      = lu.solve(b)
+         #  lu         = sla.splu(csc_matrix(M))
+         #  d_thx      = lu.solve(b)
+          d_thx      = sla.cgs(M, b, rtol = 1e-10)[0]
           # --- update and apply periodic boundary conditions
           d_tx       = d_thx.reshape((V1.nbasis-V1.degree, V2.nbasis-V2.degree))                    
           d_tx       = apply_periodic(V, d_tx, periodic, update= True)

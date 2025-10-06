@@ -1,12 +1,10 @@
 __all__ = ['assemble_vector_ex01',
            'assemble_norm_ex01'
 ]
-from pyccel.decorators import types
 
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]')
-def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, rhs):
+def assemble_vector_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', rhs:'float64[:,:]'):
 
     from numpy import exp
     from numpy import cos
@@ -63,8 +61,7 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
 
 #==============================================================================Assemble l2 and H1 error norm
 #---1 : In uniform mesh
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]', 'double[:,:]', 'double[:,:]')
-def assemble_norm_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_u, vector_w, rhs):
+def assemble_norm_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', rhs:'float64[:,:]'):
 
     from numpy import exp
     from numpy import cos

@@ -20,9 +20,9 @@ from   pyrefiga                    import getGeometryMap
 from   pyrefiga                    import build_dirichlet
 
 # Import Poisson assembly tools for uniform mesh
-from examples.gallery.gallery_section_06             import assemble_matrix_un_ex01
-from examples.gallery.gallery_section_06             import assemble_vector_un_ex01
-from examples.gallery.gallery_section_06             import assemble_norm_un_ex01
+from gallery.gallery_section_06             import assemble_matrix_un_ex01
+from gallery.gallery_section_06             import assemble_vector_un_ex01
+from gallery.gallery_section_06             import assemble_norm_un_ex01
 
 assemble_matrix_un   = compile_kernel(assemble_matrix_un_ex01, arity=2)
 assemble_rhs_un      = compile_kernel(assemble_vector_un_ex01, arity=1)

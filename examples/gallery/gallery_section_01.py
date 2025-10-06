@@ -6,12 +6,9 @@ __all__ = ['assemble_matrix_ex01',
            'assemble_norm_ex02'
 ]
 
-from pyccel.decorators import types
-
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int[:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:]')
-def assemble_vector_ex01(ne1, p1, spans_1, basis_1,  weights_1, points_1, rhs):
+def assemble_vector_ex01(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]',  weights_1:'float64[:,:]', points_1:'float64[:,:]', rhs:'float64[:]'):
 
     from numpy import exp
     from numpy import pi
@@ -52,8 +49,7 @@ def assemble_vector_ex01(ne1, p1, spans_1, basis_1,  weights_1, points_1, rhs):
 #==============================================================================Assemble l2 and H1 error norm
 #---1 : In uniform mesh
 #==============================================================================
-@types('int', 'int', 'int[:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:]', 'double[:]')
-def assemble_norm_ex01(ne1, p1, spans_1, basis_1,  weights_1, points_1, vector_u, rhs):
+def assemble_norm_ex01(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]',  weights_1:'float64[:,:]', points_1:'float64[:,:]', vector_u:'float64[:]', rhs:'float64[:]'):
 
     from numpy import exp
     from numpy import cos

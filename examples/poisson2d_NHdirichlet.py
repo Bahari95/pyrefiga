@@ -108,7 +108,7 @@ V2 = SplineSpace(degree=degree, nelements=nelements, nderiv = 2)
 Vh = TensorSpace(V1, V2)
 
 #..
-g        = ['0.','2.* cos(pi*x)','2.* x ','-2.* x']
+g        = ['0.','2.* np.cos(np.pi*y)','2.* x ','-2.* x']
 x_d, u_d = build_dirichlet(Vh, g)
 print('#---IN-UNIFORM--MESH')
 u_pH, xuh, l2_norm, H1_norm = poisson_solve(V1, V2, Vh, x_d = x_d, u_d = u_d)

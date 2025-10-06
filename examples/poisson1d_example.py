@@ -19,8 +19,8 @@ from   pyrefiga                    import assemble_mass1D
 
 
 #---In Poisson equation
-from examples.gallery.gallery_section_01 import assemble_vector_ex01    #---1 : In uniform mesh
-from examples.gallery.gallery_section_01 import assemble_norm_ex01      #---1 : In uniform mesh
+from gallery.gallery_section_01 import assemble_vector_ex01    #---1 : In uniform mesh
+from gallery.gallery_section_01 import assemble_norm_ex01      #---1 : In uniform mesh
 
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
 assemble_norm_l2     = compile_kernel(assemble_norm_ex01, arity=1)
@@ -86,7 +86,7 @@ def poisson_solve(V):
        b                   = b[1:-1]      
        # ...
        #xkron               = lu.solve(b)       
-       xkron, status = sla.cg(K1, b, tol=1.e-17, maxiter=5000)
+       xkron, status       = sla.cg(K1, b)
        # ...
        x                   = np.zeros(V.nbasis)
        x[1:-1]             = xkron

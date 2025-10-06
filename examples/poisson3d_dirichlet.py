@@ -12,14 +12,15 @@ from pyrefiga import StencilMatrix
 from pyrefiga import StencilVector
 from pyrefiga import pyccel_sol_field_3d
 from pyrefiga import Poisson
+from pyrefiga import getGeometryMap
 # ... Using Matrices accelerated with Pyccel
 from   pyrefiga                    import assemble_stiffness1D
 from   pyrefiga                    import assemble_mass1D     
 
 #---In Poisson equation
-from examples.gallery.gallery_section_03 import assemble_vector_ex01    #---1 : In uniform mesh
-from examples.gallery.gallery_section_03 import assemble_matrix_un_ex01 #---1 : In uniform mesh
-from examples.gallery.gallery_section_03 import assemble_norm_ex01      #---1 : In uniform mesh
+from gallery.gallery_section_03 import assemble_vector_ex01    #---1 : In uniform mesh
+from gallery.gallery_section_03 import assemble_matrix_un_ex01 #---1 : In uniform mesh
+from gallery.gallery_section_03 import assemble_norm_ex01      #---1 : In uniform mesh
 
 assemble_stiffness2D = compile_kernel(assemble_matrix_un_ex01, arity=2)
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
@@ -42,7 +43,7 @@ from   tabulate                     import tabulate
 import numpy                        as     np
 import timeit
 import time
-
+import argparse
 from tabulate import tabulate
 #==============================================================================
 #  for figures 
@@ -123,14 +124,29 @@ def poisson_solve(V1, V2, V3, V):
        l2_norm             = norm[0]
        H1_norm             = norm[1]       
        return u, x, l2_norm, H1_norm
+#------------------------------------------------------------------------------
+# Argument parser for controlling plotting
+parser = argparse.ArgumentParser(description="Control plot behavior and save control points.")
+parser.add_argument("--plot", action="store_true", help="Enable plotting and saving control points")
+args = parser.parse_args()
 
-degree      = 2
-quad_degree = degree + 1
+nbpts       = 100 #for plot
+nelements   = 16
+# Test 1
+g           = ['np.sin(np.pi*x)*y**2*z*3*np.sin(4.*np.pi*(1.-y))*(1.-z)']
+geometry = '../fields/cube.xml'
+print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
+print("Dirichlet boundary conditions", g)
+
+# Extract geometry mapping
+mp             = getGeometryMap(geometry,0)
+degree         = mp.degree[0] # Use same degree as geometry
+xmp, ymp, zmp  = mp.RefineGeometryMap(Nelements=(nelements,nelements,nelements))
 
 #----------------------
 #..... Initialisation and computing optimal mapping for 16*16
 #----------------------
-nelements  = 16
+quad_degree = degree + 1
 # create the spline space for each direction
 V1   = SplineSpace(degree=degree, nelements= nelements, nderiv = 2, quad_degree = quad_degree)
 V2   = SplineSpace(degree=degree, nelements= nelements, nderiv = 2, quad_degree = quad_degree)
@@ -141,49 +157,21 @@ print('#---IN-UNIFORM--MESH')
 u_pH, xuh, l2_norm, H1_norm = poisson_solve(V1, V2, V3, V)
 print('-----> L^2-error ={} -----> H^1-error = {}'.format(l2_norm, H1_norm))
 
-#---Compute a solution
-nbpts = 100
-# # ........................................................
-# ....................For testing in one nelements
-# #.........................................................
-#---Compute a solution
-u,   ux, uy, uz, X, Y, Z      = pyccel_sol_field_3d((nbpts, nbpts, nbpts),  xuh,   V.knots, V.degree)
+#------------------------------------------------------------------------------
+# Export solution for visualization
+#------------------------------------------------------------------------------
+from pyrefiga    import paraview_nurbsSolutionMultipatch
+solutions = [
+    {"name": "Solution", "data": [xuh]}
+]
+functions = [
+    {"name": "Exact solution", "expression": g[0]},
+]
+paraview_nurbsSolutionMultipatch(nbpts, [V], [xmp], [ymp], zmp=[zmp], solution = solutions, functions = functions)
+#------------------------------------------------------------------------------
+# Show or close plots depending on argument
+if args.plot :
+    import subprocess
 
-solut = lambda t, x, y : sin(pi*t)*x**2*y*3*sin(4.*pi*(1.-x))*(1.-y) 
-#solut = lambda t, x, y :  sin( pi*t)* sin( pi*x)* sin( pi*y)
-
-# set up a figure twice as wide as it is tall
-fig = plt.figure(figsize=plt.figaspect(0.5))
-#===============
-# First subplot
-# set up the axes for the first plot
-ax = fig.add_subplot(1, 2, 1, projection='3d')
-# plot a 3D surface like in the example mplot3d/surface3d_demo
-surf0 = ax.plot_surface(Y[0,:,:], Z[0,:,:], u[50,:,:], rstride=1, cstride=1, cmap=cm.coolwarm,
-                            linewidth=0, antialiased=False)
-ax.set_xlim(0.0, 1.0)
-ax.set_ylim(0.0, 1.0)
-ax.zaxis.set_major_locator(LinearLocator(10))
-ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-#ax.set_title('Approximate solution in uniform mesh')
-ax.set_xlabel('X',  fontweight ='bold')
-ax.set_ylabel('Y',  fontweight ='bold')
-# Add a color bar which maps values to colors.
-fig.colorbar(surf0, shrink=0.5, aspect=25)
-
-#===============
-# Second subplot
-ax = fig.add_subplot(1, 2, 2, projection='3d')
-surf = ax.plot_surface(Y[0,:,:], Z[0,:,:], solut(0.5,Y[0,:,:], Z[0,:,:]), cmap=cm.coolwarm,
-                            linewidth=0, antialiased=False)
-ax.set_xlim(0.0, 1.0)
-ax.set_ylim(0.0, 1.0)
-ax.zaxis.set_major_locator(LinearLocator(10))
-ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-#ax.set_title('Approximate Solution in adaptive meshes')
-ax.set_xlabel('F1',  fontweight ='bold')
-ax.set_ylabel('F2',  fontweight ='bold')
-fig.colorbar(surf, shrink=0.5, aspect=25)
-plt.savefig('figs/Poisson3D.png')
-plt.show(block=False)
-plt.close()
+    # Load the multipatch VTM
+    subprocess.run(["paraview", "figs/multipatch_solution.vtm"])

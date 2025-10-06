@@ -2,20 +2,17 @@ __all__ = ['assemble_matrix__un_ex01',
            'assemble_vector_un_ex01',
            'assemble_norm_ex02']
 
-from pyccel.decorators import types
-
 #... utilities of poisson equation
 #==============================================================================
 #---2 : In adapted mesh Matrix
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:,:,:]')
-def assemble_matrix_un_ex01(ne1, ne2,
-                        p1, p2,
-                        spans_1, spans_2,
-                        basis_1, basis_2,
-                        weights_1, weights_2,
-                        points_1, points_2,
-                        vector_m1, vector_m2,
-                        matrix):
+def assemble_matrix_un_ex01(ne1:'int', ne2:'int',
+                        p1:'int', p2:'int',
+                        spans_1:'int[:]', spans_2:'int[:]',
+                        basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]',
+                        weights_1:'float64[:,:]', weights_2:'float64[:,:]',
+                        points_1:'float64[:,:]', points_2:'float64[:,:]',
+                        vector_m1:'float64[:,:]', vector_m2:'float64[:,:]',
+                        matrix:'float64[:,:,:,:]'):
 
     # ... sizes
     from numpy import zeros
@@ -112,8 +109,7 @@ def assemble_matrix_un_ex01(ne1, ne2,
 
 #==============================================================================
 #---2 : rhs
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]')
-def assemble_vector_un_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_m1, vector_m2, vector_d, rhs):
+def assemble_vector_un_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_m1:'float64[:,:]', vector_m2:'float64[:,:]', vector_d:'float64[:,:]', rhs:'float64[:,:]'):
 
     from numpy import exp
     from numpy import cos, cosh
@@ -225,8 +221,7 @@ def assemble_vector_un_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_
 
 #=================================================================================
 # norm in uniform mesh norm
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]',  'double[:,:]')
-def assemble_norm_un_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_m1, vector_m2, vector_u, rhs):
+def assemble_norm_un_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_m1:'float64[:,:]', vector_m2:'float64[:,:]', vector_u:'float64[:,:]', rhs:'float64[:,:]'):
 
     from numpy import exp
     from numpy import pi

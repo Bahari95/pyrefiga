@@ -5,14 +5,9 @@ __all__ = ['assemble_matrix_ex03',
            'assemble_norm_ex01'
 ]
 
-
-#__________________________________
-from pyccel.decorators import types
-
 #==============================================================================
 #---2 : In adapted mesh
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'real', 'int', 'double[:,:,:,:]')
-def assemble_matrix_ex03(ne1, ne2, p1, p2,  spans_1, spans_2, basis_1, basis_2, weights_1, weights_2, points_1, points_2, vector_u, dt, alpha, matrix):
+def assemble_matrix_ex03(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', dt:'float', alpha:'int', matrix:'float64[:,:,:,:]'):
 
     # ... sizes
     from numpy import zeros
@@ -121,8 +116,7 @@ def assemble_matrix_ex03(ne1, ne2, p1, p2,  spans_1, spans_2, basis_1, basis_2, 
 
 #==============================================================================
 #---
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'real', 'int', 'double[:,:]')
-def assemble_vector_ex03(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_u, vector_w, dt, alpha, rhs):
+def assemble_vector_ex03(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', vector_w:'float64[:,:]', dt:'float', alpha:'int', rhs:'float64[:,:]'):
 
     from numpy import exp
     from numpy import cos
@@ -235,39 +229,9 @@ def assemble_vector_ex03(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     rhs[i1+p1,i2+p2] += v
     # ...
 
-# assembles mass matrix 1D
-#==============================================================================
-@types('int', 'int', 'int[:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]')
-def assemble_massmatrix1D(ne, degree, spans, basis, weights, points,  matrix):
-
-    # ... sizes
-    k1 = weights.shape[1]
-    # ... build matrices
-    for ie1 in range(0, ne):
-            i_span_1 = spans[ie1]        
-            # evaluation dependant uniquement de l'element
-
-            for il_1 in range(0, degree+1):
-                i1 = i_span_1 - degree + il_1
-                for il_2 in range(0, degree+1):
-                            i2 = i_span_1 - degree + il_2
-                            v = 0.0
-                            for g1 in range(0, k1):
-                                
-                                    bi_0 = basis[ie1, il_1, 0, g1]
-                                    bj_0 = basis[ie1, il_2, 0, g1]
-                                    
-                                    wvol = weights[ie1, g1]
-                                    
-                                    v += bi_0 * bj_0 * wvol
-
-                            matrix[degree+i1, degree+ i2-i1]  += v
-
-
 #=============================================================================
 #---
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]')
-def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, rhs):
+def assemble_vector_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', rhs:'float64[:,:]'):
 
     from numpy import zeros
     from numpy import random
@@ -310,8 +274,7 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
                     rhs[i1+p1,i2+p2] += v   
     # ...
 #==============================================================================
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'int', 'double[:,:]')
-def assemble_norm_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_u, alpha, rhs):
+def assemble_norm_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', alpha:'int', rhs:'float64[:,:]'):
 
     from numpy import sin
     from numpy import cos
