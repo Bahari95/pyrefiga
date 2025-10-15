@@ -209,18 +209,18 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None
       # nbpts = 1000
       xmp   = u11_mpH.toarray().reshape(V.nbasis)
       ymp   = u12_mpH.toarray().reshape(V.nbasis)
-      # sx    = sol_field_NURBS_2d((nbpts, nbpts), x11, V.omega, V.knots, V.degree)[0]
-      # sy    = sol_field_NURBS_2d((nbpts, nbpts), x12, V.omega, V.knots, V.degree)[0]
+      sx    = sol_field_NURBS_2d((nbpts, nbpts), x11, V.omega, V.knots, V.degree)[0]
+      sy    = sol_field_NURBS_2d((nbpts, nbpts), x12, V.omega, V.knots, V.degree)[0]
       # #---Compute a image by initial mapping
-      # x     = sol_field_NURBS_2d((None, None), xmp, V.omega, V.knots, V.degree, meshes=(sx, sy))[0]
-      # y     = sol_field_NURBS_2d((None, None), ymp, V.omega, V.knots, V.degree, meshes=(sx, sy))[0]
+      x     = sol_field_NURBS_2d((None, None), xmp, V.omega, V.knots, V.degree, meshes=(sx, sy))[0]
+      y     = sol_field_NURBS_2d((None, None), ymp, V.omega, V.knots, V.degree, meshes=(sx, sy))[0]
       # #---Compute a least square approximation of the image
-      # vx11  = least_square_2dNURBspline(V.degree[0], V.degree[1], V.knots[0], V.knots[1], V.omega[0], V.omega[1], x)
-      # vx12  = least_square_2dNURBspline(V.degree[0], V.degree[1], V.knots[0], V.knots[1], V.omega[0], V.omega[1], y)
-      f = lambda x,y : x
-      vx11 = collocation_2dNURBspline(V, f, xmp = (xmp, ymp), adxmp = (x11, x12) )
-      f = lambda x,y : y
-      vx12 = collocation_2dNURBspline(V, f, xmp = (xmp, ymp), adxmp = (x11, x12))
+      vx11  = least_square_2dNURBspline(V.degree[0], V.degree[1], V.knots[0], V.knots[1], V.omega[0], V.omega[1], x)
+      vx12  = least_square_2dNURBspline(V.degree[0], V.degree[1], V.knots[0], V.knots[1], V.omega[0], V.omega[1], y)
+      # f = lambda x,y : x
+      # vx11 = collocation_2dNURBspline(V, f, xmp = (xmp, ymp), adxmp = (x11, x12) )
+      # f = lambda x,y : y
+      # vx12 = collocation_2dNURBspline(V, f, xmp = (xmp, ymp), adxmp = (x11, x12))
       v11.from_array(V, vx11)
       v12.from_array(V, vx12)
       u11.from_array(V, x11)
@@ -240,7 +240,7 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
    # ... Assembling mapping
    mp             = getGeometryMap(geometry,0)
    degree         = mp.degree # Use same degree as geometry
-   quad_degree    = max(degree[0],degree[1])*4+1 # Quadrature degree
+   quad_degree    = max(degree[0],degree[1])*5+1 # Quadrature degree
    mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
    if mp.nelements[0]*nb_ne < 16 and mp.nelements[1]*nb_ne <16 :
       print("nelements = ", mp.nelements[0]*nb_ne, mp.nelements[1]*nb_ne)

@@ -196,6 +196,7 @@ u11_mph        = StencilVector(Vh.vector_space)
 u12_mph        = StencilVector(Vh.vector_space)
 u11_mph.from_array(Vh, xmp)
 u12_mph.from_array(Vh, ymp)
+
 # Initialize mapping vectors
 u21_mph        = StencilVector(Vh.vector_space)
 u22_mph        = StencilVector(Vh.vector_space)

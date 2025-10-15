@@ -8,8 +8,17 @@ from pyccel.decorators import types
 # Assembles a rhs at t_0
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int', 'int', 'int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'float', 'float', 'float', 'double[:,:]')
-def assemble_vector_ex00(ne1, ne2, ne3, ne4, p1, p2, p3, p4, spans_1, spans_2,  spans_3, spans_4, basis_1, basis_2, basis_3, basis_4, weights_1, weights_2, weights_3, weights_4, points_1, points_2, points_3, points_4, vector_v1, vector_v2, epsilon, gamma, dt, times, rhs):
+def assemble_vector_ex00(
+    ne1='int', ne2='int', ne3='int', ne4='int',
+    p1='int', p2='int', p3='int', p4='int',
+    spans_1='int[:]', spans_2='int[:]', spans_3='int[:]', spans_4='int[:]',
+    basis_1='double[:,:,:,:]', basis_2='double[:,:,:,:]', basis_3='double[:,:,:,:]', basis_4='double[:,:,:,:]',
+    weights_1='double[:,:]', weights_2='double[:,:]', weights_3='double[:,:]', weights_4='double[:,:]',
+    points_1='double[:,:]', points_2='double[:,:]', points_3='double[:,:]', points_4='double[:,:]',
+    vector_v1='double[:,:]', vector_v2='double[:,:]',
+    epsilon='float', gamma='float', dt='float', times='float',
+    rhs='double[:,:]'
+):
 
     from numpy import exp
     from numpy import cos
@@ -163,8 +172,19 @@ def assemble_vector_ex00(ne1, ne2, ne3, ne4, p1, p2, p3, p4, spans_1, spans_2,  
 
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int', 'int', 'int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'float', 'float', 'float', 'float', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:]')
-def assemble_vector_ex01(ne1, ne2, ne3, ne4, p1, p2, p3, p4, spans_1, spans_2,  spans_3, spans_4, basis_1, basis_2, basis_3, basis_4, weights_1, weights_2, weights_3, weights_4, points_1, points_2, points_3, points_4, vector_u, vector_v1, vector_v2, epsilon, gamma, dt, times, spans_ad1, spans_ad2, basis_ad1, basis_ad2, rhs):
+def assemble_vector_ex01(
+    ne1:'int', ne2:'int', ne3:'int', ne4:'int',
+    p1:'int', p2:'int', p3:'int', p4:'int',
+    spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]', spans_4:'int[:]',
+    basis_1:'double[:,:,:,:]', basis_2:'double[:,:,:,:]', basis_3:'double[:,:,:,:]', basis_4:'double[:,:,:,:]',
+    weights_1:'double[:,:]', weights_2:'double[:,:]', weights_3:'double[:,:]', weights_4:'double[:,:]',
+    points_1:'double[:,:]', points_2:'double[:,:]', points_3:'double[:,:]', points_4:'double[:,:]',
+    vector_u:'double[:,:]', vector_v1:'double[:,:]', vector_v2:'double[:,:]',
+    epsilon:'float', gamma:'float', dt:'float', times:'float',
+    spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]',
+    basis_ad1:'double[:,:,:,:,:,:]', basis_ad2:'double[:,:,:,:,:,:]',
+    rhs:'double[:,:]'
+):
 
     from numpy import exp
     from numpy import cos
@@ -356,8 +376,19 @@ def assemble_vector_ex01(ne1, ne2, ne3, ne4, p1, p2, p3, p4, spans_1, spans_2,  
 
 # Assembles Quality of mesh adaptation
 #==============================================================================
-@types('int', 'int', 'int', 'int', 'int', 'int', 'int', 'int','int', 'int', 'int', 'int', 'int[:]', 'int[:]','int[:]', 'int[:]','int[:]', 'int[:]', 'double[:,:,:,:]', 'double[:,:,:,:]',  'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:,:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]',  'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'double[:,:]', 'real', 'int[:,:,:,:]', 'int[:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:,:,:,:,:]', 'double[:,:]')
-def assemble_Quality_ex01(ne1, ne2, ne3, ne4, ne5, ne6, p1, p2, p3, p4, p5, p6, spans_1, spans_2,  spans_3, spans_4, spans_5, spans_6, basis_1, basis_2, basis_3, basis_4, basis_5, basis_6, weights_1, weights_2, weights_3, weights_4, weights_5, weights_6, points_1, points_2, points_3, points_4, points_5, points_6, vector_u, vector_w, vector_v1, vector_v2, times, spans_ad1, spans_ad2, basis_ad1, basis_ad2, rhs):
+def assemble_Quality_ex01(
+    ne1:'int', ne2:'int', ne3:'int', ne4:'int', ne5:'int', ne6:'int',
+    p1:'int', p2:'int', p3:'int', p4:'int', p5:'int', p6:'int',
+    spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]', spans_4:'int[:]', spans_5:'int[:]', spans_6:'int[:]',
+    basis_1:'double[:,:,:,:]', basis_2:'double[:,:,:,:]', basis_3:'double[:,:,:,:]', basis_4:'double[:,:,:,:]', basis_5:'double[:,:,:,:]', basis_6:'double[:,:,:,:]',
+    weights_1:'double[:,:]', weights_2:'double[:,:]', weights_3:'double[:,:]', weights_4:'double[:,:]', weights_5:'double[:,:]', weights_6:'double[:,:]',
+    points_1:'double[:,:]', points_2:'double[:,:]', points_3:'double[:,:]', points_4:'double[:,:]', points_5:'double[:,:]', points_6:'double[:,:]',
+    vector_u:'double[:,:]', vector_w:'double[:,:]', vector_v1:'double[:,:]', vector_v2:'double[:,:]',
+    times:'float',
+    spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]',
+    basis_ad1:'double[:,:,:,:,:,:]', basis_ad2:'double[:,:,:,:,:,:]',
+    rhs:'double[:,:]'
+):
 
     from numpy import exp
     from numpy import cos

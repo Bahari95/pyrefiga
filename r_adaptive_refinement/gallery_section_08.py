@@ -4,12 +4,19 @@ __all__ = ['assemble_vector_ex01',
            'assemble_vector_ex04',
            'assemble_Quality_ex01'
 ]
-from pyccel.decorators import types
-
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'float64[:,:,:,:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]',  'float64[:,:]',  'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'int[:,:,:,:]', 'int[:,:,:,:]', 'float64[:,:,:,:,:,:]', 'float64[:,:,:,:,:,:]',  'float64[:]', 'float64[:,:]')
-def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_u, vector_w, vector_v1, vector_v2, spans_ad1, spans_ad2, basis_ad1, basis_ad2, corners, rhs):
+def assemble_vector_ex01(ne1: 'int', ne2: 'int', p1: 'int', p2: 'int',
+    spans_1: 'int[:]', spans_2: 'int[:]',
+    basis_1: 'float64[:,:,:,:]', basis_2: 'float64[:,:,:,:]',
+    weights_1: 'float64[:,:]', weights_2: 'float64[:,:]',
+    points_1: 'float64[:,:]', points_2: 'float64[:,:]',
+    vector_u: 'float64[:,:]', vector_w: 'float64[:,:]',
+    vector_v1: 'float64[:,:]', vector_v2: 'float64[:,:]',
+    spans_ad1: 'int[:,:,:,:]', spans_ad2: 'int[:,:,:,:]',
+    basis_ad1: 'float64[:,:,:,:,:,:]', basis_ad2: 'float64[:,:,:,:,:,:]',
+    corners: 'float64[:]', rhs: 'float64[:,:]'
+):
 
     from numpy import exp
     from numpy import cos
@@ -225,8 +232,14 @@ def assemble_vector_ex01(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
 
 #==============================================================================
 #
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'float64[:,:,:,:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]',  'float64[:,:]',  'float64[:,:]', 'float64[:,:]', 'int','float64[:,:]')
-def assemble_vector_ex02(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2,  vector_v, dx, rhs):
+def assemble_vector_ex02(
+    ne1: 'int', ne2: 'int', p1: 'int', p2: 'int',
+    spans_1: 'int[:]', spans_2: 'int[:]',
+    basis_1: 'float64[:,:,:,:]', basis_2: 'float64[:,:,:,:]',
+    weights_1: 'float64[:,:]', weights_2: 'float64[:,:]',
+    points_1: 'float64[:,:]', points_2: 'float64[:,:]',
+    vector_v: 'float64[:,:]', dx: 'int', rhs: 'float64[:,:]'
+):
 
     from numpy import zeros
 
@@ -285,8 +298,11 @@ def assemble_vector_ex02(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2, 
 
     #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
-@types('int', 'int', 'int[:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:]', 'float64', 'float64[:]')
-def assemble_vectorbasis_ex02(ne1, p1, spans_1,  basis_1,  weights_1, points_1,  knots_1, ovlp_value, rhs):
+def assemble_vectorbasis_ex02(
+    ne1: 'int', p1: 'int', spans_1: 'int[:]', basis_1: 'float64[:,:,:,:]',
+    weights_1: 'float64[:,:]', points_1: 'float64[:,:]', knots_1: 'float64[:]',
+    ovlp_value: 'float64', rhs: 'float64[:]'
+):
     from numpy import zeros
     from numpy import empty
 
@@ -374,8 +390,17 @@ def assemble_vectorbasis_ex02(ne1, p1, spans_1,  basis_1,  weights_1, points_1, 
 
 # Assembles Quality of mesh adaptation
 #==============================================================================
-@types('int', 'int', 'int', 'int', 'int[:]', 'int[:]', 'float64[:,:,:,:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'int[:,:,:,:]', 'int[:,:,:,:]', 'float64[:,:,:,:,:,:]', 'float64[:,:,:,:,:,:]', 'float64[:,:]')
-def assemble_vector_ex03(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, vector_v1, spans_ad1, spans_ad2, basis_ad1, basis_ad2, rhs):
+def assemble_vector_ex03(
+    ne1: 'int', ne2: 'int', p1: 'int', p2: 'int',
+    spans_1: 'int[:]', spans_2: 'int[:]',
+    basis_1: 'float64[:,:,:,:]', basis_2: 'float64[:,:,:,:]',
+    weights_1: 'float64[:,:]', weights_2: 'float64[:,:]',
+    points_1: 'float64[:,:]', points_2: 'float64[:,:]',
+    vector_v1: 'float64[:,:]',
+    spans_ad1: 'int[:,:,:,:]', spans_ad2: 'int[:,:,:,:]',
+    basis_ad1: 'float64[:,:,:,:,:,:]', basis_ad2: 'float64[:,:,:,:,:,:]',
+    rhs: 'float64[:,:]'
+):
 
     from numpy import exp
     from numpy import cos
@@ -1182,8 +1207,17 @@ def assemble_Quality_ex01(
 
 # Assembles Quality of mesh adaptation
 #==============================================================================
-@types('int', 'int', 'int', 'int', 'int[:,:]', 'int[:,:]', 'float64[:,:,:,:]', 'float64[:,:,:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:]', 'float64[:]', 'float64[:,:]', 'float64[:,:]', 'float64[:,:]', 'float64[:]', 'float64[:]', 'float64[:,:]')
-def assemble_vector_ex04(ne1, ne2, p1, p2, spans_1, spans_2,  basis_1, basis_2,  weights_1, weights_2, points_1, points_2, knots_1, knots_2, vector_u1, vector_u2, vector_v1, omega_1, omega_2, rhs):
+def assemble_vector_ex04(
+    ne1: 'int', ne2: 'int', p1: 'int', p2: 'int',
+    spans_1: 'int[:,:]', spans_2: 'int[:,:]',
+    basis_1: 'float64[:,:,:,:]', basis_2: 'float64[:,:,:,:]',
+    weights_1: 'float64[:,:]', weights_2: 'float64[:,:]',
+    points_1: 'float64[:,:]', points_2: 'float64[:,:]',
+    knots_1: 'float64[:]', knots_2: 'float64[:]',
+    vector_u1: 'float64[:,:]', vector_u2: 'float64[:,:]',
+    vector_v1: 'float64[:,:]', omega_1: 'float64[:]', omega_2: 'float64[:]',
+    rhs: 'float64[:,:]'
+):
 
     from numpy import exp
     from numpy import cos
