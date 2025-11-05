@@ -476,10 +476,12 @@ class pyrefInterface(object):
     """
     Detect interface between patches.
     Returns the list of interfaces and Dirichlet BCs to be applied on each patch.
-    The patches are numbered as follows:
-        3  |  4
-       ----+----
-        1  |  2
+    The convention for the patches is as follows:
+                                                 ___4___
+                                                |       |
+                                              1 |       | 2
+                                                |_______|
+                                                    3
     The interface is defined as the common edge between two patches.
     The Dirichlet BCs are defined as follows:
         [True, False] : Dirichlet BC on the left edge
@@ -517,9 +519,9 @@ class pyrefInterface(object):
         return self.dirichlet_2
     
     def printInterface(self):
-        print(f"Interface between patch {self.interface[0]} and patch {self.interface[1]}")
-        print(f"Dirichlet BCs for patch {self.interface[0]} : {self.dirichlet_1}")
-        print(f"Dirichlet BCs for patch {self.interface[1]} : {self.dirichlet_2}")
+        print(f"Interface between patches ({self.interface[0]}, {self.interface[1]})")
+        print(f"Dirichlet BCs for patch {1} : {self.dirichlet_1}")
+        print(f"Dirichlet BCs for patch {2} : {self.dirichlet_2}")
 
     def setInterface(self, xd1, xd2):
         if self.interface[0] == 2 and self.interface[1] == 1:

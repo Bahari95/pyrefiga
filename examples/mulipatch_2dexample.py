@@ -87,13 +87,18 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     M[n_basis:,n_basis:]       = (stiffness22.tosparse()).toarray()[:,:]
 
     # # # Assemble Nitsche's method matrices
-    stiffness12                = assemble_stiffness2_nitsche(V, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[Vh.omega[0],Vh.omega[1], interface[1], Kappa, normS])
+    print("Assembling Nitsche matrices...", interface[0])
+    stiffness12                = assemble_stiffness2_nitsche(V, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[Vh.omega[0],Vh.omega[1], interface[0], Kappa, normS])
     stiffness12                = apply_dirichlet(V, stiffness12, dirichlet=dirichlet_1)
     M[:n_basis,n_basis:]       = (stiffness12.tosparse()).toarray()[:,:]
+
     # Assemble Nitsche's method matrices
-    stiffness21                = assemble_stiffness2_nitsche(V, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[Vh.omega[0],Vh.omega[1], interface[0], Kappa, normS])
+    stiffness21                = assemble_stiffness2_nitsche(V, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[Vh.omega[0],Vh.omega[1], interface[1], Kappa, normS])
     stiffness21                = apply_dirichlet(V, stiffness21, dirichlet=dirichlet_2)
     M[n_basis:,:n_basis]       = (stiffness21.tosparse()).toarray()[:,:]
+
+    print("Test if Nitsche matrix is symmetric: ", np.allclose(stiffness12.tosparse().toarray(), stiffness21.tosparse().toarray().T))
+
 
     # Assemble right-hand side vector
     rhs                       = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d1])
@@ -109,7 +114,6 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     # Solve the linear system using CGS
     x, inf          = sla.cg(M, b)
 
-    # print("GMRES converged:", inf, x.shape, "unknowns")
     # ... Extract solution
     u1              = StencilVector(V.vector_space)
     u2              = StencilVector(V.vector_space)
@@ -137,7 +141,7 @@ args = parser.parse_args()
 # Parameters and initialization
 #------------------------------------------------------------------------------
 nbpts       = 100 # Number of points for plotting
-RefinNumber = 2   # Number of global mesh refinements
+RefinNumber = 1   # Number of global mesh refinements
 nelements   = 8  # Initial mesh size
 table       = zeros((RefinNumber+1,5))
 i           = 1
@@ -159,7 +163,7 @@ g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 #geometry = '../fields/unitSquare.xml'
 #geometry = '../fields/circle.xml'
 geometry = '../fields/quart_annulus.xml'
-#geometry = '../fields/annulus.xml'
+# geometry = '../fields/annulus.xml'
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 
@@ -167,7 +171,7 @@ print("Dirichlet boundary conditions", g)
 mp              = getGeometryMap(geometry,0)# .. First patch 
 mp1             = getGeometryMap(geometry,1)# .. Second patch
 degree          = mp.degree # Use same degree as geometry
-quad_degree     = max(degree[0],degree[1])+3 # Quadrature degree
+quad_degree     = max(degree[0],degree[1])+1 # Quadrature degree
 mp.nurbs_check  = True # Activate NURBS if geometry uses NURBS
 mp1.nurbs_check = True # Activate NURBS if geometry uses NURBS
 

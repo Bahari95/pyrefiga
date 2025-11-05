@@ -623,7 +623,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                      grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
                multiblock[f"patch_{i}"] = grid
    else:
-      if zad is None :
+      if zad is None : # 2D adaptive mesh in 3D mapping
          if solution is None:
             if functions is None:
                for i in range(numPaches):
@@ -633,10 +633,25 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   #---Compute a image by initial mapping
                   x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
                   y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  z           = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
-                  #...Compute a Jacobian in  i direction
-                  #Jf = (F1x*F2y - F1y*F2x)
-                  Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
+                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  #...Compute dirivatives
+                  xu = sxx*F1x + syx*F1y
+                  yu = sxx*F2x + syx*F2y
+                  zu = sxx*F3x + syx*F3y
+                  xv = sxy*F1x + syy*F1y
+                  yv = sxy*F2x + syy*F2y
+                  zv = sxy*F3x + syy*F3y
+                  #
+                  r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
+                  r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
+                  n   = np.cross(r_u, r_v)
+                  n  /= np.linalg.norm(n, axis=-1, keepdims=True)
+                  # --- Light direction (unit vector) ---
+                  l = np.array([0.2, 0.6, 1.0])
+                  l /= np.linalg.norm(l)
+
+                  # --- Brightness field ---
+                  I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -646,7 +661,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   grid.dimensions = [nx, ny, 1]
 
                   # Flatten the solution and attach as a scalar field
-                  grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+                  grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
 
                   if precomputed is not None :
                      for sol in precomputed:
@@ -655,12 +670,30 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
             else:
                for i in range(numPaches):
                   #... computes adaptive mesh
-                  sx = sol_field_NURBS_2d((nbpts, nbpts), xad[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                  sy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                  sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+                  sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
                   #---Compute a image by initial mapping
-                  x = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
-                  y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
-                  z = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
+                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  #...Compute dirivatives
+                  xu = sxx*F1x + syx*F1y
+                  yu = sxx*F2x + syx*F2y
+                  zu = sxx*F3x + syx*F3y
+                  xv = sxy*F1x + syy*F1y
+                  yv = sxy*F2x + syy*F2y
+                  zv = sxy*F3x + syy*F3y
+                  #
+                  r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
+                  r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
+                  n   = np.cross(r_u, r_v)
+                  n  /= np.linalg.norm(n, axis=-1, keepdims=True)
+                  # --- Light direction (unit vector) ---
+                  l = np.array([0.2, 0.6, 1.0])
+                  l /= np.linalg.norm(l)
+
+                  # --- Brightness field ---
+                  I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -670,6 +703,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   grid.dimensions = [nx, ny, 1]
 
                   # Flatten the solution and attach as a scalar field
+                  grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
+
                   # ... image bu analytic function
                   for Funct in functions:
                      fnc = eval(Funct["expression"])
@@ -684,12 +719,31 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
             if functions is None:
                for i in range(numPaches):
                   #... computes adaptive mesh
-                  sx = sol_field_NURBS_2d((nbpts, nbpts), xad[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                  sy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                  sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+                  sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
                   #---Compute a image by initial mapping
-                  x = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
-                  y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
-                  z = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
+                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  #...Compute dirivatives
+                  xu = sxx*F1x + syx*F1y
+                  yu = sxx*F2x + syx*F2y
+                  zu = sxx*F3x + syx*F3y
+                  xv = sxy*F1x + syy*F1y
+                  yv = sxy*F2x + syy*F2y
+                  zv = sxy*F3x + syy*F3y
+                  #
+                  r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
+                  r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
+                  n   = np.cross(r_u, r_v)
+                  n  /= np.linalg.norm(n, axis=-1, keepdims=True)
+                  # --- Light direction (unit vector) ---
+                  l = np.array([0.2, 0.6, 1.0])
+                  l /= np.linalg.norm(l)
+
+                  # --- Brightness field ---
+                  I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
+
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -699,6 +753,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   grid.dimensions = [nx, ny, 1]
 
                   # Flatten the solution and attach as a scalar field
+                  grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
+
                   # .... 
                   for sol in solution:
                      U          = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V[i].omega, V[i].knots, V[i].degree)[0]
@@ -711,12 +767,30 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
             else:
                for i in range(numPaches):
                   #... computes adaptive mesh
-                  sx = sol_field_NURBS_2d((nbpts, nbpts), xad[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                  sy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                  sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+                  sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
                   #---Compute a image by initial mapping
-                  x = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
-                  y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
-                  z = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0]
+                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  #...Compute dirivatives
+                  xu = sxx*F1x + syx*F1y
+                  yu = sxx*F2x + syx*F2y
+                  zu = sxx*F3x + syx*F3y
+                  xv = sxy*F1x + syy*F1y
+                  yv = sxy*F2x + syy*F2y
+                  zv = sxy*F3x + syy*F3y
+                  #
+                  r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
+                  r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
+                  n   = np.cross(r_u, r_v)
+                  n  /= np.linalg.norm(n, axis=-1, keepdims=True)
+                  # --- Light direction (unit vector) ---
+                  l = np.array([0.2, 0.6, 1.0])
+                  l /= np.linalg.norm(l)
+
+                  # --- Brightness field ---
+                  I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -726,6 +800,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   grid.dimensions = [nx, ny, 1]
 
                   # Flatten the solution and attach as a scalar field
+                  grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
+                  
                   # ... image bu analytic function
                   for Funct in functions:
                      fnc = eval(Funct["expression"])
@@ -1163,10 +1239,22 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          else:
             for i in range(numPaches):
                #---Compute a physical domain
-               x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+               x, xu, xv = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+               y, yu, yv = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+               z, zu, zv = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
                #...
+               r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
+               r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
+               n   = np.cross(r_u, r_v)
+               n  /= np.linalg.norm(n, axis=-1, keepdims=True)
+               # --- Light direction (unit vector) ---
+               l = np.array([0.2, 0.6, 1.0])
+               l /= np.linalg.norm(l)
+
+               # --- Brightness field ---
+               I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
+
+               print(n.shape, x.shape)
                points = np.stack((x, y, z), axis=-1)
 
                nx, ny = x.shape
@@ -1175,6 +1263,8 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
                grid.dimensions = [nx, ny, 1]
 
                # Flatten the solution and attach as a scalar field
+               grid["isphotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
+
                # ... image bu analytic function
                for Funct in functions:
                   fnc = eval(Funct["expression"])
