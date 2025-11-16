@@ -3,7 +3,7 @@ mulipatch_2dexample.py
 
 Example multipatch: Solving Poisson's Equation on a 2D complex geometry using B-spline or NURBS representation.
 
-Author: M. Bahari
+Author: M. Bahari TODO BUG IN ASSEMBLY
 """
 from   pyrefiga                         import compile_kernel
 from   pyrefiga                         import apply_dirichlet
