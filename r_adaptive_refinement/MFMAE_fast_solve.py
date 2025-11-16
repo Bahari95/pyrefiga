@@ -24,10 +24,6 @@ from   pyrefiga                    import assemble_matrix_ex02
 # ...   load a geometry from xml file 
 from   pyrefiga                    import getGeometryMap
 
-#from gallery_section_06             import assemble_stiffnessmatrix1D
-#from gallery_section_06             import assemble_massmatrix1D
-#from gallery_section_06             import assemble_matrix_ex01
-#from gallery_section_06             import assemble_matrix_ex02
 #..
 from gallery_section_06             import assemble_vector_ex01
 from gallery_section_06             import assemble_Quality_ex01

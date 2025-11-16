@@ -58,3 +58,7 @@ Please pyccelize the specific files and run them afterward to accelerate the com
 You can explore and run some tests in the "tests" folder or review the content in the "examples" folder.
 
 You may work in the **newFolder** for your tasks, as it has been created automatically for you.
+
+## Example
+
+![PNG](https://github.com/Bahari95/pyrefiga/blob/main/r_adaptive_refinement/annulus_adaptive_meshes.png)

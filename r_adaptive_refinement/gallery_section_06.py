@@ -6,16 +6,16 @@ from pyccel.decorators import types
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
 def assemble_vector_ex01(
-    ne1='int', ne2='int', ne3='int', ne4='int', ne5='int', ne6='int',
-    p1='int', p2='int', p3='int', p4='int', p5='int', p6='int',
-    spans_1='int[:]', spans_2='int[:]', spans_3='int[:]', spans_4='int[:]', spans_5='int[:]', spans_6='int[:]',
-    basis_1='float64[:,:,:,:]', basis_2='float64[:,:,:,:]', basis_3='float64[:,:,:,:]', basis_4='float64[:,:,:,:]', basis_5='float64[:,:,:,:]', basis_6='float64[:,:,:,:]',
-    weights_1='float64[:,:]', weights_2='float64[:,:]', weights_3='float64[:,:]', weights_4='float64[:,:]', weights_5='float64[:,:]', weights_6='float64[:,:]',
-    points_1='float64[:,:]', points_2='float64[:,:]', points_3='float64[:,:]', points_4='float64[:,:]', points_5='float64[:,:]', points_6='float64[:,:]',
-    vector_u='float64[:,:]', vector_w='float64[:,:]', vector_v1='float64[:,:]', vector_v2='float64[:,:]',
-    spans_ad1='int[:,:,:,:]', spans_ad2='int[:,:,:,:]',
-    basis_ad1='float64[:,:,:,:,:,:]', basis_ad2='float64[:,:,:,:,:,:]',
-    rhs='float64[:,:]'
+    ne1:'int', ne2:'int', ne3:'int', ne4:'int', ne5:'int', ne6:'int',
+    p1:'int', p2:'int', p3:'int', p4:'int', p5:'int', p6:'int',
+    spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]', spans_4:'int[:]', spans_5:'int[:]', spans_6:'int[:]',
+    basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]', basis_4:'float64[:,:,:,:]', basis_5:'float64[:,:,:,:]', basis_6:'float64[:,:,:,:]',
+    weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', weights_4:'float64[:,:]', weights_5:'float64[:,:]', weights_6:'float64[:,:]',
+    points_1:'float64[:,:]', points_2:'float64[:,:]', points_3:'float64[:,:]', points_4:'float64[:,:]', points_5:'float64[:,:]', points_6:'float64[:,:]',
+    vector_u:'float64[:,:]', vector_w:'float64[:,:]', vector_v1:'float64[:,:]', vector_v2:'float64[:,:]',
+    spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]',
+    basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]',
+    rhs:'float64[:,:]'
 ):
     from numpy import exp
     from numpy import cos
