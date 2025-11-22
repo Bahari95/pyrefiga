@@ -1,7 +1,39 @@
 """
 cahn_Hilliard2d_example.py
 
-implicit_scheme
+
+ implicit 2D Cahn–Hilliard solver using pyrefiga
+
+Purpose
+  Demonstrates an isogeometric discretisation and a two-stage
+  predictor–multicorrector algorithm for the Cahn–Hilliard equation.
+
+Main components
+  - Proj_solve(V1, V2, V, alpha)
+      Projects a small random perturbation onto the spline space,
+      assembles 1D mass matrices and returns the initial field,
+      the mass matrix (kron product) and the initial GL free energy.
+
+  - Cahn_Hliard_solve(V1, V2, V, u, xh, dt, alpha, N_iter=None)
+      Performs one time step using a nonlinear iterative solver:
+      builds stiffness and RHS kernels via compiled assembly routines,
+      solves the linear(ised) system and updates the control points.
+
+Usage
+  - Configure degree, nelements, dt, alpha and ii_max near the bottom
+    of the file and run as a script.
+  - The script saves contour plots in the ./figs directory and produces
+    an animated GIF cahn_haliard.gif if imageio is available.
+
+Notes and recommendations
+  - Periodic boundary conditions are assumed in both directions.
+  - Stability and convergence depend strongly on dt, alpha and spatial
+    resolution; reduce dt or increase resolution if iterations diverge.
+  - Assembly kernels are provided by gallery.gallery_section_09 and are
+    compiled via pyrefiga.compile_kernel.
+
+Dependencies
+  pyrefiga, numpy, scipy, matplotlib, imageio (optional)
 
 author :  M. BAHARI
 """
@@ -43,7 +75,7 @@ from scipy.sparse        import csc_matrix, linalg as sla
 from numpy               import zeros, linalg, asarray, linspace
 #++
 import numpy as np
-#==============================================================================
+
 #  for figures 
 import os
 # Create the folder

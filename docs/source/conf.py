@@ -1,5 +1,5 @@
 # Configuration file for the Sphinx documentation builder.
-#
+# sphinx-build -b html -E source build/html .//./docs/source to be executed 
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
@@ -19,7 +19,9 @@ extensions = [
     'sphinx.ext.autodoc',       # automatic doc from docstrings
     'sphinx.ext.napoleon',      # Google/NumPy style docstrings
     'sphinx.ext.mathjax',       # LaTeX maths support
+    'sphinx.ext.autosummary',   # generate summary tables & pages
 ]
+
 
 templates_path = ['_templates']
 exclude_patterns = []
