@@ -25,11 +25,14 @@ class quadratures_in_admesh(object):
 				# ... 1D reparametrization
 				self.basis_spans_in_adquadrature_1d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_1DL2map
 			elif sp_dim == 2:
-				# ... L2(gradient) mapping
+				# ... using B-spline mapping
 				self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2map
 			elif sp_dim == 3:
 				#... L2 mapping in 3D
 				self.basis_spans_in_adquadrature_3d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_3L2map
+			elif sp_dim == 6 :
+				# ... The Hdiv mapping space can be selected independently of the initial mapping space.
+				self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2map
 		else:
 			if reparameterization is True : 
 				# ... L2(gradient) mapping
@@ -45,7 +48,7 @@ class quadratures_in_admesh(object):
 				self.basis_spans_in_adquadrature_3d = core.assemble_basis_spans_in_adquadrature_3L2map
 			elif sp_dim == 6 :
 				# ... The Hdiv mapping space can be selected independently of the initial mapping space.
-				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature
+				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_Hdivmap
 			else :
 				# ... L2-B-spline space (degree-1, degree-1) for Hdiv mapping is the same as for initial mapping.
 				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_same_space
@@ -98,7 +101,7 @@ class quadratures_in_admesh(object):
 			self.nb_vec2 = (nx, ny, nz, p3+1, nders+1, k1, k2, k3)
 			self.ns_vec  = (nx, ny, nz, k1, k2, k3)
 		else:
-			# ... We test Hdiv and other solver in 2D
+			# ... We test Hdiv and other solvers in 2D
 			args  = []
 			args += list(V.nelements)
 			args += list(V.degree)
@@ -147,7 +150,9 @@ class quadratures_in_admesh(object):
 
 	def ad_quadratures(self, u01_mae, u10_mae = None, u11_mae = None):
 		'''
-		computes Quadratures using Hdiv mapping
+		computes Quadratures using Monge-Ampère
+		 
+		   mapping
 		'''
 		if isinstance(u11_mae, StencilVector):
 			# ... !3D

@@ -3,7 +3,7 @@ elasticity.py
 
 # Elasticity example: Infinite plate with circular hole under constant in-plane tension in the x-direction
 
-@author : M. BAHARI TODO BUG IN ASSEMBLY
+@author : M. BAHARI TODO BUG IN ASSEMBLY (reformulate VF)
 """
 
 from pyrefiga import compile_kernel, apply_dirichlet, apply_zeros

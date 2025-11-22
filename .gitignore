@@ -128,6 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+docs/build/
 pyrefiga/__pycache__
 pyrefiga/__pyccel__
 pyrefiga/tests/__epyccel__
