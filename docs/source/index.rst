@@ -23,6 +23,7 @@ Contents
    :caption: API Reference:
 
    modules
+   integration_rules
 
 Indices and tables
 ==================
