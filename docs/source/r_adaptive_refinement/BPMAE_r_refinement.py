@@ -55,7 +55,7 @@ import time
 import os
 # Create the folder
 os.makedirs("figs", exist_ok=True)  # 'exist_ok=True' prevents errors if the folder already exists
-#------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
 # Argument parser for controlling plotting
 import argparse
 parser = argparse.ArgumentParser(description="Control plot behavior and save control points.")

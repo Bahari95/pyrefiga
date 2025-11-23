@@ -112,7 +112,7 @@ def pyccel_sol_field_2d( Npoints, uh, knots, degree, meshes = None, bound_val = 
 # Computes Solution and its gradien In two dimension
 def pyccel_sol_field_3d(Npoints,  uh , knots, degree, meshes = None):
     '''
-    Using computed control points U we compute solution
+    Using computed control points uh we compute solution
     in new discretisation by Npoints    
     '''
 

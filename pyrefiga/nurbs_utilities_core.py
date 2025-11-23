@@ -1,7 +1,107 @@
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Author: M. BAHARI
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
+Module docstring for nurbs_utilities_core.py
+This module provides utility functions to evaluate (rational) B-spline / NURBS
+field values and their first derivatives on structured evaluation grids or on
+arrays of mesh coordinates. The implementations compute non-rational B-spline
+basis functions and their first derivatives using the standard triangular
+ndu/au algorithm, convert them into rational (weighted) basis functions using
+per-direction weight arrays (omega1, omega2, omega3), and then evaluate the
+field and its derivatives by linear combination of control/coefficients uh.
+The functions mutate the provided output array Q in-place; they do not return
+new arrays. They are designed for 1D, 2D and 3D scalar fields (field value
+and gradient components).
+Common assumptions and conventions
+- Knot vectors Tu, Tv, Tw are non-decreasing sequences (iterables of floats).
+    For degree p and number of control points n, the knot vector length should
+    equal n + p + 1.
+- Degrees pu, pv, pw are non-negative integers.
+- Control/solution coefficients uh are provided on a grid matching the number
+    of control points implied by the knot vectors:
+        * 1D: uh has length nu = len(Tu) - pu - 1
+        * 2D: uh shape (nu, nv) where nu = len(Tu) - pu - 1, nv = len(Tv) - pv - 1
+        * 3D: uh shape (nu, nv, nw) with analogous definitions
+- Weight arrays omega1, omega2, omega3 contain positive weights associated
+    with control points in each parametric direction. Their lengths should match
+    nu, nv, nw respectively.
+- The output array Q is expected to have enough columns / last-dimension size
+    to hold the computed values and optionally the mesh coordinates (depending on
+    the function variant):
+        * sol_field_1D_meshes: Q shape (nx, >=3). Input x-coordinates are read
+            from Q[:, 2]. After call Q[:, 0] = field value, Q[:, 1] = d/dx (value).
+        * sol_field_2D_meshes: Q shape (nx, ny, >=5). Input coords read from
+            Q[..., 3] (x) and Q[..., 4] (y). After call Q[..., 0] = field value,
+            Q[..., 1] = d/dx, Q[..., 2] = d/dy.
+        * sol_field_2D: Q shape (nx, ny, >=3). Input coords are provided by xs and ys
+            arrays (1D arrays of length nx and ny). After call Q[..., 0] = field,
+            Q[..., 1] = d/dx, Q[..., 2] = d/dy.
+        * sol_field_3D_meshes: Q shape (nx, ny, nz, >=7). Input coords read from
+            Q[..., 4] (x), Q[..., 5] (y), Q[..., 6] (z). After call,
+            Q[..., 0] = field, Q[..., 1:4] = gradients (d/dx, d/dy, d/dz), and
+            Q[..., 4:7] remain x,y,z.
+        * sol_field_3D_mesh: same semantics as sol_field_3D_meshes (legacy naming),
+            but the functions differ only in where they obtain the input coordinates:
+            - sol_field_3D: uses xs, ys, zs arrays
+            - sol_field_3D_mesh / sol_field_2D_meshes / sol_field_1D_meshes:
+                read coordinates embedded inside Q
+- All functions compute only up to the first derivative (nders = 1). The code
+    multiplies derivative basis values by the degree to obtain the physical
+    derivative with respect to the parametric coordinate, then converts to
+    rational (weighted) derivatives using the quotient rule.
+Function summaries
+- sol_field_1D_meshes(nx, uh, Tu, pu, omega1, Q)
+        Evaluate a 1D NURBS field and its first derivative at nx sample points
+        whose x-coordinates are stored in Q[:, 2]. Fills Q[:, 0] with the field
+        value and Q[:, 1] with d/dx. Uses knot vector Tu, degree pu, control
+        coefficients uh (1D array length nu), and weights omega1 (length nu).
+- sol_field_2D_meshes(nx, ny, uh, Tu, Tv, pu, pv, omega1, omega2, Q)
+        Evaluate a 2D NURBS field and its first derivatives at a structured
+        (nx x ny) grid where coordinates are stored inside Q[..., 3] and Q[..., 4]
+        (x and y). Fills Q[..., 0] with the field value and Q[..., 1:3] with the
+        derivatives (d/dx, d/dy). The control array uh is expected shape (nu, nv)
+        and P is a copy of uh used for evaluation.
+- sol_field_2D(nx, ny, xs, ys, uh, Tu, Tv, pu, pv, omega1, omega2, Q)
+        Same as sol_field_2D_meshes but reads evaluation coordinates from separate
+        1D arrays xs (length nx) and ys (length ny) instead of embedding them in Q.
+- sol_field_3D(nx, ny, nz, xs, ys, zs, uh, Tu, Tv, Tw, pu, pv, pw,
+                                omega1, omega2, omega3, Q)
+        Evaluate a 3D NURBS scalar field and first derivatives on a structured
+        grid defined by xs, ys, zs (1D coordinate arrays). The control array uh
+        should have shape (nu, nv, nw). Results are stored in Q[..., 0:4] with
+        order (value, d/dx, d/dy, d/dz). Coordinates are not read from Q.
+- sol_field_3D_mesh(nx, ny, nz, uh, Tu, Tv, Tw, pu, pv, pw,
+                                        omega1, omega2, omega3, Q)
+        Same as sol_field_3D but reads the evaluation coordinates from Q[..., 4:7]
+        (x,y,z) and writes results into Q[..., 0:4]. This variant is intended
+        for situations where Q already contains mesh coordinates.
+Notes on numerical behavior and errors
+- The algorithm performs binary search to find the knot span and computes
+    basis functions via the standard stable recurrence. If knot vectors are
+    malformed (e.g., repeated knots leading to zero denominators) a ZeroDivisionError
+    or floating-point exception may occur. The functions do not validate all
+    input shapes extensively; mismatched shapes may raise IndexError.
+- The rational basis conversion divides by the weighted sum of basis
+    function values (sum_basisx, sum_basisy, sum_basisz). If these sums are
+    numerically zero due to weight/configuration issues, a division by zero
+    will occur.
+- The functions copy uh into a local array P before evaluation; for large
+    control grids this duplicates memory temporarily.
+Recommendations
+- Ensure Tu, Tv, Tw and uh shapes are consistent before calling these
+    routines.
+- Pre-allocate Q with the expected shape and place coordinates in the expected
+    positions for the "_meshes" variants.
+- For production use, consider adding explicit shape/consistency checks,
+    vectorizing common operations, or replacing the bespoke basis-function
+    code with a numerically robust NURBS library if available.
+References
+- The basis-function and derivative algorithm implemented here follows the
+    standard recurrence/triangular "ndu" approach commonly described in
+    NURBS references (e.g., the standard algorithm for B-spline basis
+    evaluation and derivatives).
+
+    Authors: M. Bahari
+"""
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Computes Solution and its gradien In two dimension
 def sol_field_1D_meshes(nx:'int', uh:'float[:]', Tu:'float[:]', pu:'int', omega1:'float[:]', Q:'float[:,:]'):
     # Using computed control points U we compute solution
@@ -106,7 +206,7 @@ def sol_field_1D_meshes(nx:'int', uh:'float[:]', Tu:'float[:]', pu:'int', omega1
             #..
             Q[i_x, 0]   = c
             Q[i_x, 1]   = cx
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Computes Solution and its gradien In two dimension
 def sol_field_2D_meshes(nx:'int', ny:'int', uh:'float[:,:]', Tu:'float[:]', Tv:'float[:]', pu:'int', pv:'int', omega1:'float[:]', omega2:'float[:]', Q:'float[:,:,:]'):
     # Using computed control points U we compute solution

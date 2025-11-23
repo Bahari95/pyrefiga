@@ -8,7 +8,7 @@ from pyccel.decorators import types
 def assemble_vector_ex01(
     ne1:'int', ne2:'int', ne3:'int', ne4:'int', ne5:'int', ne6:'int',
     p1:'int', p2:'int', p3:'int', p4:'int', p5:'int', p6:'int',
-    spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]', spans_4:'int[:]', spans_5:'int[:]', spans_6:'int[:]',
+    spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]', spans_4:'int[:]', spans_5:'int[:,:]', spans_6:'int[:,:]',
     basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]', basis_4:'float64[:,:,:,:]', basis_5:'float64[:,:,:,:]', basis_6:'float64[:,:,:,:]',
     weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', weights_4:'float64[:,:]', weights_5:'float64[:,:]', weights_6:'float64[:,:]',
     points_1:'float64[:,:]', points_2:'float64[:,:]', points_3:'float64[:,:]', points_4:'float64[:,:]', points_5:'float64[:,:]', points_6:'float64[:,:]',
@@ -45,19 +45,17 @@ def assemble_vector_ex01(
     # ...coefficient of normalisation
     Crho      = 0.0
     for ie1 in range(0, ne1):
-        i_span_5 = spans_5[ie1]
         for ie2 in range(0, ne2):
-            i_span_6 = spans_6[ie2]
-            
-            lcoeffs_v1[ : , : ]  =  vector_v1[i_span_5 : i_span_5+p5+1, i_span_6 : i_span_6+p6+1]
-            lcoeffs_v2[ : , : ]  =  vector_v2[i_span_5 : i_span_5+p5+1, i_span_6 : i_span_6+p6+1]
             for g1 in range(0, k1):
                 for g2 in range(0, k2):
+                    i_span_5 = spans_5[ie1, g1]
+                    i_span_6 = spans_6[ie2, g2]
+                    
+                    lcoeffs_v1[ : , : ]  =  vector_v1[i_span_5 : i_span_5+p5+1, i_span_6 : i_span_6+p6+1]
+                    lcoeffs_v2[ : , : ]  =  vector_v2[i_span_5 : i_span_5+p5+1, i_span_6 : i_span_6+p6+1]
 
                     wvol  = weights_1[ie1, g1]*weights_2[ie2, g2]
 
-                    #x    = (2.0*x1-1.0)*sqrt(1.0-0.5*(2.0*x2-1.0)**2)
-                    #y    = (2.0*x2-1.0)*sqrt(1.0-0.5*(2.0*x1-1.0)**2)
                     x         = 0.0
                     y         = 0.0
                     for il_1 in range(0, p5+1):
@@ -130,8 +128,6 @@ def assemble_vector_ex01(
             for g1 in range(0, k1):
                 for g2 in range(0, k2):
 
-                    x1   = lvalues_u1[g1,g2]
-                    x2   = lvalues_u2[g1,g2]
                     #... We compute firstly the span in new adapted points
                     span_5    = spans_ad1[ie1, ie2, g1, g2]
                     span_6    = spans_ad2[ie1, ie2, g1, g2]  
@@ -140,8 +136,7 @@ def assemble_vector_ex01(
                     lcoeffs_v1[ : , : ]  =  vector_v1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_v2[ : , : ]  =  vector_v2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     
-                    #x    = (2.0*x1-1.0)*sqrt(1.0-0.5*(2.0*x2-1.0)**2)
-                    #y    = (2.0*x2-1.0)*sqrt(1.0-0.5*(2.0*x1-1.0)**2)
+
                     x     = 0.0
                     y     = 0.0
                     for il_1 in range(0, p5+1):
@@ -196,7 +191,7 @@ def assemble_vector_ex01(
 def assemble_Quality_ex01(
     ne1: int, ne2: int, ne3: int, ne4: int, ne5: int, ne6: int,
     p1: int, p2: int, p3: int, p4: int, p5: int, p6: int,
-    spans_1: 'int[:]', spans_2: 'int[:]', spans_3: 'int[:]', spans_4: 'int[:]', spans_5: 'int[:]', spans_6: 'int[:]',
+    spans_1: 'int[:]', spans_2: 'int[:]', spans_3: 'int[:]', spans_4: 'int[:]', spans_5: 'int[:,:]', spans_6: 'int[:,:]',
     basis_1: 'float64[:,:,:,:]', basis_2: 'float64[:,:,:,:]', basis_3: 'float64[:,:,:,:]', basis_4: 'float64[:,:,:,:]', basis_5: 'float64[:,:,:,:]', basis_6: 'float64[:,:,:,:]',
     weights_1: 'float64[:,:]', weights_2: 'float64[:,:]', weights_3: 'float64[:,:]', weights_4: 'float64[:,:]', weights_5: 'float64[:,:]', weights_6: 'float64[:,:]',
     points_1: 'float64[:,:]', points_2: 'float64[:,:]', points_3: 'float64[:,:]', points_4: 'float64[:,:]', points_5: 'float64[:,:]', points_6: 'float64[:,:]',
@@ -237,19 +232,17 @@ def assemble_Quality_ex01(
     # ...coefficient of normalisation
     Crho      = 0.0
     for ie1 in range(0, ne1):
-        i_span_5 = spans_5[ie1]
         for ie2 in range(0, ne2):
-            i_span_6 = spans_6[ie2]
-            
-            lcoeffs_v1[ : , : ]  =  vector_v1[i_span_5 : i_span_5+p5+1, i_span_6 : i_span_6+p6+1]
-            lcoeffs_v2[ : , : ]  =  vector_v2[i_span_5 : i_span_5+p5+1, i_span_6 : i_span_6+p6+1]
             for g1 in range(0, k1):
                 for g2 in range(0, k2):
+                    i_span_5 = spans_5[ie1, g1]
+                    i_span_6 = spans_6[ie2, g2]
+                    
+                    lcoeffs_v1[ : , : ]  =  vector_v1[i_span_5 : i_span_5+p5+1, i_span_6 : i_span_6+p6+1]
+                    lcoeffs_v2[ : , : ]  =  vector_v2[i_span_5 : i_span_5+p5+1, i_span_6 : i_span_6+p6+1]
 
                     wvol  = weights_1[ie1, g1]*weights_2[ie2, g2]
 
-                    #x    = (2.0*x1-1.0)*sqrt(1.0-0.5*(2.0*x2-1.0)**2)
-                    #y    = (2.0*x2-1.0)*sqrt(1.0-0.5*(2.0*x1-1.0)**2)
                     x         = 0.0
                     y         = 0.0
                     for il_1 in range(0, p5+1):
@@ -276,11 +269,9 @@ def assemble_Quality_ex01(
     for ie1 in range(0, ne1):
         i_span_1 = spans_1[ie1]
         i_span_4 = spans_4[ie1]
-        i_span_5 = spans_5[ie1]
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
             i_span_3 = spans_3[ie2]
-            i_span_6 = spans_6[ie2]
 
             lvalues_u1[ : , : ]  = 0.0
             lvalues_u1x[ : , : ] = 0.0

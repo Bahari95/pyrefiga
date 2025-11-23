@@ -144,7 +144,9 @@ def assemble_basis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'int',
                     ders[i_ders,:] = ders[i_ders,:] * r
                     basis_ad1[ie1, ie2, :, i_ders, g1, g2] = ders[i_ders,:]
                     r = r * (degree-i_ders)
-
+                 #==================================
+                 # ... SECOND DIRECTION
+                 #==================================
                  xq = points2[ie1, ie2, g1, g2]
 
                  degree         = p6
@@ -271,7 +273,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'
                     points2[ie1, ie2, g1, g2] = sy
 
     #   ---Computes All basis in a new points
-    degree         = p1
+    degree         = p5
     # ...
     left           = empty( degree )
     right          = empty( degree )
@@ -279,7 +281,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'
     ndu            = empty( (degree+1, degree+1) )
     ders           = zeros( (     nders+1, degree+1) ) # output array
     # ...
-    degree         = p2
+    degree         = p6
     left2          = empty( degree )
     right2         = empty( degree )
     a2             = empty( (       2, degree+1) )
@@ -291,7 +293,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'
              for g2 in range(0, k2):
                  xq      = points1[ie1, ie2, g1, g2] 
                  
-                 degree         = p1
+                 degree         = p5
                  #span = find_span( knots, degree, xq )
                  #~~~~~~~~~~~~~~~
                  # Knot index at left/right boundary
@@ -355,14 +357,14 @@ def assemble_nurbsbasis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'
                          s1 = s2
                          s2 = j
                  # ...first compute R1
-                 for il_1 in range(0, p1+1):
+                 for il_1 in range(0, degree+1):
                     ders[0,il_1]     = ders[0,il_1] * omega_5[span-degree+il_1]
                  sum_basisx    = sum(ders[0,:])
                  basis_ad1[ie1, ie2, :, 0, g1, g2] = ders[0,:]/sum_basisx
                  r = degree
                  for i_ders in range(1,nders+1):
                     # Multiply derivatives by correct factors
-                    for il_1 in range(0, p1+1):
+                    for il_1 in range(0, degree+1):
                        ders[i_ders,il_1] = ders[i_ders,il_1] * r * omega_5[span-degree+il_1]
                     basis_ad1[ie1, ie2,  :, i_ders, g1, g2] = ders[i_ders,:]/sum_basisx
                     for j_ders in range(0,i_ders):
@@ -374,15 +376,17 @@ def assemble_nurbsbasis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'
                             num *= (i_ders - t)
                             den *= (t + 1)
                         comb_ij = num // den
-                        for il_1 in range(0, p1+1):
+                        for il_1 in range(0, degree+1):
                           basis_ad1[ie1, ie2,  il_1, i_ders, g1, g2] -= comb_ij*basis_ad1[ie1, ie2,  il_1, j_ders, g1, g2] * sum_basistmp
                     r = r * (degree-i_ders)
 
                  #==================================
-                 xq      += points2[ie1, ie2, g1, g2]
+                 # ... SECOND DIRECTION
+                 #==================================
+                 xq      = points2[ie1, ie2, g1, g2]
 
                  #span = find_span( knots, degree, xq )
-                 degree         = p2
+                 degree         = p6
                  #~~~~~~~~~~~~~~~
                  # Knot index at left2/right2 boundary
                  low  = degree
@@ -445,14 +449,14 @@ def assemble_nurbsbasis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'
                          s1 = s2
                          s2 = j
                  # ...first compute R1
-                 for il_2 in range(0, p2+1):
+                 for il_2 in range(0, degree+1):
                     ders2[0,il_2]     = ders2[0,il_2] * omega_6[span-degree+il_2]
                  sum_basisx    = sum(ders2[0,:])
                  basis_ad2[ie1, ie2, :, 0, g1, g2] = ders2[0,:]/sum_basisx
                  r = degree
                  for i_ders in range(1,nders+1):
                     # Multiply derivatives by correct factors
-                    for il_2 in range(0, p2+1):
+                    for il_2 in range(0, degree+1):
                        ders2[i_ders,il_2] = ders2[i_ders,il_2] * r * omega_6[span-degree+il_2]
                     basis_ad2[ie1, ie2,  :, i_ders, g1, g2] = ders2[i_ders,:]/sum_basisx
                     for j_ders in range(0,i_ders):
@@ -464,7 +468,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'
                             num *= (i_ders - t)
                             den *= (t + 1)
                         comb_ij = num // den
-                        for il_2 in range(0, p2+1):
+                        for il_2 in range(0, degree+1):
                            basis_ad2[ie1, ie2,  il_2, i_ders, g1, g2] -= comb_ij*basis_ad2[ie1, ie2,  il_2, j_ders, g1, g2] * sum_basistmp
                     r = r * (degree-i_ders)
 
@@ -1040,36 +1044,6 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
     # ___
     lcoeffs_u1   = zeros((p1+1,p2+1))
     lcoeffs_u2   = zeros((p1+1,p2+1))
-    # ... Initialization
-    points1    = zeros((ne1, ne2, k1, k2))
-    points2    = zeros((ne1, ne2, k1, k2))
-
-    # ... Assemble a new points by a new map
-    for ie1 in range(0, ne1):
-        i_span_1 = spans_1[ie1]
-        for ie2 in range(0, ne2):
-            i_span_2 = spans_2[ie2]
-
-            lcoeffs_u1[ : , : ] = vector_u1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_u2[ : , : ] = vector_u2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            for g1 in range(0, k1):
-                for g2 in range(0, k2):
-
-                    sx = 0.0
-                    sy = 0.0
-                    for il_1 in range(0, p1+1):
-                          for il_2 in range(0, p2+1):
-
-                              bj_0    = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
-
-                              coeff_u1 = lcoeffs_u1[il_1,il_2]
-                              coeff_u2 = lcoeffs_u2[il_1,il_2]
-
-                              sx     += coeff_u1 * bj_0
-                              sy     += coeff_u2 * bj_0
-                              
-                    points1[ie1, ie2, g1, g2] = sx
-                    points2[ie1, ie2, g1, g2] = sy
 
     #   ---Computes All basis in a new points
     degree         = p1
@@ -1079,11 +1053,37 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
     a              = empty( (       2, degree+1) )
     ndu            = empty( (degree+1, degree+1) )
     ders           = zeros( (     nders+1, degree+1) ) # output array
+    # ...
+    degree         = p2
+    left2          = empty( degree )
+    right2         = empty( degree )
+    a2             = empty( (       2, degree+1) )
+    ndu2           = empty( (degree+1, degree+1) )
+    ders2          = zeros( (     nders+1, degree+1) ) # output array
+    # ... Assemble a new points by a new map
     for ie1 in range(0, ne1):
-       for ie2 in range(0, ne2):
-          for g1 in range(0, k1):
-             for g2 in range(0, k2):
-                 xq = points1[ie1, ie2, g1, g2]
+        i_span_1 = spans_1[ie1]
+        for ie2 in range(0, ne2):
+            i_span_2 = spans_2[ie2]
+
+            lcoeffs_u1[ : , : ] = vector_u1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_u2[ : , : ] = vector_u2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            for g1 in range(0, k1):
+              for g2 in range(0, k2):
+
+                 s_dirx = 0.0
+                 s_diry = 0.0
+                 for il_1 in range(0, p1+1):
+                        for il_2 in range(0, p2+1):
+
+                            bj_0    = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
+
+                            coeff_u1 = lcoeffs_u1[il_1,il_2]
+                            coeff_u2 = lcoeffs_u2[il_1,il_2]
+
+                            s_dirx     += coeff_u1 * bj_0
+                            s_diry     += coeff_u2 * bj_0
+                 xq = s_dirx
 
                  #span = find_span( knots, degree, xq )
                  #~~~~~~~~~~~~~~~
@@ -1155,20 +1155,12 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
                     ders[i_ders,:] = ders[i_ders,:] * r
                     basis_ad1[ie1, ie2, :, i_ders, g1, g2] = ders[i_ders,:]
                     r = r * (degree-i_ders)
-    degree         = p2
-    # ...
-    left2          = empty( degree )
-    right2         = empty( degree )
-    a2             = empty( (       2, degree+1) )
-    ndu2           = empty( (degree+1, degree+1) )
-    ders2          = zeros( (     nders+1, degree+1) ) # output array
-    for ie1 in range(0, ne1):
-       for ie2 in range(0, ne2):
-          for g1 in range(0, k1):
-             for g2 in range(0, k2):
-                 xq = points2[ie1, ie2, g1, g2]
-
+                 #==============================================================================
+                 # ... Now for second direction
+                 #==============================================================================
+                 xq = s_diry
                  #span = find_span( knots, degree, xq )
+                 degree = p2
                  #~~~~~~~~~~~~~~~
                  # Knot index at left2/right2 boundary
                  low  = degree
@@ -1257,10 +1249,29 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
     lcoeffs_u1   = zeros((p1+1,p2+1,p3+1))
     lcoeffs_u2   = zeros((p1+1,p2+1,p3+1))
     lcoeffs_u3   = zeros((p1+1,p2+1,p3+1))
-    # ... Initialization
-    points1      = zeros((ne1, ne2, ne3, k1, k2, k3))
-    points2      = zeros((ne1, ne2, ne3, k1, k2, k3))
-    points3      = zeros((ne1, ne2, ne3, k1, k2, k3))
+
+    #   ---Computes All basis in a new points
+    degree         = p1
+    # ...
+    left           = empty( degree )
+    right          = empty( degree )
+    a              = empty( (       2, degree+1) )
+    ndu            = empty( (degree+1, degree+1) )
+    ders           = zeros( (     nders+1, degree+1) ) # output array
+    #...
+    degree         = p2
+    left2          = empty( degree )
+    right2         = empty( degree )
+    a2             = empty( (       2, degree+1) )
+    ndu2           = empty( (degree+1, degree+1) )
+    ders2          = zeros( (     nders+1, degree+1) ) # output array
+    #...
+    degree         = p3
+    left3          = empty( degree )
+    right3         = empty( degree )
+    a3             = empty( (       2, degree+1) )
+    ndu3           = empty( (degree+1, degree+1) )
+    ders3          = zeros( (     nders+1, degree+1) ) # output array
 
     # ... Assemble a new points by a new map
     for ie1 in range(0, ne1):
@@ -1277,42 +1288,25 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
                    for g2 in range(0, k2):
                       for g3 in range(0, k3):
 
-                        sx = 0.0
-                        sy = 0.0
-                        sz = 0.0
-                        for il_1 in range(0, p1+1):
-                            for il_2 in range(0, p2+1):
-                                for il_3 in range(0, p3+1):
-                                    bj_0     = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]*basis_3[ie3,il_3,0,g3]
+                            s_dirx = 0.0
+                            s_diry = 0.0
+                            s_dirz = 0.0
+                            for il_1 in range(0, p1+1):
+                                for il_2 in range(0, p2+1):
+                                    for il_3 in range(0, p3+1):
+                                        bj_0     = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]*basis_3[ie3,il_3,0,g3]
 
-                                    coeff_u1 = lcoeffs_u1[il_1,il_2,il_3]
-                                    coeff_u2 = lcoeffs_u2[il_1,il_2,il_3]
-                                    coeff_u3 = lcoeffs_u3[il_1,il_2,il_3]
+                                        coeff_u1 = lcoeffs_u1[il_1,il_2,il_3]
+                                        coeff_u2 = lcoeffs_u2[il_1,il_2,il_3]
+                                        coeff_u3 = lcoeffs_u3[il_1,il_2,il_3]
 
-                                    sx      += coeff_u1 * bj_0
-                                    sy      += coeff_u2 * bj_0
-                                    sz      += coeff_u3 * bj_0
-                        points1[ie1, ie2, ie3, g1, g2, g3] = sx
-                        points2[ie1, ie2, ie3, g1, g2, g3] = sy
-                        points3[ie1, ie2, ie3, g1, g2, g3] = sz
-
-    #   ---Computes All basis in a new points
-    degree         = p1
-    # ...
-    left           = empty( degree )
-    right          = empty( degree )
-    a              = empty( (       2, degree+1) )
-    ndu            = empty( (degree+1, degree+1) )
-    ders           = zeros( (     nders+1, degree+1) ) # output array
-    for ie1 in range(0, ne1):
-       for ie2 in range(0, ne2):
-            for ie3 in range(0, ne3):
-                for g1 in range(0, k1):
-                    for g2 in range(0, k2):
-                        for g3 in range(0, k3):
-                            xq = points1[ie1, ie2, ie3, g1, g2, g3]
+                                        s_dirx      += coeff_u1 * bj_0
+                                        s_diry      += coeff_u2 * bj_0
+                                        s_dirz      += coeff_u3 * bj_0
+                            xq = s_dirx
 
                             #span = find_span( knots, degree, xq )
+                            degree         = p1
                             #~~~~~~~~~~~~~~~
                             # Knot index at left/right boundary
                             low  = degree
@@ -1382,22 +1376,12 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
                                 ders[i_ders,:] = ders[i_ders,:] * r
                                 basis_ad1[ie1, ie2, ie3, :, i_ders, g1, g2, g3] = ders[i_ders,:]
                                 r = r * (degree-i_ders)
-    degree         = p2
-    #...
-    left2          = empty( degree )
-    right2         = empty( degree )
-    a2             = empty( (       2, degree+1) )
-    ndu2           = empty( (degree+1, degree+1) )
-    ders2          = zeros( (     nders+1, degree+1) ) # output array
-    for ie1 in range(0, ne1):
-       for ie2 in range(0, ne2):
-           for ie3 in range(0, ne3):
-                for g1 in range(0, k1):
-                    for g2 in range(0, k2):
-                        for g3 in range(0, k3):
-                            xq = points2[ie1, ie2, ie3, g1, g2, g3]
-
+                            # ==============================================================================
+                            # 2nd direction
+                            # ==============================================================================
+                            xq = s_diry
                             #span = find_span( knots, degree, xq )
+                            degree         = p2
                             #~~~~~~~~~~~~~~~
                             # Knot index at left2/right2 boundary
                             low  = degree
@@ -1467,22 +1451,12 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
                                 ders2[i_ders,:] = ders2[i_ders,:] * r
                                 basis_ad2[ie1, ie2, ie3, :, i_ders, g1, g2, g3] = ders2[i_ders,:]
                                 r = r * (degree-i_ders)
-    degree         = p3
-    #...
-    left3          = empty( degree )
-    right3         = empty( degree )
-    a3             = empty( (       2, degree+1) )
-    ndu3           = empty( (degree+1, degree+1) )
-    ders3          = zeros( (     nders+1, degree+1) ) # output array
-    for ie1 in range(0, ne1):
-       for ie2 in range(0, ne2):
-            for ie3 in range(0, ne3):
-                for g1 in range(0, k1):
-                    for g2 in range(0, k2):
-                        for g3 in range(0, k3):
-                            xq = points2[ie1, ie2, ie3, g1, g2, g3]
-
+                            # ==============================================================================
+                            # 3rd direction
+                            # ==============================================================================
+                            xq = s_dirz
                             #span = find_span( knots, degree, xq )
+                            degree = p3
                             #~~~~~~~~~~~~~~~
                             # Knot index at left3/right3 boundary
                             low  = degree

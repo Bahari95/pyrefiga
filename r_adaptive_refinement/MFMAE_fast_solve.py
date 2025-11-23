@@ -10,7 +10,8 @@ from   pyrefiga                    import SplineSpace
 from   pyrefiga                    import TensorSpace
 from   pyrefiga                    import StencilMatrix
 from   pyrefiga                    import StencilVector
-from   pyrefiga                    import pyccel_sol_field_2d
+from   pyrefiga                    import pyccel_sol_field_2d 
+from   pyrefiga                    import sol_field_NURBS_2d
 from   pyrefiga                    import quadratures_in_admesh
 #.. Prologation by knots insertion matrix
 from   pyrefiga                    import prolongation_matrix
@@ -23,6 +24,7 @@ from   pyrefiga                    import assemble_matrix_ex01
 from   pyrefiga                    import assemble_matrix_ex02
 # ...   load a geometry from xml file 
 from   pyrefiga                    import getGeometryMap
+from   pyrefiga                    import load_xml
 
 #..
 from gallery_section_06             import assemble_vector_ex01
@@ -61,12 +63,12 @@ os.makedirs("figs", exist_ok=True)  # 'exist_ok=True' prevents errors if the fol
 
 #==============================================================================
 #.......Poisson ALGORITHM
-def picard_solve(V1, V2, V3, V4, V,  V00, V11, V01, V10, u11_mpH = None, u12_mpH = None, times = None, x_2 = None, tol = None):
+def picard_solve(V1, V2, V3, V4, V, V11, V01, V10, u11_mpH = None, u12_mpH = None, times = None, x_2 = None, tol = None):
        niter      = 30   #
        if tol is None :
           tol     = 1e-8  # 
        # .. computes basis and sopans in adapted quadrature
-       Quad_adm   = quadratures_in_admesh(V)
+       Quad_adm   = quadratures_in_admesh(V, nders = 0)
        #----------------------------------------------------------------------------------------------
        # ... Strong form of Neumann boundary condition which is Dirichlet because of Mixed formulation
        u_01       = StencilVector(V01.vector_space)
@@ -278,88 +280,80 @@ def picard_solve(V1, V2, V3, V4, V,  V00, V11, V01, V10, u11_mpH = None, u12_mpH
 # ....................Using Two or Multi grid method for soving MAE
 # #..................................................................
 
-def  Monge_ampere_equation(nb_ne, geometry = '../fields/circle.xml', degree = None, times = None, check =None) :
-   #Degree of B-spline and number of elements
-   if nb_ne <=3 :
-      print('please for the reason of sufficient mesh choose nb_ne strictly greater than 3')
-      return 0.
-   if degree is None :
-      degree          = 3
+def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map = 0, check =None) :
+
+
+   geometry       = load_xml(geometry)  # Load geometry
    if times is None :
       times           = 0.
-   quad_degree    = degree
-   #..... Initialisation and computing optimal mapping for 16*16
+   #...=====================
+   # ... Assembling mapping
+   mp             = getGeometryMap(geometry,id_map)
+   degree         = mp.degree # Use same degree as geometry
+   quad_degree    = max(degree[0],degree[1])*2+1 # Quadrature degree
+   mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
+   if mp.nelements[0]*2**nb_ne < 8 and mp.nelements[1]*2**nb_ne <8 :
+      raise ValueError('please for the reason of sufficient mesh choose nelemsnts strictly greater than 4')
+   # ... Assembling mapping
+   weight, xmp, ymp = mp.RefineGeometryMap(numElevate=1)
+   # ... Assembling mapping
+   wm1, wm2         = weight[:,0], weight[0,:]
+   # ... Rescale mapping to fit in [-1.2, 1.2]x[-1.2, 1.2]
+   # a, b = -0.2, 1.2
+   # xmp  = xmp*(b-a) +a
+   # a, b = -1.2, 1.2
+   # ymp  = ymp*(b-a) +a
+
+   ne               = mp.nelements[0]*4
+   # Create spline spaces for each direction
+   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
+   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
+   Vmp             = TensorSpace(V1mp, V2mp)
+   # ... Initial guess
    #----------------------
    # create the spline space for each direction
-   Hnelements       = 2**4
-   V1H             = SplineSpace(degree=degree,   nelements= Hnelements, nderiv = 2)
-   V2H             = SplineSpace(degree=degree,   nelements= Hnelements, nderiv = 2)
-   V3H             = SplineSpace(degree=degree-1, nelements= Hnelements, grid = V1H.grid, nderiv = 2, quad_degree = quad_degree)
-   V4H             = SplineSpace(degree=degree-1, nelements= Hnelements, grid = V2H.grid, nderiv = 2, quad_degree = quad_degree)
+   V1H             = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+   V2H             = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
+   V3H             = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+   V4H             = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
 
    # create the tensor space
-   VH00           = TensorSpace(V1H, V2H)
    VH11           = TensorSpace(V3H, V4H)
    VH01           = TensorSpace(V1H, V3H)
    VH10           = TensorSpace(V4H, V2H)
 
-   # ... Assembling mapping
-   V1mpH          = SplineSpace(degree=degree-1,   nelements= Hnelements, nderiv = 2, quad_degree = degree)
-   V2mpH          = SplineSpace(degree=degree-1,   nelements= Hnelements, nderiv = 2, quad_degree = degree)	
-   VHmp           = TensorSpace(V1mpH, V2mpH)
-   # ... Assembling mapping
-   mp             = getGeometryMap(geometry,0)
-   xmp, ymp       = mp.RefineGeometryMap(Nelements=(Hnelements, Hnelements))
-
-   a, b = -0.2, 1.2
-   xmp = xmp.reshape(VHmp.nbasis)*(b-a) +a
-   a, b = -1.2, 1.2
-   ymp = ymp.reshape(VHmp.nbasis)*(b-a) +a
-
-   u11_mpH        = StencilVector(VHmp.vector_space)
-   u12_mpH        = StencilVector(VHmp.vector_space)
-   u11_mpH.from_array(VHmp, xmp)
-   u12_mpH.from_array(VHmp, ymp)
+   u11_mp         = StencilVector(Vmp.vector_space)
+   u12_mp         = StencilVector(Vmp.vector_space)
+   u11_mp.from_array(Vmp, xmp)
+   u12_mp.from_array(Vmp, ymp)
 
    # ... G-space
-   VH             = TensorSpace(V1H, V2H, V3H, V4H, V1mpH, V2mpH)
+   VH             = TensorSpace(V1H, V2H, V3H, V4H, V1mp, V2mp)
 
    #... in coarse grid
    tol            = 1e-5
    start          = time.time()
-   x2H            = picard_solve(V1H, V2H, V3H, V4H, VH, VH00, VH11, VH01, VH10, u11_mpH = u11_mpH, u12_mpH = u12_mpH, times = times, tol = tol)[-1]
+   x2H            = picard_solve(V1H, V2H, V3H, V4H, VH, VH11, VH01, VH10, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, tol = tol)[-1]
    MG_time        = time.time()- start
-
    # ... For multigrid method
-   for n in range(5,nb_ne):
-      nelements   = 2**n
-      V1mg        = SplineSpace(degree=degree,   nelements= nelements, nderiv = 2)
-      V2mg        = SplineSpace(degree=degree,   nelements= nelements, nderiv = 2)
-      V3mg        = SplineSpace(degree=degree-1, nelements= nelements, grid = V1mg.grid, nderiv = 2, quad_degree = quad_degree)
-      V4mg        = SplineSpace(degree=degree-1, nelements= nelements, grid = V2mg.grid, nderiv = 2, quad_degree = quad_degree)
+   for n in range(4,nb_ne):
+      ne          = mp.nelements[0]*2**n
+      V1mg        = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+      V2mg        = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
+      V3mg        = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+      V4mg        = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
 
       # create the tensor space
-      Vh00mg      = TensorSpace(V1mg, V2mg)
       Vh11mg      = TensorSpace(V3mg, V4mg)
       Vh01mg      = TensorSpace(V1mg, V3mg)
       Vh10mg      = TensorSpace(V4mg, V2mg)
-      
-      # ... Assembling mapping
-      V1mph       = SplineSpace(degree=degree-1,   nelements= nelements, nderiv = 2, quad_degree = degree)
-      V2mph       = SplineSpace(degree=degree-1,   nelements= nelements, nderiv = 2, quad_degree = degree)	
-      Vhmp        = TensorSpace(V1mph, V2mph)
-         
-      Vhmg        = TensorSpace(V1mg, V2mg, V3mg, V4mg, V1mph, V2mph)
 
-      #.. Prologation by knots insertion matrix of the initial mapping
-      M_mp        = prolongation_matrix(VHmp, Vhmp)
-      xmp         = (M_mp.dot(u11_mpH.toarray())).reshape(Vhmp.nbasis)
-      ymp         = (M_mp.dot(u12_mpH.toarray())).reshape(Vhmp.nbasis)
-      # ...
-      u11_mph     = StencilVector(Vhmp.vector_space)
-      u12_mph     = StencilVector(Vhmp.vector_space)
-      u11_mph.from_array(Vhmp, xmp)
-      u12_mph.from_array(Vhmp, ymp)	   
+      # Create spline spaces for each direction
+      V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
+      V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
+      Vmp             = TensorSpace(V1mp, V2mp)
+         
+      Vhmg        = TensorSpace(V1mg, V2mg, V3mg, V4mg, V1mp, V2mp)
       
       #.. Prologation by knots insertion matrix
       M           = prolongation_matrix(VH11, Vh11mg)
@@ -369,57 +363,46 @@ def  Monge_ampere_equation(nb_ne, geometry = '../fields/circle.xml', degree = No
       # ... in new grid
       #tol       *= 1e-1
       start       = time.time()
-      x2H         = picard_solve(V1mg, V2mg, V3mg, V4mg, Vhmg, Vh00mg, Vh11mg, Vh01mg, Vh10mg, u11_mpH = u11_mph, u12_mpH = u12_mph, times = times, x_2 = x2H, tol= tol)[-1]
+      x2H         = picard_solve(V1mg, V2mg, V3mg, V4mg, Vhmg, Vh11mg, Vh01mg, Vh10mg, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, x_2 = x2H, tol= tol)[-1]
       MG_time    += time.time()- start
       # .. update grids
-      V1H         = SplineSpace(degree=degree,   nelements= nelements, nderiv = 2)
-      V2H         = SplineSpace(degree=degree,   nelements= nelements, nderiv = 2)
-      V3H         = SplineSpace(degree=degree-1, nelements= nelements, grid = V1H.grid, nderiv = 2, quad_degree = quad_degree)
-      V4H         = SplineSpace(degree=degree-1, nelements= nelements, grid = V2H.grid, nderiv = 2, quad_degree = quad_degree)
+      V1H         = V1mg
+      V2H         = V2mg
+      V3H         = V3mg
+      V4H         = V4mg
 
       # create the tensor space
-      VH00        = TensorSpace(V1H, V2H)
       VH11        = TensorSpace(V3H, V4H)
       VH01        = TensorSpace(V1H, V3H)
       VH10        = TensorSpace(V4H, V2H)
-      VH          = TensorSpace(V1H, V2H, V3H, V4H, V1mph, V2mph )
+      VH          = TensorSpace(V1H, V2H, V3H, V4H, V1mp, V2mp )
 
    # ...
    if check is not None :
-      if  VH.nelements[0] == Hnelements :
+      if  VH.nelements[0] == mp.nelements[0]*2 and VH.nelements[1] == mp.nelements[1]*2 :
          print(".../!\.. : two-level is activated")
       else : 
          print(".../!\.. : multi-level is activated")
 
    #----------------------
    # create the spline space for each direction
-   nelements       = 2**nb_ne
-   V1              = SplineSpace(degree=degree,   nelements= nelements, nderiv = 2)
-   V2              = SplineSpace(degree=degree,   nelements= nelements, nderiv = 2)
-   V3              = SplineSpace(degree=degree-1, nelements= nelements, grid = V1.grid, nderiv = 2, quad_degree = quad_degree)
-   V4              = SplineSpace(degree=degree-1, nelements= nelements, grid = V2.grid, nderiv = 2, quad_degree = quad_degree)
+   ne              = mp.nelements[0]*2**nb_ne
+   V1              = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+   V2              = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
+   V3              = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+   V4              = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
 
    # create the tensor space
-   Vh00            = TensorSpace(V1, V2)
    Vh11            = TensorSpace(V3, V4)
    Vh01            = TensorSpace(V1, V3)
    Vh10            = TensorSpace(V4, V2)
 
-   # ... Assembling mapping
-   V1mph           = SplineSpace(degree=degree-1,   nelements= nelements, nderiv = 2, quad_degree = degree)
-   V2mph           = SplineSpace(degree=degree-1,   nelements= nelements, nderiv = 2, quad_degree = degree)	
-   Vhmp            = TensorSpace(V1mph, V2mph)
+   # Create spline spaces for each direction
+   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
+   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
+   Vmp             = TensorSpace(V1mp, V2mp)
          
-   Vh              = TensorSpace(V1, V2, V3, V4, V1mph, V2mph)
-   #.. Prologation by knots insertion matrix of the initial mapping
-   M_mp            = prolongation_matrix(VHmp, Vhmp)
-   xmp             = (M_mp.dot(u11_mpH.toarray())).reshape(Vhmp.nbasis)
-   ymp             = (M_mp.dot(u12_mpH.toarray())).reshape(Vhmp.nbasis)
-   # ...
-   u11_mph         = StencilVector(Vhmp.vector_space)
-   u12_mph         = StencilVector(Vhmp.vector_space)
-   u11_mph.from_array(Vhmp, xmp)
-   u12_mph.from_array(Vhmp, ymp)	   	
+   Vh              = TensorSpace(V1, V2, V3, V4, V1mp, V2mp)
 
    #.. Prologation by knots insertion matrix
    M                = prolongation_matrix(VH11, Vh11)
@@ -427,128 +410,77 @@ def  Monge_ampere_equation(nb_ne, geometry = '../fields/circle.xml', degree = No
 
    # ... in fine grid
    start            = time.time()
-   u11_pH, u12_pH, x11uh, x12uh, iter_N, l2_residualh = picard_solve(V1, V2, V3, V4, Vh, Vh00, Vh11, Vh01, Vh10, u11_mpH = u11_mph, u12_mpH = u12_mph, times = times, x_2 = x2H)[:-1]
+   u11_pH, u12_pH, x11uh, x12uh, iter_N, l2_residualh = picard_solve(V1, V2, V3, V4, Vh, Vh11, Vh01, Vh10, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, x_2 = x2H)[:-1]
    MG_time         += time.time()- start
    # ...
    # .. computes basis and sopans in adapted quadrature
    Quad_adm         = quadratures_in_admesh(Vh)
    spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11_pH, u12_pH)
    Quality          = StencilVector(Vh11.vector_space)
-   Quality          = assemble_Quality(Vh, fields=[u11_pH, u12_pH, u11_mph, u12_mph], value = [times, spans_ad1, spans_ad2, basis_ad1, basis_ad2],  out = Quality)
+   Quality          = assemble_Quality(Vh, fields=[u11_pH, u12_pH, u11_mp, u12_mp], value = [times, spans_ad1, spans_ad2, basis_ad1, basis_ad2],  out = Quality)
    norm             = Quality.toarray()
    l2_Quality       = norm[0]
    l2_displacement  = norm[1]
-   return nelements, l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vhmp
+   return mp.nelements[0]*2**nb_ne, l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vmp
 
-
-# # ........................................................
-# ....................For testing in one nelements
-# #.........................................................
-if True :
-	# ... unite-squar 0.6
-	geometry = '../fields/unitSquare.xml'
-	#geometry = '../fields/mhd.xml'	
-	# ... Circular domain
-	#geometry = '../fields/circle.xml'
-	
-	# ... Puzzle piece
-	#geometry = '../fields/Piece.xml'
-	
-	# ... Quartert-annulus
-	#geometry = '../fields/quart_annulus.xml'
-	
-	# ... IP
-	#geometry = '../fields/IP.xml'
-
-	# ... Butterfly
-	#geometry = '../fields/butterfly.xml'
-
-	# ... nelement = 2**nb_ne
-	nb_ne           = 7
-	
-	nelements, l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vhmp = Monge_ampere_equation(nb_ne, geometry= geometry, check = True)
-
-	#---Compute a solution
-	nbpts              = 100
-	
-	#---Solution in uniform mesh
-	sx, uxx, uxy, X, Y = pyccel_sol_field_2d((nbpts,nbpts),  x11uh , Vh01.knots, Vh01.degree)
-	sy, uyx, uyy       = pyccel_sol_field_2d((nbpts,nbpts),  x12uh , Vh10.knots, Vh10.degree)[0:3]
-
-	#---Compute a mapping
-	F1 = pyccel_sol_field_2d((nbpts,nbpts),  xmp , Vhmp.knots, Vhmp.degree)[0]
-	F2 = pyccel_sol_field_2d((nbpts,nbpts),  ymp , Vhmp.knots, Vhmp.degree)[0]
-	# ... in adaped mesh
-	ux = pyccel_sol_field_2d( None,  xmp , Vhmp.knots, Vhmp.degree, meshes = (sx, sy))[0]
-	uy = pyccel_sol_field_2d( None,  ymp , Vhmp.knots, Vhmp.degree, meshes = (sx, sy))[0]
-	# ... Jacobian function of Optimal mapping
-	det = uxx*uyy-uxy**2
-
-	det_min          = np.min( det[1:-1,1:-1])
-	det_max          = np.max( det[1:-1,1:-1])
-	#... tabulate 
-
-	print("degree = ", Vh01.degree[0])
-	table            = [ [Vh01.degree[0], nelements, l2_Quality, MG_time, l2_displacement, det_min, det_max] ]
-	headers          = ["degree", "$#$cells"," Err","CPU-time (s)", "Qual" ,"$min-det(PsiPsi)$", "$max_det(PsiPsi)$"]
-	print(tabulate(table, headers, tablefmt="github"),'\n')
-
-if False :
-	V1mpH          = SplineSpace(degree=2,   nelements= 16)
-	V2mpH          = SplineSpace(degree=2,   nelements= 16)	
-	VHmp           = TensorSpace(V1mpH, V2mpH)
-	xm             = np.loadtxt('fields/Butterflyx_'+str(2)+'_16.txt')*0.6+0.5
-	ym             = np.loadtxt('fields/Butterflyy_'+str(2)+'_16.txt')*0.6+0.5
-	nxm  = pyccel_sol_field_2d( None,  x11uh , Vh01.knots, Vh01.degree, meshes = (xm, ym))[0]
-	nym  = pyccel_sol_field_2d( None,  x12uh , Vh10.knots, Vh10.degree, meshes = (xm, ym))[0]	
-	X2 = pyccel_sol_field_2d((nbpts,nbpts),  nxm , VHmp.knots, VHmp.degree)[0]
-	Y2 = pyccel_sol_field_2d((nbpts,nbpts),  nym , VHmp.knots, VHmp.degree)[0]	
-	X1 = pyccel_sol_field_2d((nbpts,nbpts),  xm , VHmp.knots, VHmp.degree)[0]
-	Y1 = pyccel_sol_field_2d((nbpts,nbpts),  ym , VHmp.knots, VHmp.degree)[0]
 # # ........................................................
 # ....................For generating tables
 # #.........................................................
-if False :
-   # ... unite-squar 0.6
-   geometry = '../fields/squar.xml'
-   degree          = 3
-   # ... new discretization for plot
-   nbpts           = 100
-   print("	\subcaption{Degree $p =",degree,"$}")
-   print("	\\begin{tabular}{r c c c c c}")
-   print("		\hline")
-   print("		$\#$cells & Err & CPU-time (s) & Qual &$\min~\\text{Jac}(\PsiPsi)$ &$\max ~\\text{Jac}(\PsiPsi)$\\\\")
-   print("		\hline")
-   for nb_ne in range(4,9):
+# ... unite-squar
+#geometry = 'unitSquare.xml'
+#id_map   = 122
+#geometry = '../fields/mhd.xml'	
+# ... Circular domain
+geometry = '../fields/circle.xml'
+id_map   = 0
+# ... Puzzle piece
+#geometry = '../fields/Piece.xml'
 
-      nelements, l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vhmp = Monge_ampere_equation(nb_ne, geometry= geometry, degree = degree)
+# ... Quartert-annulus
+#geometry = '../fields/quart_annulus.xml'
 
-      #---Compute a solution
-      sx, uxx, uxy, X, Y = pyccel_sol_field_2d((nbpts,nbpts),  x11uh , Vh01.knots, Vh01.degree)
-      sy, uyx, uyy       = pyccel_sol_field_2d((nbpts,nbpts),  x12uh , Vh10.knots, Vh10.degree)[0:3]
+# ... IP
+#geometry = '../fields/IP.xml'
 
-      #---Compute a mapping
-      F1 = pyccel_sol_field_2d((nbpts,nbpts),  xmp , Vhmp.knots, Vhmp.degree)[0]
-      F2 = pyccel_sol_field_2d((nbpts,nbpts),  ymp , Vhmp.knots, Vhmp.degree)[0]
-      # ... in adaped mesh
-      ux = pyccel_sol_field_2d( None, xmp , Vhmp.knots, Vhmp.degree, meshes = (sx, sy))[0]
-      uy = pyccel_sol_field_2d( None, ymp , Vhmp.knots, Vhmp.degree, meshes = (sx, sy))[0]
-      # ... Jacobian function of Optimal mapping
-      det = uxx*uyy-uxy**2
-      # ...
-      det_min          = np.min( det[1:-1,1:-1])
-      det_max          = np.max( det[1:-1,1:-1])
+# ... Butterfly
+#geometry = '../fields/butterfly.xml'
 
-      # ... scientific format
-      l2_Quality       = np.format_float_scientific(l2_Quality, unique=False, precision=3)
-      l2_displacement  = np.format_float_scientific( l2_displacement, unique=False, precision=3)
-      MG_time          = round(MG_time, 3)
-      det_min          = np.format_float_scientific(det_min, unique=False, precision=3)
-      det_max          = np.format_float_scientific(det_max, unique=False, precision=3)
-      print("		",nelements, "&", l2_Quality,"&",  MG_time, "&", l2_displacement, "&", det_min, "&", det_max,"\\\\")
-   print("		\hline")
-   print("	\end{tabular}")
-   print('\n')
+# ... new discretization for plot
+nbpts           = 100
+print("	\\begin{tabular}{r c c c c c}")
+print("		\hline")
+print("		$\#$cells & Err & CPU-time (s) & Qual &$\min~\\text{Jac}(\PsiPsi)$ &$\max ~\\text{Jac}(\PsiPsi)$\\\\")
+print("		\hline")
+for nb_ne in range(5,6):
+
+   nelements, l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vhmp = Monge_ampere_equation(nb_ne, geometry= geometry, id_map = id_map)
+
+   #---Compute a solution
+   sx, uxx, uxy, X, Y = pyccel_sol_field_2d((nbpts,nbpts),  x11uh , Vh01.knots, Vh01.degree)
+   sy, uyx, uyy       = pyccel_sol_field_2d((nbpts,nbpts),  x12uh , Vh10.knots, Vh10.degree)[0:3]
+
+   #---Compute a mapping
+   F1 = sol_field_NURBS_2d((nbpts,nbpts),  xmp , Vhmp.omega, Vhmp.knots, Vhmp.degree)[0]
+   F2 = sol_field_NURBS_2d((nbpts,nbpts),  ymp , Vhmp.omega, Vhmp.knots, Vhmp.degree)[0]
+   # ... in adaped mesh
+   ux = sol_field_NURBS_2d( None,  xmp , Vhmp.omega, Vhmp.knots, Vhmp.degree, meshes = (sx, sy))[0]
+   uy = sol_field_NURBS_2d( None,  ymp , Vhmp.omega, Vhmp.knots, Vhmp.degree, meshes = (sx, sy))[0]
+   # ... Jacobian function of Optimal mapping
+   det = uxx*uyy-uxy*uyx
+   # ...
+   det_min          = np.min( det[1:-1,1:-1])
+   det_max          = np.max( det[1:-1,1:-1])
+
+   # ... scientific format
+   l2_Quality       = np.format_float_scientific(l2_Quality, unique=False, precision=3)
+   l2_displacement  = np.format_float_scientific( l2_displacement, unique=False, precision=3)
+   MG_time          = round(MG_time, 3)
+   det_min          = np.format_float_scientific(det_min, unique=False, precision=3)
+   det_max          = np.format_float_scientific(det_max, unique=False, precision=3)
+   print("		",nelements, "&", l2_Quality,"&",  MG_time, "&", l2_displacement, "&", det_min, "&", det_max,"\\\\")
+print("		\hline")
+print("	\end{tabular}")
+print('\n')
 	
 #~~~~~~~~~~~~~~~~~~~~~~~
 for i in range(nbpts):
@@ -580,46 +512,7 @@ from numpy import pi, cos, sin, sqrt, arctan2, exp, cosh
 
 rho = lambda x,y : exp( -1000.*abs(1./(abs(y**2-4.*x*(x-1)**2)+1.)-1.))
 
-
-fig =plt.figure() 
-for i in range(nbpts):
-   phidx = X[:,i]
-   phidy = Y[:,i]
-
-   plt.plot(phidx, phidy, '-k', linewidth = .3)
-for i in range(nbpts):
-   phidx = X[i,:]
-   phidy = Y[i,:]
-
-   plt.plot(phidx, phidy, '-k', linewidth = .3)
-#plt.plot(u11_pH.toarray(), u12_pH.toarray(), 'ro', markersize=3.5)
-#~~~~~~~~~~~~~~~~~~~~
-#.. Plot the surface
-phidx = X[:,0]
-phidy = Y[:,0]
-plt.plot(phidx, phidy, 'm', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
-# ...
-phidx = X[:,nbpts-1]
-phidy = Y[:,nbpts-1]
-plt.plot(phidx, phidy, 'b', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
-#''
-phidx = X[0,:]
-phidy = Y[0,:]
-plt.plot(phidx, phidy, 'r',  linewidth=2., label = '$Im([0,1]^2_{x=0})$')
-# ...
-phidx = X[nbpts-1,:]
-phidy = Y[nbpts-1,:]
-plt.plot(phidx, phidy, 'g', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
-
-#plt.xlim([-0.075,0.1])
-#plt.ylim([-0.25,-0.1])
-#axes[0].axis('off')
-plt.margins(0,0)
-fig.tight_layout()
-plt.savefig('figs/Un_meshes_US.png')
-plt.show(block=False)
-plt.close()
-
+#~~~~~~~~~~~~~~~
 fig =plt.figure() 
 for i in range(nbpts):
    phidx = F1[:,i]
@@ -652,7 +545,7 @@ plt.plot(phidx, phidy, 'g', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
 
 #plt.xlim([-0.075,0.1])
 #plt.ylim([-0.25,-0.1])
-plt.axis('off')
+# plt.axis('off')
 plt.margins(0,0)
 fig.tight_layout()
 plt.savefig('figs/Un_meshes.png')
@@ -733,7 +626,7 @@ plt.plot(phidx, phidy, 'g', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
 
 #plt.xlim([-0.075,0.1])
 #plt.ylim([-0.25,-0.1])
-plt.axis('off')
+# plt.axis('off')
 plt.margins(0,0)
 fig.tight_layout()
 plt.savefig('figs/adaptive_meshes.png')
