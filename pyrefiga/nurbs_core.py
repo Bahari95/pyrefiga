@@ -263,7 +263,7 @@ def nurbs_ders_on_shared_quad_grid(ne1:'int', p1:'int', spans_1:'int[:,:]', basi
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', points_1:'float64[:,:]', knots_1:'float64[:]', omega:'float64[:]', vector_u:'float64[:]',  spans_ad:'int[:,:]', basis_ad:'float64[:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', knots_1:'float64[:]', omega:'float64[:]', vector_u:'float64[:]',  spans_ad:'int[:,:]', basis_ad:'float64[:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -392,7 +392,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans
 # ... L2-B-spline space for L^2 mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -644,7 +644,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping. in 3D
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', points_3:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', omega_3:'float64[:]', vector_u1:'float64[:,:,:]', vector_u2:'float64[:,:,:]', vector_u3:'float64[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:,:,:]', basis_ad3:'float64[:,:,:,:,:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', omega_3:'float64[:]', vector_u1:'float64[:,:,:]', vector_u2:'float64[:,:,:]', vector_u3:'float64[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:,:,:]', basis_ad3:'float64[:,:,:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros

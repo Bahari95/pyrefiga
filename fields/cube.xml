@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The Fichera Corner consist of 7patches consisting of cubes-->
+<!-- cube using different poly degree-->
 <xml>
  <Geometry type="TensorBSpline3" id="0">
   <Basis type="TensorBSplineBasis3">

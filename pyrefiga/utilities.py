@@ -539,3 +539,33 @@ class pyrefInterface(object):
         else:
             raise ValueError("Invalid interface configuration")
         return xd1, xd2
+    
+import pyrefiga
+from pathlib import Path
+
+def load_xml(name: str) -> str:
+    """
+    Return the full path to a data file inside 'fields/' as a string.
+
+    Parameters
+    ----------
+    name : str
+        Filename of the XML file (e.g., "annulus.xml").
+
+    Returns
+    -------
+    str
+        Full path to the requested file as a string.
+    """
+    # Installed location
+    base_path = Path(pyrefiga.__file__).parent.parent
+    xml_path = base_path / "fields" / name
+    if xml_path.exists():
+        return str(xml_path)
+
+    # Development fallback
+    dev_path = Path(__file__).parent.parent.parent / "fields" / name
+    if dev_path.exists():
+        return str(dev_path)
+
+    raise FileNotFoundError(f"Cannot find XML file '{name}' in fields/")

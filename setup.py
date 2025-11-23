@@ -1,10 +1,11 @@
 # -*- coding: UTF-8 -*-
 #!/usr/bin/env python
 
-from pathlib import Path
-from setuptools import setup, find_packages
+from pathlib                    import Path
+from setuptools                 import setup, find_packages
 from setuptools.command.install import install
-from setuptools import Command
+from glob                       import glob
+from setuptools                 import Command
 import subprocess
 
 # Read library version into '__version__' variable
@@ -76,11 +77,13 @@ def setup_package():
     setup(
         packages=packages,
         include_package_data=True,
+        package_data={
+            "": ["../fields/*.xml"],  # include all XML files in fielddata
+        },
         install_requires=install_requires,
-        cmdclass={'run_pyccel': RunPyccelCommand},  # Register custom command
+        cmdclass={'run_pyccel': RunPyccelCommand},
         **setup_args
     )
-
 if __name__ == "__main__":
     setup_package()
 

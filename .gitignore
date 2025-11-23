@@ -146,3 +146,6 @@ cad/figs
 docs/source/examples/__epyccel__
 docs/source/examples/__pycache__
 docs/source/examples/figs
+docs/source/r_adaptive_refinement/__epyccel__
+docs/source/r_adaptive_refinement/__pycache__
+docs/source/r_adaptive_refinement/figs

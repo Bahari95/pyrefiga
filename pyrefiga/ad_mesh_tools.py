@@ -18,34 +18,34 @@ class quadratures_in_admesh(object):
 		# ...
 		sp_dim      = V.dim
 		nurbs_space = True # ... if the parameterization is given by nurbs
-		if V.omega is None or all(x is None for x in V.omega):
+		if all(x is None for x in V.omega):
 			nurbs_space = False			
 		if nurbs_space:
 			if sp_dim == 1 :
 				# ... 1D reparametrization
 				self.basis_spans_in_adquadrature_1d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_1DL2map
-			elif sp_dim == 2:
-				# ... using B-spline mapping
-				self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2map
 			elif sp_dim == 3:
 				#... L2 mapping in 3D
 				self.basis_spans_in_adquadrature_3d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_3L2map
+			elif sp_dim == 2:
+				# ... using B-spline mapping
+				self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2map
 			elif sp_dim == 6 :
 				# ... The Hdiv mapping space can be selected independently of the initial mapping space.
-				self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2map
+				self.basis_spans_in_adquadrature_2d = core.assemble_nurbsbasis_spans_in_adquadrature_Hdivmap
 		else:
-			if reparameterization is True : 
-				# ... L2(gradient) mapping
-				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_L2map
-			elif sp_dim == 1 :
+			if sp_dim == 1 :
 				# ... 1D reparametrization
 				self.basis_spans_in_adquadrature_1d = core.assemble_basis_spans_in_adquadrature_1DL2map
-			elif sp_dim == 2 :
-				# ... gradient mapping
-				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_gradmap
 			elif sp_dim == 3:
 				#... L2 mapping in 3D
 				self.basis_spans_in_adquadrature_3d = core.assemble_basis_spans_in_adquadrature_3L2map
+			elif reparameterization is True : 
+				# ... L2 mapping
+				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_L2map
+			elif sp_dim == 2 :
+				# ... gradient mapping
+				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_gradmap
 			elif sp_dim == 6 :
 				# ... The Hdiv mapping space can be selected independently of the initial mapping space.
 				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_Hdivmap
@@ -60,14 +60,13 @@ class quadratures_in_admesh(object):
 					V.spans,
 					V.basis,
 					V.weights,
-					V.points,
 					V.knots]
+			if nurbs_space:
+				args += [V.omega]
 			#...
 			p1       = V.degree
 			nx       = V.nelements
 			wx       = V.weights
-			if nurbs_space:
-				args += [V.omega]
 			# ...
 			k1       = wx.shape[1]
 			# ...
@@ -82,7 +81,6 @@ class quadratures_in_admesh(object):
 			args += list(V.spans)			
 			args += list(V.basis)
 			args += list(V.weights)
-			args += list(V.points)
 			args += list(V.knots)
 			if nurbs_space:
 				args += list(V.omega)	
@@ -103,18 +101,20 @@ class quadratures_in_admesh(object):
 		else:
 			# ... We test Hdiv and other solvers in 2D
 			args  = []
-			args += list(V.nelements)
+			args += list(V.nelements[:2])
 			args += list(V.degree)
 			if sp_dim == 6 :
 				args += list(V.spans[:-2])
+				args += list(V.basis[:-2])
 			else :
 				args += list(V.spans)			
-			args += list(V.basis)
-			args += list(V.weights)
-			args += list(V.points)
-			args += list(V.knots)
-			if nurbs_space:
-				args += list(V.omega)	
+				args += list(V.basis)
+			args += list(V.weights[:2])
+			args += list(V.knots[-2:])
+			if nurbs_space and sp_dim != 6:
+				args += list(V.omega)
+			elif nurbs_space and sp_dim == 6:
+				args += list(V.omega[-2:])#last two spaces are for nurbs mapping
 			#...
 			p1, p2       = V.degree[-2:]
 			nx, ny       = V.nelements[-2:]

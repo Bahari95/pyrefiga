@@ -14,7 +14,7 @@ from   pyrefiga                    import pyccel_sol_field_2d
 from   pyrefiga                    import sol_field_NURBS_2d
 from   pyrefiga                    import quadratures_in_admesh
 from   pyrefiga                    import build_dirichlet
-from   pyrefiga                    import least_square_2dNURBspline, collocation_2dNURBspline
+from   pyrefiga                    import least_square_2dNURBspline, load_xml
 #.. Prologation by knots insertion matrix
 from   pyrefiga                    import prolongation_matrix
 # ... Using Kronecker algebra accelerated with Pyccel
@@ -237,12 +237,13 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None
 # # .................................................................
 # ....................Using Two or Multi grid method for soving MAE
 # #..................................................................
-def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check = False) :
+def  Bahari_solver(nb_ne, geometry = 'teapot.xml', times = None, check = False) :
       
    if times is None :
       times       = 0.
    #..... Initialisation and computing optimal mapping for 16*16
    MG_time        = 0.
+   geometry       = load_xml(geometry)
    #...=====================
    # ... Assembling mapping
    mp             = getGeometryMap(geometry,0)
@@ -327,19 +328,19 @@ def  Bahari_solver(nb_ne, geometry = '../fields/teapot.xml', times = None, check
 # #.........................................................
 if True :
    # ... unit-square
-   #geometry = '../fields/unit_square.xml'
+   #geometry = 'unit_square.xml'
 
-   #geometry = '../fields/circle.xml'
+   #geometry = 'circle.xml'
 
    # ... quarter annulus
-   #geometry = '../fields/quart_annulus.xml'
+   #geometry = 'quart_annulus.xml'
 
    # ... 
-   #geometry = '../fields/lake.xml'
+   #geometry = 'lake.xml'
 
-   # geometry = '../fields/elasticity.xml'
+   # geometry = 'elasticity.xml'
 
-   geometry = '../fields/nice_geo.xml'   
+   geometry = 'nice_geo.xml'   
    # ... new discretization for plot
    
    nbpts    = args.nbpts
