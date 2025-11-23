@@ -384,7 +384,7 @@ if True :
    print("		\hline")
    print("	\end{tabular}")
    print('\n')
-   np.savetxt('tableerror.txt', table, fmt='%.20e')
+   np.savetxt('figs/tableerror.txt', table, fmt='%.20e')
 
 #~~~~~~~~~~~~~~~~~~~~~~~
 # for i in range(nbpts):
