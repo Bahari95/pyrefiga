@@ -9,7 +9,7 @@ from   .               import results_f90_core as core
 #==============================================================
 from numpy import zeros, linspace, meshgrid
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Computes Solution and its gradien In two dimension
+# Computes Solution and its gradien In one dimension
 def pyccel_sol_field_1d(knots, uh, Npoints = None, meshes = None, bound_val = None):
    """
    Computes the solution and its gradient in one dimension.
@@ -109,7 +109,7 @@ def pyccel_sol_field_2d( Npoints, uh, knots, degree, meshes = None, bound_val = 
        return Q[:,:,0], Q[:,:,1], Q[:,:,2]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Computes Solution and its gradien In two dimension
+# Computes Solution and its gradien In three dimension
 def pyccel_sol_field_3d(Npoints,  uh , knots, degree, meshes = None):
     '''
     Using computed control points uh we compute solution
@@ -516,7 +516,6 @@ def plot_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, cp = True, savefig = Non
 #----------------------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------------------
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def paraview_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = None, solution = None, functions = None, output_path = "figs/admultipatch_multiblock.vtm", plot = True): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
@@ -1209,35 +1208,3 @@ def paraview_SolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None,
    # Save multiblock dataset
    multiblock.save(output_path)
    print(f"Saved all patches with solution to {output_path}")
-
-
-
-# output_pvd_path = "figs/all_patches.pvd"
-# filename_base = "figs/Pmultipatch"
-# with open(output_pvd_path, 'w') as f:
-#    f.write('<?xml version="1.0"?>\n')
-#    f.write('<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">\n')
-#    f.write('  <Collection>\n')
-
-#    for idx, (elF1, elF2) in enumerate(zip(F1, F2)):
-#       # Create 3D points (z = 0 for 2D)
-#       x, y = elF1, elF2
-#       z = np.zeros_like(x)
-#       points = np.stack((x, y, z), axis=-1)
-
-#       # Convert to PyVista structured grid
-#       nx, ny = x.shape
-#       grid = pv.StructuredGrid()
-#       grid.points = points.reshape(-1, 3)
-#       grid.dimensions = [nx, ny, 1]
-
-#       # Save to .vts file
-#       vts_filename = f"{filename_base}_{idx}.vts"
-#       grid.save(vts_filename)
-#       print(f"Saved patch {idx} to {vts_filename}")
-
-#       rel_path = os.path.basename(vts_filename)
-#       f.write(f'    <DataSet timestep="{idx}" group="" part="0" file="{rel_path}"/>\n')
-
-#    f.write('  </Collection>\n')
-#    f.write('</VTKFile>\n')

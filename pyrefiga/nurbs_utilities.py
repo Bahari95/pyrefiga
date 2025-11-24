@@ -8,7 +8,7 @@ from   .               import nurbs_utilities_core as core
 
 from numpy import zeros, linspace, meshgrid
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Computes Solution and its gradien In two dimension
+# Computes Solution and its gradien In one dimension
 def sol_field_NURBS_1d(knots, uh, Npoints = None, meshes = None, bound_val = None):
    """
    Computes the solution and its gradient in one dimension.
@@ -109,7 +109,7 @@ def sol_field_NURBS_2d( Npoints, uh, omega, knots, degree, meshes = None, bound_
        return Q[:,:,0], Q[:,:,1], Q[:,:,2]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Computes Solution and its gradien In two dimension
+# Computes Solution and its gradien In three dimension
 def sol_field_NURBS_3d(Npoints,  uh , omega, knots, degree, meshes = None):
     '''
     Using computed control points U we compute solution
@@ -159,7 +159,10 @@ def sol_field_NURBS_3d(Npoints,  uh , omega, knots, degree, meshes = None):
        Q[:,:,:,6] = meshes[2][:,:,:]
        core.sol_field_3D_mesh(nx, ny, nz, uh, Tu, Tv, Tz, pu, pv, pz, w1, w2, w3, Q)
        return Q[:,:,:,0], Q[:,:,:,1], Q[:,:,:,2], Q[:,:,:,3]    
-       
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Prolongate NURBS mapping from VH to Vh
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
 def prolongate_NURBS_mapping(VH, Vh, w, Cp):
     #.. Prologation by knots insertion matrix
     from   pyrefiga.utilities    import prolongation_matrix

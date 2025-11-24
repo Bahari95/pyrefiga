@@ -150,34 +150,24 @@ def point_on_bspline_surface(Tu, Tv, P, u, v):
     span_u = find_span( Tu, pu, u )
     span_v = find_span( Tv, pv, v )
 
-    basis_x =basis_funs_all_ders( Tu, pu, u, span_u, 2 )
-    basis_y =basis_funs_all_ders( Tv, pv, v, span_v, 2 )
+    basis_x =basis_funs_all_ders( Tu, pu, u, span_u, 1 )
+    basis_y =basis_funs_all_ders( Tv, pv, v, span_v, 1 )
 
     bu   = basis_x[0,:]
     bv   = basis_y[0,:]
     
     derbu   = basis_x[1,:]
     derbv   = basis_y[1,:]
-
-    dderbu   = basis_x[2,:]
-    dderbv   = basis_y[2,:]
         
     c = np.zeros(d)
     cx = np.zeros(d)
     cy = np.zeros(d)
-    cxx = np.zeros(d)
-    cxy = np.zeros(d)
-    cyy = np.zeros(d)
     for ku in range(0, pu+1):
         for kv in range(0, pv+1):
             c[:] += bu[ku]*bv[kv]*P[span_u-pu+ku, span_v-pv+kv,:]
             cx[:] += derbu[ku]*bv[kv]*P[span_u-pu+ku, span_v-pv+kv,:]
             cy[:] += bu[ku]*derbv[kv]*P[span_u-pu+ku, span_v-pv+kv,:]
-
-            cxx[:] += dderbu[ku]*bv[kv]*P[span_u-pu+ku, span_v-pv+kv,:]
-            cxy[:] += derbu[ku]*derbv[kv]*P[span_u-pu+ku, span_v-pv+kv,:]
-            cyy[:] += bu[ku]*dderbv[kv]*P[span_u-pu+ku, span_v-pv+kv,:]
-    return c, cx, cy, cxx, cxy, cyy
+    return c, cx, cy
 
 from numpy import zeros, linspace, meshgrid, asarray
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -214,10 +204,10 @@ def sol_field_2d(Npoints,  uh , knots, degree):
     for j in range(nv):
         P[i, j, 0] = uh[i,j]    
 
-    Q  = zeros((nx, ny, 6))
+    Q  = zeros((nx, ny, 3))
     for i,x in enumerate(xs):
         for j,y in enumerate(ys):
             Q[i,j,:]   = point_on_bspline_surface(Tu, Tv, P, x, y)
     X, Y = meshgrid(xs, ys)
 
-    return Q[:,:,0], Q[:,:,1], Q[:,:,2],Q[:,:,3], Q[:,:,4], Q[:,:,5], X, Y
+    return Q[:,:,0], Q[:,:,1], Q[:,:,2], X, Y

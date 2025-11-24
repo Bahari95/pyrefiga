@@ -3,7 +3,7 @@ MFMAE_fast_solver.py
 
 # mixed variational formulation solver for fast diagonalization solver for Monge-Ampere equation
 
-@author : M. BAHARI TODO NURBS
+@author : M. BAHARI TODO postprocessing
 """
 from   pyrefiga                    import compile_kernel
 from   pyrefiga                    import SplineSpace
