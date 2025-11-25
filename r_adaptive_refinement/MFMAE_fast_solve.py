@@ -219,22 +219,7 @@ def picard_solve(V1, V2, V3, V4, V, V11, V01, V10, u11_mpH = None, u12_mpH = Non
        # ... for assembling residual
        M_res      = kron(D1, D2)
        #___       
-       del poisson_c1
-       del poisson_c2
-       del b01
-       del b10
-       del R1
-       del R2
-       del r1
-       del r2
-       del D1
-       del D2
-       del M1
-       del M2
-       del A1
-       del A2
-       del b11
-       del b12
+       del poisson_c1, poisson_c2, b01, b10, R1, R2, r1, r2, D1, D2, M1, M2, A1, A2, b11, b12
        
        for i in range(niter):
            
@@ -298,12 +283,6 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    weight, xmp, ymp = mp.RefineGeometryMap(numElevate=1)
    # ... Assembling mapping
    wm1, wm2         = weight[:,0], weight[0,:]
-   # ... Rescale mapping to fit in [-1.2, 1.2]x[-1.2, 1.2]
-   # a, b = -0.2, 1.2
-   # xmp  = xmp*(b-a) +a
-   # a, b = -1.2, 1.2
-   # ymp  = ymp*(b-a) +a
-
    ne               = mp.nelements[0]*4
    # Create spline spaces for each direction
    V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
@@ -427,23 +406,17 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
 # ....................For generating tables
 # #.........................................................
 # ... unite-squar
-#geometry = 'unitSquare.xml'
-#id_map   = 122
-#geometry = '../fields/mhd.xml'	
+geometry = 'unitSquare.xml'
+id_map   = 122
 # ... Circular domain
-geometry = '../fields/circle.xml'
-id_map   = 0
-# ... Puzzle piece
-#geometry = '../fields/Piece.xml'
-
+# geometry = 'circle.xml'
+# id_map   = 0
 # ... Quartert-annulus
-#geometry = '../fields/quart_annulus.xml'
-
-# ... IP
-#geometry = '../fields/IP.xml'
-
+#geometry = 'quart_annulus.xml'
+# id_map   = 0
 # ... Butterfly
-#geometry = '../fields/butterfly.xml'
+#geometry = 'butterfly.xml'
+# id_map   = 0
 
 # ... new discretization for plot
 nbpts           = 100

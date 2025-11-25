@@ -61,4 +61,4 @@ You may work in the **newFolder** for your tasks, as it has been created automat
 
 ## Example
 
-![PNG](https://github.com/Bahari95/pyrefiga/blob/main/r_adaptive_refinement/annulus_adaptive_meshes.png)
+![PNG](https://github.com/Bahari95/pyrefiga/blob/main/r_adaptive_refinement/adaptive_meshes.png)
