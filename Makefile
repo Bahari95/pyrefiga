@@ -5,6 +5,8 @@ CLEAN_DIRS = __epyccel__ __pycache__ figs
 ROOT_DIRS = $(HOME)/pyrefiga/r_adaptive_refinement \
             $(HOME)/pyrefiga/cad\
             $(HOME)/pyrefiga/examples \
+            $(HOME)/pyrefiga/docs/source/examples \
+            $(HOME)/pyrefiga/docs/source/r_adaptive_refinement \
             $(HOME)/pyrefiga/newFolder \
             $(HOME)/pyrefiga/pyrefiga/tests
 
