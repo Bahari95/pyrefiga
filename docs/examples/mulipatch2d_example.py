@@ -19,7 +19,7 @@ from   pyrefiga                         import least_square_Bspline
 from   pyrefiga                         import getGeometryMap
 from   pyrefiga                         import build_dirichlet
 from   pyrefiga                         import pyrefInterface
-
+from   pyrefiga                         import load_xml
 # Import Poisson assembly tools for uniform mesh
 from gallery.gallery_section_10 import assemble_vector_un_ex01
 from gallery.gallery_section_10 import assemble_norm_un_ex01
@@ -160,10 +160,10 @@ g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-#geometry = '../fields/unitSquare.xml'
-#geometry = '../fields/circle.xml'
-geometry = '../fields/quart_annulus.xml'
-# geometry = '../fields/annulus.xml'
+#geometry = load_xml('unitSquare.xml')
+#geometry = load_xml('circle.xml')
+geometry = load_xml('quart_annulus.xml')
+# geometry = load_xml('annulus.xml')
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 

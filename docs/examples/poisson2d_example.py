@@ -17,6 +17,7 @@ from   pyrefiga                    import pyccel_sol_field_2d
 from   pyrefiga                    import prolongation_matrix
 from   pyrefiga                    import least_square_Bspline
 from   pyrefiga                    import getGeometryMap
+from   pyrefiga                    import load_xml
 from   pyrefiga                    import build_dirichlet
 
 # Import Poisson assembly tools for uniform mesh
@@ -104,9 +105,10 @@ g         = ['1./(1.+np.exp((x + y  - 0.5)/0.01) )']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-#geometry = '../fields/quart_annulus.xml'
-#geometry = '../fields/unitSquare.xml'
-geometry = '../fields/circle.xml'
+#geometry = load_xml('unitSquare.xml')
+geometry = load_xml('circle.xml')
+#geometry = load_xml('quart_annulus.xml')
+# geometry = load_xml('annulus.xml')
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 

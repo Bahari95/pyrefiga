@@ -372,7 +372,6 @@ rho  = '9./(2.+np.cos(10.*np.pi*np.sqrt((x)**2+(y+2.)**2)))'
 #.. Test 1  circle
 #rho = '5./np.cosh( 5.*((x-np.sqrt(3)/2)**2+(y-0.5)**2 - (np.pi/2)**2) )**2 + 5./np.cosh( 5.*((x+np.sqrt(3)/2)**2+(y-0.5)**2 - (pi/2)**2) )**2'
 
-
 # ... test butterfly
 #rho       = lambda x,y : 2.+np.sin(10.*np.pi*np.sqrt((x-0.6)**2+(y-0.6)**2)) 
 from   pyrefiga                    import paraview_nurbsAdMeshMultipatch, paraview_nurbsSolutionMultipatch
