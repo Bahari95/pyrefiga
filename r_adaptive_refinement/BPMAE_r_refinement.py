@@ -27,14 +27,14 @@ from   pyrefiga                   import assemble_mass1D
 #..
 from   gallery.gallery_section_08      import assemble_vector_ex01
 from   gallery.gallery_section_08      import assemble_vector_ex02
-from   gallery.gallery_section_08      import assemble_vector_ex04
+# from   gallery.gallery_section_08      import assemble_vector_ex04
 from   gallery.gallery_section_08      import assemble_vectorbasis_ex02
 from   gallery.gallery_section_08      import assemble_Quality_ex01
 
 #..
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
 assemble_dirs        = compile_kernel(assemble_vector_ex02, arity=1)
-assemble_comp        = compile_kernel(assemble_vector_ex04, arity=1)
+# assemble_comp        = compile_kernel(assemble_vector_ex04, arity=1)
 assemble_Quality     = compile_kernel(assemble_Quality_ex01, arity=1)
 #==============================================================================
 #.. Assembling basis on the interface
@@ -185,34 +185,6 @@ def bmae_solve(V1, V2, V, u11_mpH, u12_mpH, x_2 = None, tol = None, niter = None
       v11           = StencilVector(V.vector_space)
       v12           = StencilVector(V.vector_space)
       # #... Project back to the fine mesh
-      # ... computes spans and basis in adapted quadrature 
-      # spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11, u12)
-      # rhs           = assemble_comp(V, fields = [u11_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
-      # rhs           = assemble_comp(V, fields = [u12_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2])
-      # Create spline spaces for each direction
-      # grids = np.linspace(0, 1, V1.nelements+1)
-      # Vs1   = SplineSpace(degree=V.degree[0], grid = V.grid[0], nderiv = 1, omega = V.omega[0], sharing_grid = grids, quad_degree = quad_degree)
-      # Vs2   = SplineSpace(degree=V.degree[1], grid = V.grid[1], nderiv = 1, omega = V.omega[1], sharing_grid = grids, quad_degree = quad_degree)
-      # Vh            = TensorSpace(Vs1, Vs2)
-      #... Return solution
-      # rhs           = assemble_comp(Vh, fields = [u11, u12, u11_mpH], knots= True, value = [V1.omega, V2.omega])
-      # vx11          = poisson.project(rhs.toarray()).reshape(V.nbasis)
-      # f_exact       = ['x+0.*y']
-      # x_d = build_dirichlet(V, f_exact, map = (u11_mpH.toarray().reshape(V.nbasis), u12_mpH.toarray().reshape(V.nbasis)), admap=( x11, x12, V, V) )[0]
-      # vx11[0,:]   = x_d[0,:]
-      # vx11[-1,:]  = x_d[-1,:]
-      # vx11[:, 0]  = x_d[:, 0]
-      # vx11[:,-1]  = x_d[:,-1]
-      # #___
-      # rhs            = assemble_comp(Vh, fields = [u11, u12, u12_mpH], knots= True, value = [V1.omega, V2.omega])
-      # vx12           = poisson.project(rhs.toarray()).reshape(V.nbasis)
-      # f_exact        = ['0.*x+y']
-      # x_d = build_dirichlet(V, f_exact, map = (u11_mpH.toarray().reshape(V.nbasis), u12_mpH.toarray().reshape(V.nbasis)), admap=( x11, x12, V, V) )[0]
-      # vx12[0,:]   = x_d[0,:]
-      # vx12[-1,:]  = x_d[-1,:]
-      # vx12[:, 0]  = x_d[:, 0]
-      # vx12[:,-1]  = x_d[:,-1]
-      # ..         
       # nbpts = 1000
       xmp   = u11_mpH.toarray().reshape(V.nbasis)
       ymp   = u12_mpH.toarray().reshape(V.nbasis)
@@ -294,15 +266,14 @@ def  Bahari_solver(nb_ne, geometry = 'teapot.xml', times = None, check = False) 
       start            = time.time()
       v11_H, v12_H, vx11uh, vx12uh, u11_pH, u12_pH, x11uh, x12uh     = bmae_solve(V1, V2, Vh, u11_mph, u12_mph, quad_degree = quad_degree)
       MG_time         += time.time()- start
-      from pyrefiga import save_geometry_to_xml
-      # print('weights =', Vh.omega)
-      Gmap  = np.zeros((V1.nbasis*V2.nbasis,2))
-      Gmap[:,0] = u12_pH.toarray()[:]
-      Gmap[:,1] = u11_pH.toarray()[:]
-      save_geometry_to_xml(Vh, Gmap, locname = "figs/admapping_psi{}".format(V1.nbasis))
-      Gmap[:,0] = v11_H.toarray()[:]
-      Gmap[:,1] = v12_H.toarray()[:]
-      save_geometry_to_xml(Vh, Gmap, locname = "figs/admapping_patch{}".format(V1.nbasis))
+      # from pyrefiga import save_geometry_to_xml
+      # Gmap  = np.zeros((V1.nbasis*V2.nbasis,2))
+      # Gmap[:,0] = u12_pH.toarray()[:]
+      # Gmap[:,1] = u11_pH.toarray()[:]
+      # save_geometry_to_xml(Vh, Gmap, locname = "figs/admapping_psi{}".format(V1.nbasis))
+      # Gmap[:,0] = v11_H.toarray()[:]
+      # Gmap[:,1] = v12_H.toarray()[:]
+      # save_geometry_to_xml(Vh, Gmap, locname = "figs/admapping_patch{}".format(V1.nbasis))
       #...
       Multipatchadx.append(vx11uh)
       Multipatchady.append(vx12uh)
@@ -317,11 +288,11 @@ def  Bahari_solver(nb_ne, geometry = 'teapot.xml', times = None, check = False) 
       norm             = Quality.toarray()
       l2_Quality      += norm[0]**2
       l2_displacement += norm[1]**2
-      print(" The Volume for patch", "exact =", norm[5], "comp =", norm[2], "appr=", norm[3], "bdr=", norm[4] )
+      # print(" The Volume for patch", "exact =", norm[5], "comp =", norm[2], "appr=", norm[3], "bdr=", norm[4] )
 
    l2_Quality       = sqrt(l2_Quality     )
    l2_displacement  = sqrt(l2_displacement)
-   return Vh.nelements, l2_Quality, MG_time, l2_displacement, Multipatchadx, Multipatchady, Multipatchmpx, Multipatchmpy, MultipatchVh,norm[2], norm[3], norm[4]
+   return Vh.nelements, l2_Quality, MG_time, l2_displacement, Multipatchadx, Multipatchady, Multipatchmpx, Multipatchmpy, MultipatchVh, norm[4]
 
 # # ........................................................
 # ....................For generating tables
@@ -344,20 +315,15 @@ if True :
    # ... new discretization for plot
    
    nbpts    = args.nbpts
-   table    = np.zeros((4,4))
    print("	\subcaption{geometry =",geometry,"}")
    print("	\\begin{tabular}{r c c c c}")
    print("		\hline")
-   print("		$\#$cells & CPU-time (s) & Qual &$\min~\\text{Jac}(\PsiPsi)$ &$\max ~\\text{Jac}(\PsiPsi)$ \\\\")
+   print("		$\#$cells & CPU-time (s) & Qual & bdr-error &$\min~\\text{Jac}(\PsiPsi)$ &$\max ~\\text{Jac}(\PsiPsi)$ \\\\")
    print("		\hline")
    for ne in range(4,5):
 
       nb_ne = 2**ne
-      nelements, l2_Quality, MG_time, l2_displacement, MPadx, MPady, MPmpx, MPmpy, MPVh,norm2, norm3, norm4 = Bahari_solver(nb_ne, geometry= geometry)
-      table[0,ne-4] = (MPVh[0].degree[0]+MPVh[0].nelements[0])*(MPVh[0].degree[0]+MPVh[0].nelements[1])
-      table[1,ne-4] = norm2
-      table[2,ne-4] = norm3
-      table[3,ne-4] = norm4
+      nelements, l2_Quality, MG_time, l2_displacement, MPadx, MPady, MPmpx, MPmpy, MPVh, norm4 = Bahari_solver(nb_ne, geometry= geometry)
       # #---Compute a mapping
       uxx = np.zeros((len(MPVh)*nbpts, nbpts))
       uyy = np.zeros((len(MPVh)*nbpts, nbpts))
@@ -380,19 +346,11 @@ if True :
       MG_time          = round(MG_time, 3)
       det_min          = np.format_float_scientific(det_min, unique=False, precision=3)
       det_max          = np.format_float_scientific(det_max, unique=False, precision=3)
-      print("		",nelements[0],"$\\times$",nelements[1],"&",  MG_time, "&", l2_displacement, "&", det_min, "&", det_max,"\\\\")
+      norm4            = np.format_float_scientific(norm4, unique=False, precision=3)
+      print("		",nelements[0],"$\\times$",nelements[1],"&",  MG_time, "&", l2_displacement,  "&", norm4, "&", det_min, "&", det_max,"\\\\")
    print("		\hline")
    print("	\end{tabular}")
    print('\n')
-   np.savetxt('figs/tableerror.txt', table, fmt='%.20e')
-
-#~~~~~~~~~~~~~~~~~~~~~~~
-# for i in range(nbpts):
-#   for j in range(nbpts):
-#      if det[i,j] < 0.:
-#          print('Npoints =',nbpts,'min_Jac-F in the entire domain = ', det[i,j] ,'index =', i, j)
-
-# print('..../!\...: min~max value of the Jacobian function =', np.min(det),'~', np.max(det) )
 
 #         -++++++++++++++++++++++++++++++++++++++++++++++++++++ End of sharing part of any geometry-----------------------------------------------------------
 
