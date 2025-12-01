@@ -18,7 +18,7 @@ class quadratures_in_admesh(object):
 		# ...
 		sp_dim      = V.dim
 		nurbs_space = True # ... if the parameterization is given by nurbs
-		if all(x is None for x in V.omega):
+		if V.omega is None or all(x is None for x in V.omega):
 			nurbs_space = False			
 		if nurbs_space:
 			if sp_dim == 1 :

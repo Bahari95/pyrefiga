@@ -117,6 +117,34 @@ def build_dirichlet(V, f, map = None, admap = None):
                 x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1)
                 x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0)
                 x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1)
+            elif len(map) == 3:
+                # map = (x, y, V) different spaces for map and FE space
+                if admap is None :
+                    #-------------------------------------------------
+                    #.. In the phyisacl domain without adaptive mapping               
+                    n_dir        = V.nbasis[0]*10+10
+                    sX           = pyccel_sol_field_2d((n_dir,n_dir),  map[0] , map[2].knots, map[2].degree)[0]
+                    sY           = pyccel_sol_field_2d((n_dir,n_dir),  map[1] , map[2].knots, map[2].degree)[0]
+
+                    x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:]))
+                    x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:]))
+                    x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0]))
+                    x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1(sX[:,-1], sY[:,-1]))
+
+                else :
+                    #-----------------------------------------------
+                    #.. In the phyisacl domain with adaptive mapping               
+                    n_dir        = V.nbasis[0]*10+10
+
+                    Xmae         = pyccel_sol_field_2d((n_dir,n_dir), admap[0] , admap[2].knots, admap[2].degree)[0]
+                    Ymae         = pyccel_sol_field_2d((n_dir,n_dir), admap[1] , admap[3].knots, admap[3].degree)[0]
+                    sX           = pyccel_sol_field_2d( None, map[0], map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                    sY           = pyccel_sol_field_2d( None, map[1], map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+
+                    x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:]))
+                    x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:]))
+                    x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0]))
+                    x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1(sX[:,-1], sY[:,-1]))
 
             elif admap is None :
                 #-------------------------------------------------
@@ -362,8 +390,13 @@ class getGeometryMap:
         return self._grids
     @property
     def weights(self):
-        return self._weights
-    
+        Omega = self._weights.reshape(self._nbasis)
+        if self.geo_dim == 2:
+            return Omega[0,:], Omega[:,0]
+        elif self.geo_dim == 3:
+            return Omega[:,0,0], Omega[0,:,0], Omega[0,0,:]
+        else:
+            return Omega
     def coefs(self):
         return self._coefs      
     

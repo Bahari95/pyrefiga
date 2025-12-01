@@ -3,7 +3,7 @@ MFMAE_fast_solver.py
 
 # mixed variational formulation solver for fast diagonalization solver for Monge-Ampere equation
 
-@author : M. BAHARI TODO postprocessing
+@author : M. BAHARI TODO postprocessing using paraview
 """
 from   pyrefiga                    import compile_kernel
 from   pyrefiga                    import SplineSpace
@@ -27,8 +27,8 @@ from   pyrefiga                    import getGeometryMap
 from   pyrefiga                    import load_xml
 
 #..
-from gallery_section_06             import assemble_vector_ex01
-from gallery_section_06             import assemble_Quality_ex01
+from gallery.gallery_section_06             import assemble_vector_ex01
+from gallery.gallery_section_06             import assemble_Quality_ex01
 
 #..
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
@@ -280,9 +280,10 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    if mp.nelements[0]*2**nb_ne < 8 and mp.nelements[1]*2**nb_ne <8 :
       raise ValueError('please for the reason of sufficient mesh choose nelemsnts strictly greater than 4')
    # ... Assembling mapping
-   weight, xmp, ymp = mp.RefineGeometryMap(numElevate=1)
+   xmp, ymp       = mp.coefs()
+   wm1, wm2       = mp.weights
+
    # ... Assembling mapping
-   wm1, wm2         = weight[:,0], weight[0,:]
    ne               = mp.nelements[0]*4
    # Create spline spaces for each direction
    V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
@@ -406,11 +407,11 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
 # ....................For generating tables
 # #.........................................................
 # ... unite-squar
-geometry = 'unitSquare.xml'
-id_map   = 122
+# geometry = 'unitSquare.xml'
+# id_map   = 122
 # ... Circular domain
-# geometry = 'circle.xml'
-# id_map   = 0
+geometry = 'circle.xml'
+id_map   = 0
 # ... Quartert-annulus
 #geometry = 'quart_annulus.xml'
 # id_map   = 0
@@ -572,34 +573,34 @@ for i in range(nbpts):
    phidx = ux[:,i]
    phidy = uy[:,i]
 
-   plt.plot(phidx, phidy, '-b', linewidth = .3)
+   plt.plot(phidx, phidy, '-k', linewidth = .3)
 for i in range(nbpts):
    phidx = ux[i,:]
    phidy = uy[i,:]
 
-   plt.plot(phidx, phidy, '-b', linewidth = .3)
+   plt.plot(phidx, phidy, '-k', linewidth = .3)
 #plt.plot(u11_pH.toarray(), u12_pH.toarray(), 'ro', markersize=3.5)
 #~~~~~~~~~~~~~~~~~~~~
 #.. Plot the surface
 phidx = ux[:,0]
 phidy = uy[:,0]
-plt.plot(phidx, phidy, 'm', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
+plt.plot(phidx, phidy, 'k', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
 # ...
 phidx = ux[:,nbpts-1]
 phidy = uy[:,nbpts-1]
-plt.plot(phidx, phidy, 'b', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
+plt.plot(phidx, phidy, 'k', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
 #''
 phidx = ux[0,:]
 phidy = uy[0,:]
-plt.plot(phidx, phidy, 'r',  linewidth=2., label = '$Im([0,1]^2_{x=0})$')
+plt.plot(phidx, phidy, 'k',  linewidth=2., label = '$Im([0,1]^2_{x=0})$')
 # ...
 phidx = ux[nbpts-1,:]
 phidy = uy[nbpts-1,:]
-plt.plot(phidx, phidy, 'g', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
+plt.plot(phidx, phidy, 'k', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
 
 #plt.xlim([-0.075,0.1])
 #plt.ylim([-0.25,-0.1])
-# plt.axis('off')
+plt.axis('off')
 plt.margins(0,0)
 fig.tight_layout()
 plt.savefig('figs/adaptive_meshes.png')
@@ -658,7 +659,7 @@ plt.close()
 # Create a grid
 x = np.linspace(-0.5, 2.5, 400)
 y = np.linspace(-1, 1, 400)
-X, Y = np.meshgrid(x, y)
+X, Y = F1 , F2 #np.meshgrid(x, y)
 
 # Define the functions
 F0 = Y**2 - X*(X-1)**2
@@ -683,9 +684,10 @@ plt.contour(X, Y, F0, levels=[0], colors='blue', linewidths=2, linestyles='solid
 # Line for x = 2
 #plt.axvline(x=2, color='magenta', linestyle='dotted', linewidth=2, label='X2')
 
-plt.xlim(-0.5, 2.5)
+plt.xlim(-0.5, 1.5)
 plt.ylim(-1, 1)
 plt.gca().set_aspect('equal')
-plt.title('Iso-curves and Boundaries')
+# plt.title('Iso-curves and Boundaries')
+plt.savefig('figs/isocurves.png')
 plt.grid(True)
 plt.show()

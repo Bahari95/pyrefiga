@@ -25,9 +25,9 @@ from   pyrefiga                    import assemble_mass1D
 from   pyrefiga                    import assemble_matrix_ex01
 from   pyrefiga                    import assemble_matrix_ex02
 # ...
-from gallery_section_07             import assemble_vector_ex01
-from gallery_section_07             import assemble_Quality_ex01
-from gallery_section_07             import assemble_vector_ex00
+from gallery.gallery_section_07             import assemble_vector_ex01
+from gallery.gallery_section_07             import assemble_Quality_ex01
+from gallery.gallery_section_07             import assemble_vector_ex00
 # ...
 assemble_rhs_in      = compile_kernel(assemble_vector_ex00, arity=1)
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)

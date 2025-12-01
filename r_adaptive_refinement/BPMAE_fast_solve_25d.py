@@ -18,11 +18,11 @@ from   pyrefiga                   import assemble_mass1D
 # ... for visualization
 from   pyrefiga                    import paraview_nurbsAdMeshMultipatch, paraview_nurbsSolutionMultipatch
 #..
-from   gallery_section_18      import assemble_vector_ex01
-from   gallery_section_18      import assemble_vector_ex02
-from   gallery_section_18      import assemble_vector_ex04
-from   gallery_section_18      import assemble_vectorbasis_ex02
-from   gallery_section_18      import assemble_Quality_ex01
+from   gallery.gallery_section_18      import assemble_vector_ex01
+from   gallery.gallery_section_18      import assemble_vector_ex02
+from   gallery.gallery_section_18      import assemble_vector_ex04
+from   gallery.gallery_section_18      import assemble_vectorbasis_ex02
+from   gallery.gallery_section_18      import assemble_Quality_ex01
 
 #..
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
