@@ -2,12 +2,12 @@
 CLEAN_DIRS = __epyccel__ __pycache__ figs
 
 # Directories to clean
-ROOT_DIRS = $(HOME)/pyrefiga/r_adaptive_refinement \
-            $(HOME)/pyrefiga/cad\
-            $(HOME)/pyrefiga/examples \
-            $(HOME)/pyrefiga/docs/examples \
-            $(HOME)/pyrefiga/newFolder \
-            $(HOME)/pyrefiga/pyrefiga/tests
+ROOT_DIRS = ./pyrefiga/r_adaptive_refinement \
+            ./pyrefiga/cad\
+            ./pyrefiga/examples \
+            ./pyrefiga/docs/examples \
+            ./pyrefiga/newFolder \
+            ./pyrefiga/pyrefiga/tests
 
 # Clean target
 clean:
