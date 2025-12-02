@@ -3,7 +3,7 @@ MFMAE_fast_solver.py
 
 # mixed variational formulation solver for fast diagonalization solver for Monge-Ampere equation
 
-@author : M. BAHARI TODO postprocessing using paraview
+@author : M. BAHARI
 """
 from   pyrefiga                    import compile_kernel
 from   pyrefiga                    import SplineSpace
@@ -13,6 +13,7 @@ from   pyrefiga                    import StencilVector
 from   pyrefiga                    import pyccel_sol_field_2d 
 from   pyrefiga                    import sol_field_NURBS_2d
 from   pyrefiga                    import quadratures_in_admesh
+from   pyrefiga                    import paraview_nurbsAdMeshMultipatch
 #.. Prologation by knots insertion matrix
 from   pyrefiga                    import prolongation_matrix
 # ... Using Kronecker algebra accelerated with Pyccel
@@ -59,7 +60,13 @@ import time
 import os
 # Create the folder
 os.makedirs("figs", exist_ok=True)  # 'exist_ok=True' prevents errors if the folder already exists
-
+#------------------------------------------------------------------------------
+# Argument parser for controlling plotting
+import argparse
+parser = argparse.ArgumentParser(description="Control plot behavior and save control points.")
+parser.add_argument("--plot", action="store_true", help="Enable plotting results")
+parser.add_argument("--nbpts", type=int, default=50, help="Number of elements used for plot(default: 50)")
+args = parser.parse_args()
 
 #==============================================================================
 #.......Poisson ALGORITHM
@@ -420,7 +427,7 @@ id_map   = 0
 # id_map   = 0
 
 # ... new discretization for plot
-nbpts           = 100
+nbpts           = args.nbpts
 print("	\\begin{tabular}{r c c c c c}")
 print("		\hline")
 print("		$\#$cells & Err & CPU-time (s) & Qual &$\min~\\text{Jac}(\PsiPsi)$ &$\max ~\\text{Jac}(\PsiPsi)$\\\\")
@@ -484,182 +491,29 @@ from numpy import pi, cos, sin, sqrt, arctan2, exp, cosh
 #rho = lambda x,y : 1.+ 10.*exp( -10.*(4.*(x-0.1)**2+2.*(y-0.35)**2 - 1.4)**2)
 #rho = lambda x,y : (1.+5./cosh(40.*(2./(y**2-4.*x*(x-1)**2+1.)-2.))**2+5./cosh(10.*(2./(y**2-4.*x*(x-1)**2+1.)-2.))**2 +(30./cosh(100.*(2./(y**2-4.*x*(x-1)**2+1.)-2.))**2+30./cosh(100.*(2./(y**2-4.*x*(x-1)**2+1.)-2.))**2)*(x>0.9)*(x<1.1))
 
-rho = lambda x,y : exp( -1000.*abs(1./(abs(y**2-4.*x*(x-1)**2)+1.)-1.))
+rho = ["np.exp( -1000.*np.abs(1./(np.abs(y**2-4.*x*(x-1)**2)+1.)-1.))"]
 
-#~~~~~~~~~~~~~~~
-fig =plt.figure() 
-for i in range(nbpts):
-   phidx = F1[:,i]
-   phidy = F2[:,i]
 
-   plt.plot(phidx, phidy, '-k', linewidth = .3)
-for i in range(nbpts):
-   phidx = F1[i,:]
-   phidy = F2[i,:]
+#---Compute a solution
+functions = [
+        {"name": "density", "expression": rho[0]},
+]
 
-   plt.plot(phidx, phidy, '-k', linewidth = .3)
-#plt.plot(u11_pH.toarray(), u12_pH.toarray(), 'ro', markersize=3.5)
-#~~~~~~~~~~~~~~~~~~~~
-#.. Plot the surface
-phidx = F1[:,0]
-phidy = F2[:,0]
-plt.plot(phidx, phidy, 'm', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
-# ...
-phidx = F1[:,nbpts-1]
-phidy = F2[:,nbpts-1]
-plt.plot(phidx, phidy, 'b', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
-#''
-phidx = F1[0,:]
-phidy = F2[0,:]
-plt.plot(phidx, phidy, 'r',  linewidth=2., label = '$Im([0,1]^2_{x=0})$')
-# ...
-phidx = F1[nbpts-1,:]
-phidy = F2[nbpts-1,:]
-plt.plot(phidx, phidy, 'g', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
+paraview_nurbsAdMeshMultipatch(nbpts, [Vhmp], [xmp], [ymp], [x11uh], [x12uh], adspace =[[Vh01],[Vh10]], functions = functions, filename = 'figs/admesh_2dexample')
+#------------------------------------------------------------------------------
+# Show or close plots depending on argument
+if args.plot :
+    import subprocess
 
-#plt.xlim([-0.075,0.1])
-#plt.ylim([-0.25,-0.1])
-# plt.axis('off')
-plt.margins(0,0)
-fig.tight_layout()
-plt.savefig('figs/Un_meshes.png')
-plt.show(block=False)
-plt.close()
+    # Load the multipatch VTM
+    subprocess.run(["paraview", "figs/admesh_2dexample.vtm"])
 
-#~~~~~~~~~~~~~~~
-# Adapted mesh  
-#~~~~~~~~~~~~~~~~~~~~
-fig =plt.figure() 
-for i in range(nbpts):
-   phidx = sx[:,i]
-   phidy = sy[:,i]
-
-   plt.plot(phidx, phidy, '-k', linewidth = .3)
-for i in range(nbpts):
-   phidx = sx[i,:]
-   phidy = sy[i,:]
-
-   plt.plot(phidx, phidy, '-k', linewidth = .3)
-#plt.plot(u11_pH.toarray(), u12_pH.toarray(), 'ro', markersize=3.5)
-#~~~~~~~~~~~~~~~~~~~~
-#.. Plot the surface
-phidx = sx[:,0]
-phidy = sy[:,0]
-plt.plot(phidx, phidy, 'm', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
-# ...
-phidx = sx[:,nbpts-1]
-phidy = sy[:,nbpts-1]
-plt.plot(phidx, phidy, 'b', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
-#''
-phidx = sx[0,:]
-phidy = sy[0,:]
-plt.plot(phidx, phidy, 'r',  linewidth=2., label = '$Im([0,1]^2_{x=0})$')
-# ...
-phidx = sx[nbpts-1,:]
-phidy = sy[nbpts-1,:]
-plt.plot(phidx, phidy, 'g', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
-
-#plt.xlim([-0.075,0.1])
-#plt.ylim([-0.25,-0.1])
-#axes[0].axis('off')
-plt.margins(0,0)
-fig.tight_layout()
-plt.savefig('figs/adaptive_meshes_US.png')
-plt.show(block=False)
-plt.close()
-#---------------------------------------------------------
-fig =plt.figure() 
-for i in range(nbpts):
-   phidx = ux[:,i]
-   phidy = uy[:,i]
-
-   plt.plot(phidx, phidy, '-k', linewidth = .3)
-for i in range(nbpts):
-   phidx = ux[i,:]
-   phidy = uy[i,:]
-
-   plt.plot(phidx, phidy, '-k', linewidth = .3)
-#plt.plot(u11_pH.toarray(), u12_pH.toarray(), 'ro', markersize=3.5)
-#~~~~~~~~~~~~~~~~~~~~
-#.. Plot the surface
-phidx = ux[:,0]
-phidy = uy[:,0]
-plt.plot(phidx, phidy, 'k', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
-# ...
-phidx = ux[:,nbpts-1]
-phidy = uy[:,nbpts-1]
-plt.plot(phidx, phidy, 'k', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
-#''
-phidx = ux[0,:]
-phidy = uy[0,:]
-plt.plot(phidx, phidy, 'k',  linewidth=2., label = '$Im([0,1]^2_{x=0})$')
-# ...
-phidx = ux[nbpts-1,:]
-phidy = uy[nbpts-1,:]
-plt.plot(phidx, phidy, 'k', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
-
-#plt.xlim([-0.075,0.1])
-#plt.ylim([-0.25,-0.1])
-plt.axis('off')
-plt.margins(0,0)
-fig.tight_layout()
-plt.savefig('figs/adaptive_meshes.png')
-plt.show(block=True)
-plt.close()
-
-Z = rho(F1, F2)
-fig, axes =plt.subplots() 
-im2 = plt.contourf( F1, F2, Z, np.linspace(np.min(Z),np.max(Z),100), cmap= 'jet')
-#divider = make_axes_locatable(axes) 
-#cax   = divider.append_axes("right", size="5%", pad=0.05, aspect = 40) 
-#plt.colorbar(im2, cax=cax) 
-fig.tight_layout()
-plt.savefig('figs/density_function.png')
-plt.show(block=False)
-plt.close()
-
-fig =plt.figure() 
-#axes[0].set_title( 'Physical domain ' )
-for i in range(nbpts):
-    phidx = ux[:,i]
-    phidy = uy[:,i]
-
-    plt.plot(phidx, phidy, '-b', linewidth = 0.54)
-for i in range(nbpts):
-    phidx = ux[i,:]
-    phidy = uy[i,:]
-
-    plt.plot(phidx, phidy, '-b', linewidth = 0.54)
-#plt.axis('off')
-#plt.margins(0,0)
-i     = 0
-phidx = F1[:,i]
-phidy = F2[:,i]
-plt.plot(phidx, phidy, '-r', linewidth = 2.)
-i     = nbpts-1
-phidx = F1[:,i]
-phidy = F2[:,i]
-plt.plot(phidx, phidy, '-r', linewidth = 2.)
-#''
-i     = 0
-phidx = F1[i,:]
-phidy = F2[i,:]
-plt.plot(phidx, phidy, '-r', linewidth = 2.)
-i     = nbpts-1
-phidx = F1[i,:]
-phidy = F2[i,:]
-plt.plot(phidx, phidy, '-r', linewidth = 2.)
-plt.xlim(0.8, 1.)
-plt.ylim(0.35, 0.65)
-plt.savefig('figs/close_up_adaptive_meshes.png')
-plt.show(block=True)
-plt.close()
-
+print("End")
 
 # Create a grid
 x = np.linspace(-0.5, 2.5, 400)
 y = np.linspace(-1, 1, 400)
-X, Y = F1 , F2 #np.meshgrid(x, y)
+X, Y = np.meshgrid(x, y)
 
 # Define the functions
 F0 = Y**2 - X*(X-1)**2
