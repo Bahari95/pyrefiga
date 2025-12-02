@@ -1,7 +1,7 @@
 """
 poisson3d_computation_domain_example.py
 
-Example: Solving Poisson's Equation on a 3D using B-spline or NURBS representation.
+Example: Solving Poisson's Equation on a 3D using B-spline on the computational domain.
 
 author :  M. BAHARI
 """
@@ -20,11 +20,9 @@ from   pyrefiga                    import assemble_stiffness1D
 from   pyrefiga                    import assemble_mass1D     
 
 #---In Poisson equation
-from gallery.gallery_section_03 import assemble_vector_ex01    #---1 : In uniform mesh
-from gallery.gallery_section_03 import assemble_matrix_un_ex01 #---1 : In uniform mesh
-from gallery.gallery_section_03 import assemble_norm_ex01      #---1 : In uniform mesh
+from gallery.gallery_section_03 import assemble_vector_ex01
+from gallery.gallery_section_03 import assemble_norm_ex01  
 
-assemble_stiffness2D = compile_kernel(assemble_matrix_un_ex01, arity=2)
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
 assemble_norm_l2     = compile_kernel(assemble_norm_ex01, arity=1)
 
@@ -133,10 +131,11 @@ parser.add_argument("--plot", action="store_true", help="Enable plotting and sav
 args = parser.parse_args()
 
 nbpts       = 100 #for plot
-nelements   = 16
+nelements   = 32
 # Test 1
-g           = ['np.sin(np.pi*x)*y**2*z*3*np.sin(4.*np.pi*(1.-y))*(1.-z)']
-geometry = '../fields/cube.xml'
+from pyrefiga import load_xml
+geometry = load_xml('cube.xml')
+g           = ['np.sin(np.pi*x)*np.sin(np.pi*y)*np.sin(np.pi*z)']
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 
@@ -148,17 +147,16 @@ xmp, ymp, zmp  = mp.RefineGeometryMap(Nelements=(nelements,nelements,nelements))
 #----------------------
 #..... Initialisation and computing optimal mapping for 16*16
 #----------------------
-quad_degree = degree + 1
 # create the spline space for each direction
-V1   = SplineSpace(degree=degree, nelements= nelements, nderiv = 2, quad_degree = quad_degree)
-V2   = SplineSpace(degree=degree, nelements= nelements, nderiv = 2, quad_degree = quad_degree)
-V3   = SplineSpace(degree=degree, nelements= nelements, nderiv = 2, quad_degree = quad_degree)
+V1   = SplineSpace(degree=degree, nelements= nelements)
+V2   = SplineSpace(degree=degree, nelements= nelements)
+V3   = SplineSpace(degree=degree, nelements= nelements)
 V    = TensorSpace(V1, V2, V3)
 
 print('#---IN-UNIFORM--MESH')
 u_pH, xuh, l2_norm, H1_norm = poisson_solve(V1, V2, V3, V)
 print('-----> L^2-error ={} -----> H^1-error = {}'.format(l2_norm, H1_norm))
-
+print(np.min(xuh), np.max(xuh))
 #------------------------------------------------------------------------------
 # Export solution for visualization
 #------------------------------------------------------------------------------

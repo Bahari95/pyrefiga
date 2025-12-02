@@ -18,12 +18,15 @@ def assemble_matrix(core, V, fields=None, knots = None, value = None, out=None):
     args = []
     if knots is None :
        if isinstance(V, TensorSpace):
-           args += list(V.nelements)
+           # default for 2D: for integration we use same mesh and quadrature in each direction
+           int_par = 2 if not (V.dim % 3 == 0 and (V.dim != 6 or V.omega[3] is not None)) else 3
+
+           args += list(V.nelements[:int_par])
            args += list(V.degree)
            args += list(V.spans)   
            args += list(V.basis)
-           args += list(V.weights)
-           args += list(V.points)
+           args += list(V.weights[:int_par])
+           args += list(V.points[:int_par])
 
        else:
            args = [V.nelements,
@@ -35,12 +38,13 @@ def assemble_matrix(core, V, fields=None, knots = None, value = None, out=None):
     # ...
     else :
        if isinstance(V, TensorSpace):
-           args += list(V.nelements)
+           int_par = 2 if not (V.dim % 3 == 0 and (V.dim != 6 or V.omega[3] is not None)) else 3
+           args += list(V.nelements[:int_par])
            args += list(V.degree)
            args += list(V.spans)
            args += list(V.basis)
-           args += list(V.weights)
-           args += list(V.points)
+           args += list(V.weights[:int_par])
+           args += list(V.points[:int_par])
            args += list(V.knots)
 
        else:
@@ -76,12 +80,13 @@ def assemble_vector(core, V, fields=None, knots = None, value = None, out=None):
     args = []
     if knots is None :
        if isinstance(V, TensorSpace):
-           args += list(V.nelements)
+           int_par = 2 if not (V.dim % 3 == 0 and (V.dim != 6 or V.omega[3] is not None)) else 3
+           args += list(V.nelements[:int_par])
            args += list(V.degree)
            args += list(V.spans)   
            args += list(V.basis)
-           args += list(V.weights)
-           args += list(V.points)
+           args += list(V.weights[:int_par])
+           args += list(V.points[:int_par])
 
        else:
            args = [V.nelements,
@@ -93,12 +98,13 @@ def assemble_vector(core, V, fields=None, knots = None, value = None, out=None):
     # ...
     else :
        if isinstance(V, TensorSpace):
-           args += list(V.nelements)
+           int_par = 2 if not (V.dim % 3 == 0 and (V.dim != 6 or V.omega[3] is not None)) else 3
+           args += list(V.nelements[:int_par])
            args += list(V.degree)
            args += list(V.spans)
            args += list(V.basis)
-           args += list(V.weights)
-           args += list(V.points)
+           args += list(V.weights[:int_par])
+           args += list(V.points[:int_par])
            args += list(V.knots)
 
        else:
@@ -129,12 +135,13 @@ def assemble_scalar(core, V, fields=None, knots = None, value = None):
     args = []
     if knots is None :
        if isinstance(V, TensorSpace):
-           args += list(V.nelements)
+           int_par = 2 if not (V.dim % 3 == 0 and (V.dim != 6 or V.omega[3] is not None)) else 3
+           args += list(V.nelements[:int_par])
            args += list(V.degree)
            args += list(V.spans)   
            args += list(V.basis)
-           args += list(V.weights)
-           args += list(V.points)
+           args += list(V.weights[:int_par])
+           args += list(V.points[:int_par])
 
        else:
            args = [V.nelements,
@@ -146,12 +153,13 @@ def assemble_scalar(core, V, fields=None, knots = None, value = None):
     # ...
     else :
        if isinstance(V, TensorSpace):
-           args += list(V.nelements)
+           int_par = 2 if not (V.dim % 3 == 0 and (V.dim != 6 or V.omega[3] is not None)) else 3
+           args += list(V.nelements[:int_par])
            args += list(V.degree)
            args += list(V.spans)
            args += list(V.basis)
-           args += list(V.weights)
-           args += list(V.points)
+           args += list(V.weights[:int_par])
+           args += list(V.points[:int_par])
            args += list(V.knots)
 
        else:

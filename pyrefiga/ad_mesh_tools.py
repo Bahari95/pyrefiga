@@ -31,8 +31,14 @@ class quadratures_in_admesh(object):
 				# ... using B-spline mapping
 				self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2map
 			elif sp_dim == 6 :
-				# ... The Hdiv mapping space can be selected independently of the initial mapping space.
-				self.basis_spans_in_adquadrature_2d = core.assemble_nurbsbasis_spans_in_adquadrature_Hdivmap
+				if len(V.spans[0].shape) == 1:
+					# ... The Hdiv mapping space can be selected independently of the initial mapping space.
+					# S same grid for knots and integral
+					self.basis_spans_in_adquadrature_2d = core.assemble_nurbsbasis_spans_in_adquadrature_HdivmapS
+				else :
+					# ... The Hdiv mapping space can be selected independently of the initial mapping space.
+					# Refined integration grid for Hdiv mapping
+					self.basis_spans_in_adquadrature_2d = core.assemble_nurbsbasis_spans_in_adquadrature_Hdivmap
 		else:
 			if sp_dim == 1 :
 				# ... 1D reparametrization
