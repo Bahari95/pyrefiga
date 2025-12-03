@@ -34,11 +34,11 @@ class quadratures_in_admesh(object):
 				if len(V.spans[0].shape) == 1:
 					# ... The Hdiv mapping space can be selected independently of the initial mapping space.
 					# S same grid for knots and integral
-					self.basis_spans_in_adquadrature_2d = core.assemble_nurbsbasis_spans_in_adquadrature_HdivmapS
+					self.basis_spans_in_adquadrature_2d = core.assemble_nurbsbasis_spans_in_adquadrature_Hdivmap
 				else :
 					# ... The Hdiv mapping space can be selected independently of the initial mapping space.
 					# Refined integration grid for Hdiv mapping
-					self.basis_spans_in_adquadrature_2d = core.assemble_nurbsbasis_spans_in_adquadrature_Hdivmap
+					self.basis_spans_in_adquadrature_2d = core.assemble_nurbsbasis_spans_in_adquadrature_HdivmapGmesh
 		else:
 			if sp_dim == 1 :
 				# ... 1D reparametrization
@@ -53,8 +53,13 @@ class quadratures_in_admesh(object):
 				# ... gradient mapping
 				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_gradmap
 			elif sp_dim == 6 :
-				# ... The Hdiv mapping space can be selected independently of the initial mapping space.
-				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_Hdivmap
+				if len(V.spans[0].shape) == 1:
+					# ... The Hdiv mapping space can be selected independently of the initial mapping space.
+					# S same grid for knots and integral
+					self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_Hdivmap
+				else :
+					# Refined integration grid for Hdiv mapping
+					self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_HdivmapGmesh					
 			else :
 				# ... L2-B-spline space (degree-1, degree-1) for Hdiv mapping is the same as for initial mapping.
 				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_same_space

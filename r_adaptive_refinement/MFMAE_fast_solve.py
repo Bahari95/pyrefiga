@@ -1,7 +1,7 @@
 """
 MFMAE_fast_solver.py
 
-# mixed variational formulation solver for fast diagonalization solver for Monge-Ampere equation
+# mixed variational formulation fast diagonalization solver for Monge-Ampere equation
 
 @author : M. BAHARI
 """
