@@ -513,7 +513,19 @@ class pyrefInterface(object):
     The input are the control points of the two patches.
     """
     def __init__(self, xmp, ymp, xmp1, ymp1):
-
+        
+        # mp        = [] TODO
+        # dirichlet = []
+        # j         = 0
+        # for i in idx : 
+        #     mp.append(getGeometryMap(geometry,i)) 
+        #     mp[j].nurbs_check  = True # Activate NURBS if geometry uses NURBS
+        #     dirichlet.append([[True, True], [True, True]])
+        #     j +=1
+        # degree          = mp[0].degree # Use same degree as geometry
+        # #....        
+        # xmp, ymp     = mp.coefs()
+        #...
         self.interface   = [2,1]
         self.dirichlet_1 = [[True, True], [True, True]]
         self.dirichlet_2 = [[True, True], [True, True]]

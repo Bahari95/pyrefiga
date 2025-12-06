@@ -65,24 +65,17 @@ os.makedirs("figs", exist_ok=True)
 #------------------------------------------------------------------------------
 def Eliminate_Dirichlet(V, x, dirichlet, dirichlet_patch2 = None):
 
+    if all(dir is False for dir in dirichlet):
+        raise NotImplementedError('No Dirichlet available')
     n1, n2  = V.nbasis
     rhs     = False
     #indeces for elimination
-    d1 = 0
-    d2 = n1
-    d3 = 0
-    d4 = n2
-    if dirichlet[0][0]:
-        d1 = 1
-    if dirichlet[0][1]:
-        d2 -= 1
-    if dirichlet[1][0]:
-        d3 = 1
-    if dirichlet[1][1]:
-        d4 -= 1
-    else:
-        raise NotImplementedError('No Dirichlet available')
+    d1 = 1    if dirichlet[0][0] else 0 
+    d2 = n1-1 if dirichlet[0][1] else n1
+    d3 = 1    if dirichlet[1][0] else 0 
+    d4 = n2-1 if dirichlet[1][1] else n2
 
+    print("====================", d1, d2, d3, d4)
     if isinstance(x, StencilMatrix):
         x   = (x.tosparse()).toarray().reshape((n1,n2,n1,n2))
     elif isinstance(x, StencilVector): # TODO 
@@ -101,28 +94,28 @@ def Eliminate_Dirichlet(V, x, dirichlet, dirichlet_patch2 = None):
             x   = x[d1:d2,d3:d4,d1:d2,d3:d4].reshape(((d2-d1)*(d4-d3), (d2-d1)*(d4-d3)))
     else:
         #indeces for elimination
-        pd1 = 0
-        pd2 = n1
-        pd3 = 0
-        pd4 = n2
-        if dirichlet_patch2[0][0]:
-            pd1 = 1
-        if dirichlet_patch2[0][1]:
-            pd2 -= 1
-        if dirichlet_patch2[1][0]:
-            pd3 = 1
-        if dirichlet_patch2[1][1]:
-            pd4 -= 1
-        else:
-            raise NotImplementedError('No Dirichlet available')
+        pd1 = 1    if dirichlet_patch2[0][0] else 0 
+        pd2 = n1-1 if dirichlet_patch2[0][1] else n1
+        pd3 = 1    if dirichlet_patch2[1][0] else 0 
+        pd4 = n2-1 if dirichlet_patch2[1][1] else n2
+        print("====================)", pd1, pd2, pd3, pd4)
         x   = x[pd1:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-pd1)*(pd4-pd3), (d2-d1)*(d4-d3)))
     return  x
 
 def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, dirichlet_1, dirichlet_2):
-
+    d1 = 1              if dirichlet_1[0][0] else 0 
+    d2 = V.nbasis[0]-1  if dirichlet_1[0][1] else V.nbasis[0]
+    d3 = 1              if dirichlet_1[1][0] else 0 
+    d4 = V.nbasis[1]-1  if dirichlet_1[1][1] else V.nbasis[1]
+    #...
+    pd1 = 1             if dirichlet_2[0][0] else 0 
+    pd2 = V.nbasis[0]-1 if dirichlet_2[0][1] else V.nbasis[0]
+    pd3 = 1             if dirichlet_2[1][0] else 0 
+    pd4 = V.nbasis[1]-1 if dirichlet_2[1][1] else V.nbasis[1]
     # Build global linear system
-    n_basis       = (V.nbasis[0]-1) * (V.nbasis[1]-2)
-    M             = zeros((n_basis*2,n_basis*2))
+    n_basis       = ((d2-d1) * (d4-d3), (pd2-pd1) * (pd4-pd3))
+
+    M             = zeros((n_basis[0]+n_basis[1],n_basis[0]+n_basis[1]))
     #... computes coeffs for Nitsche's method
     stab          = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
     m_h           = (V.nbasis[0]*V.nbasis[1])
@@ -137,16 +130,18 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     # stiffness11   = (stiffness11.tosparse()).toarray().reshape(Vh.nbasis)
     # stiffness11   = stiffness11[1:,1:-1,1:,1:-1]
     # stiffness11   = (stiffness11 ).reshape((n_basis, n_basis))
+    print("st11")
     stiffness11   = Eliminate_Dirichlet(V, stiffness11, dirichlet_1)    
-    M[:n_basis,:n_basis]       = stiffness11[:,:]
+    M[:n_basis[0],:n_basis[0]]       = stiffness11[:,:]
 
     # Assemble stiffness matrix 22
     stiffness22   = assemble_stiffness_nitsche(V, fields=[u21_mph, u22_mph], knots=True, value=[V.omega[0],V.omega[1], interface[1], Kappa, normS])
     # stiffness22   = (stiffness22.tosparse()).toarray().reshape(Vh.nbasis)
     # stiffness22   = stiffness22[:-1,1:-1,:-1,1:-1]
     # stiffness22   = (stiffness22 ).reshape((n_basis, n_basis))
+    print("st22")
     stiffness22   = Eliminate_Dirichlet(V, stiffness22, dirichlet_2)
-    M[n_basis:,n_basis:]       = stiffness22[:,:]
+    M[n_basis[0]:,n_basis[0]:]       = stiffness22[:,:]
 
     #=======================================
     # # # Assemble Nitsche's method matrices
@@ -159,12 +154,13 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     # stiffness21   =  stiffness21.toarray().reshape(Vh.nbasis)
     # stiffness21   =  stiffness21[:-1,1:-1,1:,1:-1]
     # stiffness21   =  stiffness21.reshape((n_basis, n_basis))
+    print("st33")
     stiffness21   = Eliminate_Dirichlet(V, stiffness21, dirichlet_1, dirichlet_2)
     # Assemble Nitsche's method matrices
-    M[n_basis:,:n_basis]       = stiffness21[:,:]
-    M[:n_basis,n_basis:]       = stiffness21.T[:,:]
+    M[n_basis[0]:,:n_basis[0]]       = stiffness21[:,:]
+    M[:n_basis[0],n_basis[0]:]       = stiffness21.T[:,:]
 
-
+    print("rhs")
     # plt.spy(M, markersize=2, marker='+')
     # plt.show()
     # print("Test if Nitsche matrix is symmetric: ", np.allclose(stiffness12, stiffness21.T))
@@ -177,9 +173,9 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     rhs                       = assemble_rhs_un( V, fields=[u21_mph, u22_mph, u_d2])
     rhs2   = Eliminate_Dirichlet(V, rhs, dirichlet_2)    
     # Assemble right-hand side vector
-    b                          = zeros(n_basis*2)
-    b[:n_basis]                = rhs1[:]
-    b[n_basis:]                = rhs2[:]
+    b                          = zeros(n_basis[0]+n_basis[1])
+    b[:n_basis[0]]                = rhs1[:]
+    b[n_basis[0]:]                = rhs2[:]
 
     # Solve the linear system using CGS
     x, inf          = sla.cg(M, b)
@@ -189,13 +185,13 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     u2              = StencilVector(V.vector_space)
     # ... Convert solution to StencilVector format
     x1              = zeros(V.nbasis)
-    x1[1:,1:-1]     = x[:n_basis].reshape((V.nbasis[0]-1, V.nbasis[1]-2))
-    x1              += u_d1.toarray().reshape(V.nbasis)
+    x1[d1:d2,d3:d4] = x[:n_basis[0]].reshape((d2-d1, d4-d3))
+    x1             += u_d1.toarray().reshape(V.nbasis)
     u1.from_array(V, x1)
     #...
-    x2              = zeros(V.nbasis)
-    x2[:-1,1:-1]    = x[n_basis:].reshape((V.nbasis[0]-1, V.nbasis[1]-2))
-    x2             += u_d2.toarray().reshape(V.nbasis)
+    x2                  = zeros(V.nbasis)
+    x2[pd1:pd2,pd3:pd4] = x[n_basis[0]:].reshape((pd2-pd1, pd4-pd3))
+    x2                 += u_d2.toarray().reshape(V.nbasis)
     u2.from_array(V, x2)
 
     # Compute L2 and H1 errors
@@ -239,9 +235,9 @@ g         = ['x**2+y**2']
 # Load CAD geometry
 #------------------------------------------------------------------------------
 # geometry = load_xml('unitSquare.xml')
-#geometry = load_xml('circle.xml')
-geometry = load_xml('quart_annulus.xml')
-# geometry = load_xml('annulus.xml')
+# geometry = load_xml('circle.xml')
+# geometry = load_xml('quart_annulus.xml')
+geometry = load_xml('annulus.xml')
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 

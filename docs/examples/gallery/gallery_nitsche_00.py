@@ -314,27 +314,42 @@ def assemble_matrix_nitsche_ex00(
                 for jl_1 in range(0, p1+1):
                     i1 = i_span_1 - p1 + il_1
                     j1 = i_span_1 - p1 + jl_1
-                    v  = 0.0
+
+                    v    = 0.0
+                    vip  = 0.0 # penultimate derivative
+                    vjp  = 0.0 # penultimate derivative
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
                         bi_y  = -1* bi_0 * by_left
+                        bi_py =  1* bi_0 * by_left
                         #...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
                         bj_x  = basis_1[ie1, jl_1, 1, g1]
                         bj_y  = -1* bj_0 * by_left
+                        bj_py =  1* bj_0 * by_left
                         # ...
-                        comp_1          = -1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += +1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = +1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += -1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_2          = -1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_2         += +1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2          = +1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2         += -1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        # ...
+                        comp_3          = +1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_3         += -1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        # ...
+                        comp_4          = +1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_4         += -1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         #...
                         wvol            = weights_1[ie1, g1]
                         # ...
                         v              +=  normalS * (comp_1 * bj_0 + bi_0*comp_2) * wvol + Kappa * bi_0 * bj_0 * wvol * sqrt(F1_1x[g1]**2 + F1_2x[g1]**2)
+                        vip            +=  normalS * (comp_3 * bj_0) * wvol
+                        vjp            +=  normalS * (bi_0*comp_4) * wvol
 
-                    matrix[p1+i1, p2, p1+j1-i1, p2]  += v
+                    matrix[p1+i1, p2, p1+j1-i1, p2]     += v
+                    matrix[p1+i1, p2+1, p1+j1-i1, p2-1] += vip
+                    matrix[p1+i1, p2, p1+j1-i1, p2+1]   += vjp
     elif interface_nb == 4:
         by_right = p2/(knots_2[ne2+2*p2]-knots_2[ne2+p2-1])*(omega_2[ne2+p2-2]/omega_2[ne2+p2-1])
         #... Assemble the boundary condition for Nitsche (y=right)
@@ -375,27 +390,41 @@ def assemble_matrix_nitsche_ex00(
                 for jl_1 in range(0, p1+1):
                     i1 = i_span_1 - p1 + il_1
                     j1 = i_span_1 - p1 + jl_1
-                    v  = 0.0
+
+                    v    = 0.0
+                    vip  = 0.0 # penultimate derivative
+                    vjp  = 0.0 # penultimate derivative
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
                         bi_y  = bi_0*by_right
+                        bi_py  = -1.*bi_0*by_right
                         #...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
                         bj_x  = basis_1[ie1, jl_1, 1, g1]
                         bj_y  = bj_0*by_right
+                        bj_py  = -1.*bj_0*by_right
                         # ...
-                        comp_1          = +1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += -1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = -1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += +1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_2          = +1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_2         += -1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2          = -1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2         += +1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        # ...
+                        comp_3          = -1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_3         += +1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        # ...
+                        comp_4          = -1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_4         += +1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         #...
                         wvol  = weights_1[ie1, g1]
                         # ...
                         v    +=  normalS * (comp_1 * bj_0 + bi_0*comp_2) * wvol + Kappa * bi_0 * bj_0 * wvol * sqrt(F1_1x[g1]**2 + F1_2x[g1]**2)
-
-                    matrix[p1+i1, i_span_2+p2, p1+j1-i1, p2]  += v
+                        vip  +=  normalS * (comp_3 * bj_0) * wvol
+                        vjp  +=  normalS * (bi_0 * comp_4) * wvol
+                    matrix[p1+i1, i_span_2+p2, p1+j1-i1, p2]     += v
+                    matrix[p1+i1, i_span_2+p2-1, p1+j1-i1, p2+1] += vip
+                    matrix[p1+i1, i_span_2+p2, p1+j1-i1, p2-1]   += vjp
     # ...
 #------------------------------------------------------------------------------
 #... Nitsche's method for assembling the matrix : normal derivative
@@ -441,8 +470,6 @@ def assemble_matrix_nitsche_ex02(
         # ... v1*u2
         ie1      = 0
         i_span_1 = spans_1[ie1]
-        i1       = spans_1[ne1-1]  #v1
-        j1       = spans_1[ne1-1]  #u2
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
@@ -563,8 +590,8 @@ def assemble_matrix_nitsche_ex02(
                         v    +=  normalS * (bj_0 * comp_1)  * wvol
                          # ... 0.5*u2*v1_n
                         vip  +=  normalS * (bj_0 * comp_3)  * wvol
-                    matrix[p1+spans_1[ne1-1], p2+i2, p1+0, p2+j2]   += v
-                    matrix[p1+spans_1[ne1-1]-1, p2+i2, p1+0, p2+j2] += vip
+                    matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2]   += v
+                    matrix[p1+spans_1[ne1-1]-1, p2+i2, p1, p2+j2] += vip
 
     elif interface_nb == 2:
         bx_left  = p1/(knots_1[p1+1]-knots_1[0])*omega_1[1]/omega_1[0]
@@ -572,8 +599,6 @@ def assemble_matrix_nitsche_ex02(
         # ... u1*v2
         ie1      = 0
         i_span_1 = spans_1[ie1]
-        i1       = spans_1[ne1-1]# v2
-        j1       = 0 # u1
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
@@ -739,27 +764,31 @@ def assemble_matrix_nitsche_ex02(
                 for jl_1 in range(0, p1+1):
                     i1 = i_span_1 - p1 + il_1
                     j1 = i_span_1 - p1 + jl_1
-                    v  = 0.0
+
+                    v   = 0.0
+                    vjp = 0.0
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
-                        # bi_x  = basis_1[ie1, il_1, 1, g1]
-                        # bi_y  = -1*bi_0*by_left
                         #...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
-                        # bj_x  = basis_1[ie1, jl_1, 1, g1]
-                        # bj_y  = -1*bj_0*by_left
+                        bj_x  = basis_1[ie1, jl_1, 1, g1]
+                        bj_y  = -1*bj_0*by_left
+                        bj_py =  1*bj_0*by_left
                         # ...
-                        # comp_1          = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        # comp_1         += +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2          = -1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
+                        comp_2         += +1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
                         # ...
-                        # comp_2          = +1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
-                        # comp_2         += -1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
+                        comp_4          = -1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_py)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
+                        comp_4         += +1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_py)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
                         # ...
                         wvol  = weights_1[ie1, g1]
-                        # ... 0.* ( bi_0*comp_2) * wvol
-                        v    +=  - Kappa * bi_0 * bj_0 * wvol*sqrt(F1_1x[g1]**2+ F1_2x[g1]**2)
+                        # ... 
+                        v    += normalS * ( comp_2 * bi_0) * wvol - Kappa * bi_0 * bj_0 * wvol*sqrt(F1_1x[g1]**2+ F1_2x[g1]**2)
+                        vjp  += normalS * ( comp_4 * bi_0) * wvol
 
-                    matrix[p1+i1, p2+spans_2[ne2-1], p1+j1-i1, p2] += v
+                    matrix[p1+i1, p2+spans_2[ne2-1], p1+j1, p2]   += v
+                    matrix[p1+i1, p2+spans_2[ne2-1], p1+j1, p2+1] += vjp
+
         #... Assemble the boundary condition for Nitsche (x=right)
         ie2      = ne2 -1
         i_span_2 = spans_2[ie2]
@@ -798,26 +827,32 @@ def assemble_matrix_nitsche_ex02(
                 for jl_1 in range(0, p1+1):
                     i1 = i_span_1 - p1 + il_1
                     j1 = i_span_1 - p1 + jl_1
-                    v  = 0.0
+
+                    v   = 0.0
+                    vip = 0.0
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
                         bi_y  = bi_0*by_right
+                        bi_py = -1.*bi_0*by_right
                         #...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
-                        # bj_x  = basis_1[ie1, jl_1, 1, g1]
-                        # bj_y  = bj_0*by_right
                         # # ...
-                        comp_1          = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = +1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += -1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        # comp_2          = -1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
-                        # comp_2         += +1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
+                        comp_3          = +1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_3         += -1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
                         wvol  = weights_1[ie1, g1]
-                        # ...
-                        v    +=  normalS * (comp_1 * bj_0)  * wvol
-                    matrix[p1+i1, p2+spans_2[ne2-1], p1+j1-i1, p2]  += v
+                        # ... 0.5*u2*v1_n
+                        v    +=  normalS * (bj_0 * comp_1)  * wvol
+                         # ... 0.5*u2*v1_n
+                        vip  +=  normalS * (bj_0 * comp_3)  * wvol
+
+                    matrix[p1+i1, p2+spans_2[ne2-1], p1+j1, p2]   += v
+                    matrix[p1+i1, p2+spans_2[ne2-1]-1, p1+j1, p2] += vip
+
     elif interface_nb == 4:
         by_left  =  p2*(1/(knots_2[p2+1]-knots_2[0]))*(omega_2[1]/omega_2[0])
         by_right =  p2*(1/(knots_2[ne2+2*p2]-knots_2[ne2+p2-1]))*(omega_2[ne2+p2-2]/omega_2[ne2+p2-1])
@@ -859,27 +894,31 @@ def assemble_matrix_nitsche_ex02(
                 for jl_1 in range(0, p1+1):
                     i1 = i_span_1 - p1 + il_1
                     j1 = i_span_1 - p1 + jl_1
-                    v  = 0.0
+
+                    v   = 0.0
+                    vip = 0.0
                     for g1 in range(0, k1):
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
                         bi_y  = -1*bi_0*by_left
+                        bi_py =  1*bi_0*by_left
                         # ...
                         bj_0  = basis_1[ie1, jl_1, 0, g1]
-                        # bj_x  = basis_1[ie1, jl_1, 1, g1]
-                        # bj_y  = -1*bj_0*by_left
                         # ...
-                        comp_1          = +1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += -1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        # comp_2          = -1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
-                        # comp_2         += +1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
+                        comp_3          = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_3         += +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
                         wvol  = weights_1[ie1, g1]
                         # ...
-                        v    +=  normalS * ( bj_0*comp_1) * wvol - Kappa * bi_0 * bj_0 * wvol*sqrt(F1_1x[g1]**2+ F1_2x[g1]**2)
+                        v    +=  normalS * (comp_1 * bj_0) * wvol - Kappa * bi_0 * bj_0 * wvol*sqrt(F1_1x[g1]**2+ F1_2x[g1]**2)
+                        vip  +=  normalS * (comp_3 * bj_0)  * wvol
 
-                    matrix[p1+i1, p2, p1+j1-i1, p2] += v
+                    matrix[p1+i1, p2, p1+j1, p2+spans_2[ne2-1]]   += v
+                    matrix[p1+i1, p2+1, p1+j1, p2+spans_2[ne2-1]] += vip
+
         #... Assemble the boundary condition for Nitsche (x=right)
         ie2      = ne2 -1
         i_span_2 = spans_2[ie2]
@@ -918,24 +957,27 @@ def assemble_matrix_nitsche_ex02(
                 for jl_1 in range(0, p1+1):
                     i1 = i_span_1 - p1 + il_1
                     j1 = i_span_1 - p1 + jl_1
-                    v  = 0.0
+
+                    v   = 0.0
+                    vjp = 0.0
                     for g1 in range(0, k1):
                         bi_0    = basis_1[ie1, il_1, 0, g1]
-                        # bi_x  = basis_1[ie1, il_1, 1, g1]
-                        # bi_y  = bi_0*by_right
                         #...
                         bj_0    = basis_1[ie1, jl_1, 0, g1]
                         bj_x    = basis_1[ie1, jl_1, 1, g1]
                         bj_y    = bj_0*by_right
-                        # # ...
-                        # comp_1 = -1 * ( F_2y[g1]*bi_x - F_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        # comp_1+= +1 * (-F_1y[g1]*bi_x + F_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        bj_py   = -1.*bj_0*by_right
                         # ...
-                        comp_2  = -1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
-                        comp_2 += +1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
+                        comp_2  = +1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_y)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
+                        comp_2 += -1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_y)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
+                        # ...
+                        comp_4  = +1 * ( F1_2y[g1]*bj_x - F1_2x[g1]*bj_py)/J_mat1[g1] * F1_2x[g1]#/sqrt(F1y**2+ F2y**2)
+                        comp_4 += -1 * (-F1_1y[g1]*bj_x + F1_1x[g1]*bj_py)/J_mat1[g1] * F1_1x[g1]#/sqrt(F1y**2+ F2y**2)
                         # ...
                         wvol    = weights_1[ie1, g1]
-                        # ...
-                        v      +=  normalS * (comp_2 * bi_0)  * wvol
-                    matrix[p1+i1, p2, p1+j1-i1, p2]  += v
+                        # ... 0.5*u1_n*v2
+                        v      +=  normalS * ( comp_2 * bi_0) * wvol
+                        vjp    +=  normalS * ( comp_4 * bi_0) * wvol
+                    matrix[p1+i1, p2, p1+j1, p2+spans_2[ne2-1]]   += v
+                    matrix[p1+i1, p2, p1+j1, p2+spans_2[ne2-1]-1] += vjp
     # ...
