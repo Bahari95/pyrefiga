@@ -45,19 +45,28 @@ import argparse
 #------------------------------------------------------------------------------
 import os
 os.makedirs("figs", exist_ok=True)
+#------------------------------------------------------------------------------
+# Argument parser for controlling plotting
+parser = argparse.ArgumentParser(description="Control plot behavior and save control points.")
+parser.add_argument("--plot", action="store_true", help="Enable plotting and saving control points")
+parser.add_argument("--last", action="store_true", help="Enable iterations")
+parser.add_argument("--el", type=int, default=2, help="Number of elements to elevalte the grid (default: 2)")
+args = parser.parse_args()
 
 #------------------------------------------------------------------------------
 # Poisson solver algorithm
 #------------------------------------------------------------------------------
 def poisson_solve(V, u11_mph, u12_mph, u_d):
     u   = StencilVector(V.vector_space)
+
     # Assemble stiffness matrix
     stiffness  = assemble_matrix_un(V, fields=[u11_mph, u12_mph])
-    stiffness  = apply_dirichlet(V, stiffness)
-    M          = stiffness.tosparse()
-
     # Assemble right-hand side vector
     rhs        = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d])
+
+    #... apply Dirichlet
+    stiffness  = apply_dirichlet(V, stiffness)
+    M          = stiffness.tosparse()
     rhs        = apply_dirichlet(V, rhs)
     b          = rhs.toarray()
     
@@ -76,23 +85,21 @@ def poisson_solve(V, u11_mph, u12_mph, u_d):
     l2_norm = norm[0]
     H1_norm = norm[1]
     return u, x, l2_norm, H1_norm
-#------------------------------------------------------------------------------
-# Argument parser for controlling plotting
-parser = argparse.ArgumentParser(description="Control plot behavior and save control points.")
-parser.add_argument("--plot", action="store_true", help="Enable plotting and saving control points")
-args = parser.parse_args()
 
 #------------------------------------------------------------------------------
 # Parameters and initialization
 #------------------------------------------------------------------------------
-nbpts       = 100 # Number of points for plotting
-RefinNumber = 2   # Number of global mesh refinements
-nelements   = 16  # Initial mesh size
+nbpts       = 100       # Number of points for plotting
+RefinNumber = args.el   # Number of global mesh refinements
+nelements   = 16        # Initial mesh size
 table       = zeros((RefinNumber+1,5))
-i           = 1
+if args.last:
+    nelements   = 2**(5+RefinNumber)  # Initial mesh size
+    RefinNumber = 0
+    table       = zeros((RefinNumber+1,5))    
 times       = []
 
-print("(#=assembled Dirichlet, #=solve poisson)\n")
+print("(#=spaces, #=assembled Dirichlet, #=solve poisson)\n")
 
 #------------------------------------------------------------------------------
 # Define exact solution and Dirichlet boundary condition
@@ -107,13 +114,14 @@ g         = ['1./(1.+np.exp((x + y  - 0.5)/0.01) )']
 #------------------------------------------------------------------------------
 #geometry = load_xml('unitSquare.xml')
 geometry = load_xml('circle.xml')
+id_mp    = 0
 #geometry = load_xml('quart_annulus.xml')
 # geometry = load_xml('annulus.xml')
-print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
+print('#---Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 
 # Extract geometry mapping
-mp             = getGeometryMap(geometry,0)
+mp             = getGeometryMap(geometry,id_mp)
 degree         = mp.degree # Use same degree as geometry
 quad_degree    = max(degree[0],degree[1])+3 # Quadrature degree
 mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
@@ -130,7 +138,7 @@ V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,Nelements), nderiv = 1
 V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,Nelements), nderiv = 1, omega = wm2, quad_degree = quad_degree)
 # Create tensor product space
 Vh = TensorSpace(V1, V2)
-
+print('#')
 # Initialize mapping vectors
 u11_mph        = StencilVector(Vh.vector_space)
 u12_mph        = StencilVector(Vh.vector_space)
@@ -190,16 +198,11 @@ for nbne in range(RefinNumber):
 #------------------------------------------------------------------------------
 # Print error results in LaTeX table format
 #------------------------------------------------------------------------------
-if True :
-    print("	\subcaption{Degree $p =",degree,"$}")
-    print("	\\begin{tabular}{c|ccc|ccc}")
-    print("		\hline")
-    print("		 $\#$cells & $L^2$-Err & $H^1$-Err & cpu-time\\\\")
-    print("		\hline")
-    for i in range(0,RefinNumber+1):
-        print("		",int(table[i,1]),"$\\times$", int(table[i,1]), "&", np.format_float_scientific(table[i,2], unique=False, precision=2), "&", np.format_float_scientific(table[i,3], unique=False, precision=2), "&", np.format_float_scientific(table[i,4], unique=False, precision=2),"\\\\")
-    print("		\hline")
-    print("	\end{tabular}")
+print("Degree $p =",degree,"\n")
+print("cells & $L^2$-Err & $H^1$-Err & cpu-time")
+print("----------------------------------------")
+for i in range(0,RefinNumber+1):
+    print("",int(table[i,1]),"X", int(table[i,1]), "&", np.format_float_scientific(table[i,2], unique=False, precision=2), "&", np.format_float_scientific(table[i,3], unique=False, precision=2), "&", np.format_float_scientific(table[i,4], unique=False, precision=2))
 print('\n')
 
 #------------------------------------------------------------------------------

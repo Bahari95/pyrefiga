@@ -728,13 +728,12 @@ def assemble_vector_un_ex01(
                     lvalues_udx[g1, g2] /= J_mat
                     lvalues_udy[g1, g2]  = (F1x * udy - F1y*udx)
                     lvalues_udy[g1, g2] /= J_mat
-                    #.. Test 1
-                    #f = -4000000*x**2*(x**2 + y**2 - 0.2)**2*exp(-500*(x**2 + y**2 - 0.2)**2) + 4000*x**2*exp(-500*(x**2 + y**2 - 0.2)**2) - 4000000*y**2*(x**2 + y**2 - 0.2)**2*exp(-500*(x**2 + y**2 - 0.2)**2)
-                    #f+= 4000*y**2*exp(-500*(x**2 + y**2 - 0.2)**2) - 2*(-2000*x**2 - 2000*y**2 + 400.0)*exp(-500*(x**2 + y**2 - 0.2)**2)
-                    # Circular domain
+                    # .. test 0
+                    # f  = 2.*(2.*pi)**2*sin(2.*pi*x)*sin(2.*pi*y)
+                    # test 1
                     #f = 3.85749969592784e-18*exp(100.0*x + 100.0*y)/(1.92874984796392e-22*exp(100.0*x + 100.0*y) + 1.0)**2 - 1.48803039040833e-39*exp(200.0*x + 200.0*y)/(1.92874984796392e-22*exp(100.0*x + 100.0*y) + 1.0)**3
-                    # .. sin
-                    f  = 2.*(2.*pi)**2*sin(2.*pi*x)*sin(2.*pi*y)
+                    # .. test 0
+                    f  = -4.+0.*x
 
                     lvalues_u[g1,g2]   = f 
                     lvalues_Jac[g1,g2] = J_mat
@@ -857,25 +856,23 @@ def assemble_norm_un_ex01(
                     # ...                              
                     wvol  = weights_1[ie1, g1] * weights_2[ie2, g2]
                     area += det_J * wvol
-                    x1    =  points_1[ie1, g1]
-                    x2    =  points_2[ie2, g2]
 
                     uh    = lvalues_u[g1,g2]
                     sx    = lvalues_ux[g1,g2]
                     sy    = lvalues_uy[g1,g2]
  
-                    #... TEST Circlur domain
+                    # ... test 0 
+                    # f    = sin(2.*pi*x)*sin(2.*pi*y)
+                    # fx   = 2.*pi*cos(2.*pi*x)*sin(2.*pi*y)
+                    # fy   = 2.*pi*sin(2.*pi*x)*cos(2.*pi*y)
+                    #... TEST 1
                     # f    = 1./(1.+exp((x + y  - 0.5)/0.01) )
                     # fx   = -1.92874984796392e-20*exp(100.0*x + 100.0*y)/(1.92874984796392e-22*exp(100.0*x + 100.0*y) + 1.0)**2
                     # fy   = -1.92874984796392e-20*exp(100.0*x + 100.0*y)/(1.92874984796392e-22*exp(100.0*x + 100.0*y) + 1.0)**2
                     #... TEST 2
-                    #f   = exp(-100.*sin(6.*((y+0.1)**2-0.1*x)-0.05)**2)
-                    #fx  = -120.0*exp(-100.0*sin(0.6*x - 6.0*(y + 0.1)**2 + 0.05)**2)*sin(0.6*x - 6.0*(y + 0.1)**2 + 0.05)*cos(0.6*x - 6.0*(y + 0.1)**2 + 0.05)
-                    #fy  = -200.0*(-12.0*y - 1.2)*exp(-100.0*sin(0.6*x - 6.0*(y + 0.1)**2 + 0.05)**2)*sin(0.6*x - 6.0*(y + 0.1)**2 + 0.05)*cos(0.6*x - 6.0*(y + 0.1)**2 + 0.05)
-                    # ...
-                    f    = sin(2.*pi*x)*sin(2.*pi*y)
-                    fx   = 2.*pi*cos(2.*pi*x)*sin(2.*pi*y)
-                    fy   = 2.*pi*sin(2.*pi*x)*cos(2.*pi*y)
+                    f   = x**2+y**2
+                    fx  = 2.*x
+                    fy  = 2.*y
                     # ...
                     uhx   = (F2y*sx-F2x*sy)/det_J
                     uhy   = (F1x*sy-F1y*sx)/det_J

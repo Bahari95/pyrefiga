@@ -549,17 +549,17 @@ class pyrefInterface(object):
 
     def setInterface(self, xd1, xd2):
         if self.interface[0] == 2 and self.interface[1] == 1:
-            xd1[-1,:]   = 0.0 # Reset xd to zero
-            xd2[0,:]    = 0.0 # Reset xd to zero
+            xd1[-1,1:-1]   = 0.0 # Reset xd to zero
+            xd2[0,1:-1]    = 0.0 # Reset xd to zero
         elif self.interface[0] == 1 and self.interface[1] == 2:
-            xd1[0,:]    = 0.0 # Reset xd to zero
-            xd2[-1,:]   = 0.0 # Reset xd to zero
+            xd1[0,1:-1]    = 0.0 # Reset xd to zero
+            xd2[-1,1:-1]   = 0.0 # Reset xd to zero
         elif self.interface[0] == 3 and self.interface[1] == 4 :
-            xd1[:,0]    = 0.0 # Reset xd to zero
-            xd2[:,-1]   = 0.0 # Reset xd to zero
+            xd1[1:-1,0]    = 0.0 # Reset xd to zero
+            xd2[1:-1,-1]   = 0.0 # Reset xd to zero
         elif self.interface[0] == 4 and self.interface[1] == 3 :
-            xd1[:,-1]   = 0.0
-            xd2[:,0]    = 0.0 # Reset xd to zero
+            xd1[1:-1,-1]   = 0.0
+            xd2[1:-1,0]    = 0.0 # Reset xd to zero
         else:
             raise ValueError("Invalid interface configuration")
         return xd1, xd2
