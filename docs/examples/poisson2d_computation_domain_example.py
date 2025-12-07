@@ -4,7 +4,8 @@ poisson2d_computation_domain_example.py
 author :  M. BAHARI
 """
 
-from pyrefiga import compile_kernel, apply_dirichlet
+from pyrefiga import compile_kernel
+from pyrefiga import apply_dirichlet
 from pyrefiga import SplineSpace
 from pyrefiga import TensorSpace
 from pyrefiga import StencilMatrix
@@ -27,9 +28,9 @@ import time
 start = time.time()
 
 #---In Poisson equation
-from examples.gallery.gallery_section_04 import assemble_vector_ex01 #---1 : In uniform mesh
-from examples.gallery.gallery_section_04 import assemble_matrix_ex01 #---1 : In uniform mesh
-from examples.gallery.gallery_section_04 import assemble_norm_ex01 #---1 : In uniform mesh
+from gallery.gallery_section_04 import assemble_vector_ex01 #---1 : In uniform mesh
+from gallery.gallery_section_04 import assemble_matrix_ex01 #---1 : In uniform mesh
+from gallery.gallery_section_04 import assemble_norm_ex01 #---1 : In uniform mesh
 
 assemble_stiffness2D = compile_kernel(assemble_matrix_ex01, arity=2)
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
@@ -56,31 +57,19 @@ def poisson_solve(V1, V2 , V, x_d = None, u_d = None):
        u   = StencilVector(V.vector_space)
 
        stiffness           = assemble_stiffness2D(V)
-       stiffness     = (stiffness.tosparse()).toarray()
-       stiffness     = stiffness.reshape((V1.nbasis,V2.nbasis,V1.nbasis,V2.nbasis))
-       stiffness     = stiffness[1:-1,1:-1,1:-1,1:-1]
-       stiffness     = stiffness.reshape(((V1.nbasis-2)*(V2.nbasis-2),(V1.nbasis-2)*(V2.nbasis-2)))
-       #stiffness           = apply_dirichlet(V, stiffness)
+       stiffness           = apply_dirichlet(V, stiffness)
        #--Assembles matrix
-       #stiffness             = stiffness.tosparse()
        lu                  = sla.splu(csc_matrix(stiffness))
        #--Assembles right hand side of Poisson equation
        rhs                 = assemble_rhs( V, fields = [u_d] )
-       rhs            = rhs.toarray()
-       rhs            = rhs.reshape((V1.nbasis,V2.nbasis))
-       rhs            = rhs[1:-1,1:-1]
-       b              = rhs.reshape((V1.nbasis-2)*(V2.nbasis-2))
-       # rhs                 = apply_dirichlet(V, rhs)
-       #b                   = rhs.toarray()
+       b                   = apply_dirichlet(V, rhs)
        # ...
-       x                   = lu.solve(b)       
-       x                   = x.reshape((V1.nbasis-2, V2.nbasis-2))       
+       x                   = lu.solve(b)         
 
        # Rassembles Direcjlet boundary conditions
-       xsol                = zeros(V.nbasis)
-       xsol[ 1: -1, 1: -1] = x[ : , : ]
-       xsol[ : , : ]      += x_d[ : , : ]       
-       u.from_array(V, xsol)
+       u = apply_dirichlet(V, x, update = u_d)
+       xsol                = u.toarray().reshape(V.nbasis)
+       
        #--Computes error l2 and H1
        Norm                = assemble_norm_l2(V, fields=[u])
        norm                = Norm.toarray()

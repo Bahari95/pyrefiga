@@ -66,25 +66,22 @@ def poisson_solve(V, u11_mph, u12_mph, u_d):
 
     #... apply Dirichlet
     stiffness  = apply_dirichlet(V, stiffness)
-    M          = stiffness.tosparse()
     rhs        = apply_dirichlet(V, rhs)
-    b          = rhs.toarray()
     
     # Solve linear system
-    lu         = sla.splu(csc_matrix(M))
-    x          = lu.solve(b)
+    lu         = sla.splu(csc_matrix(stiffness))
+    x          = lu.solve(rhs)
 
     # Apply Dirichlet boundary conditions
-    x          = x.reshape(V.nbasis)
-    x         += (u_d.toarray()).reshape(V.nbasis)
-    u.from_array(V, x)
+    u          = apply_dirichlet(V, x, update = u_d)
+    x_s        = u.toarray().reshape(V.nbasis)
 
     # Compute L2 and H1 errors
     Norm    = assemble_norm_un(V, fields=[u11_mph, u12_mph, u])
     norm    = Norm.toarray()
     l2_norm = norm[0]
     H1_norm = norm[1]
-    return u, x, l2_norm, H1_norm
+    return u, x_s, l2_norm, H1_norm
 
 #------------------------------------------------------------------------------
 # Parameters and initialization

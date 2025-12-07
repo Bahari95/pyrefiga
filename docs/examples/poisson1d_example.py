@@ -66,31 +66,21 @@ def poisson_solve(V):
 
        #..Stiffness and Mass matrix in 1D in the first deriction
        K1                  = assemble_stiffness1D(V)
-       K1                  = K1.tosparse()
-       K1                  = K1.toarray()[1:-1,1:-1]
-       #K1                  = csc_matrix(K1)
+       K1                  = apply_dirichlet(V, K1, True)
 
        M1                  = assemble_mass1D(V)
-       M1                  = M1.tosparse()
-       M1                  = M1.toarray()[1:-1,1:-1]
+       M1                  = apply_dirichlet(V, M1, True)
        M1                  = csr_matrix(M1)
 
        # ...
-       #M                   = kron(K1,kron(M2,M3))+kron(M1,kron(K2,M3))+kron(M1,kron(M2,K3))
-       #lu                  = sla.splu(csc_matrix(K1))
-       # ++++
        #--Assembles a right hand side of Poisson equation
        rhs                 = assemble_rhs( V )
-       b                   = rhs.toarray()
-       b                   = b.reshape(V.nbasis)
-       b                   = b[1:-1]      
+       b                   = apply_dirichlet(V, rhs, True)
        # ...
-       #xkron               = lu.solve(b)       
        xkron, status       = sla.cg(K1, b)
        # ...
-       x                   = np.zeros(V.nbasis)
-       x[1:-1]             = xkron
-       u.from_array(V, x)
+       u                   = apply_dirichlet(V, xkron, update = u)#zero Dirichlet u can be replaced by u_d if not zero
+       x                   = u.toarray().reshape(V.nbasis)
        # ...
        Norm                = assemble_norm_l2(V, fields=[u]) 
        norm                = Norm.toarray()

@@ -6,7 +6,7 @@ using B-spline basis functions in a uniform mesh.
 
 author :  M. BAHARI
 """
-from pyrefiga import compile_kernel,  apply_dirichlet
+from pyrefiga import compile_kernel
 
 from pyrefiga import SplineSpace
 from pyrefiga import TensorSpace

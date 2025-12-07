@@ -87,7 +87,9 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
     map = (x,y, V) : control points and associated space
     admap = (x, V1, y, V2) control points and associated space
     '''
-    if len(map)== V.dim:
+    if map is None:
+        pass
+    elif len(map) == V.dim:
         map = [*map, V]
     if len(f) > 1 :
         fx0      = lambda   y :  eval(f[0])

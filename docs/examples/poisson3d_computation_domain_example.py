@@ -6,7 +6,8 @@ Example: Solving Poisson's Equation on a 3D using B-spline on the computational 
 author :  M. BAHARI
 """
 
-from pyrefiga import compile_kernel, apply_dirichlet
+from pyrefiga import compile_kernel
+from pyrefiga import apply_dirichlet
 
 from pyrefiga import SplineSpace
 from pyrefiga import TensorSpace
@@ -61,63 +62,47 @@ def poisson_solve(V1, V2, V3, V):
 
        #..Stiffness and Mass matrix in 1D in the first deriction
        K1                  = assemble_stiffness1D(V1)
-       K1                  = K1.tosparse()
-       K1                  = K1.toarray()[1:-1,1:-1]
+       K1                  = apply_dirichlet(V1, K1)
        K1                  = csr_matrix(K1)
 
        M1                  = assemble_mass1D(V1)
-       M1                  = M1.tosparse()
-       M1                  = M1.toarray()[1:-1,1:-1]
+       M1                  = apply_dirichlet(V1, M1)
        M1                  = csr_matrix(M1)
 
        # Stiffness and Mass matrix in 1D in the second deriction
        K2                  = assemble_stiffness1D(V2)
-       K2                  = K2.tosparse()
-       K2                  = K2.toarray()[1:-1,1:-1]
+       K2                  = apply_dirichlet(V2, K2)
        K2                  = csr_matrix(K2)
 
        M2                  = assemble_mass1D(V2)
-       M2                  = M2.tosparse()
-       M2                  = M2.toarray()[1:-1,1:-1]
+       M2                  = apply_dirichlet(V2, M2)
        M2                  = csr_matrix(M2)
        
        # Stiffness and Mass matrix in 1D in the thrd deriction
        K3                  = assemble_stiffness1D(V3)
-       K3                  = K3.tosparse()
-       K3                  = K3.toarray()[1:-1,1:-1]
+       K3                  = apply_dirichlet(V3, K3)
        K3                  = csr_matrix(K3)
 
        M3                  = assemble_mass1D(V3)
-       M3                  = M3.tosparse()
-       M3                  = M3.toarray()[1:-1,1:-1]
+       M3                  = apply_dirichlet(V3, M3)
        M3                  = csr_matrix(M3)
 
-       # ...
-       #M                   = kron(K1,kron(M2,M3))+kron(M1,kron(K2,M3))+kron(M1,kron(M2,K3))
-       #lu                  = sla.splu(csc_matrix(M))
+       # ...Fast diag solver based on kronecker product
        mats_1              = [M1, K1]
        mats_2              = [M2, K2]
        mats_3              = [M3, K3]
        # ...Fast Solver
        poisson             = Poisson(mats_1, mats_2, mats_3)
 
-       # ++++
        #--Assembles a right hand side of Poisson equation
        rhs                 = assemble_rhs( V )
-       b                   = rhs.toarray()
-       b                   = b.reshape(V.nbasis)
-       b                   = b[1:-1, 1:-1, 1:-1]      
-       b                   = b.reshape((V1.nbasis-2)*(V2.nbasis-2)*(V3.nbasis-2))
+       b                   = apply_dirichlet(V, rhs)      
        # ...
-       #xkron               = lu.solve(b)       
        xkron               = poisson.solve(b)
        
-       xkron               = xkron.reshape([V1.nbasis-2,V2.nbasis-2,V3.nbasis-2])
+       u                   = apply_dirichlet(V, xkron, update = u)# zero Dirichlet
        # ...
-       x                   = np.zeros(V.nbasis)
-       x[1:-1, 1:-1, 1:-1] = xkron
-       x                   = x.reshape(V.nbasis)
-       u.from_array(V, x)
+       x                   = u.toarray().reshape(V.nbasis)
        # ...
        Norm                = assemble_norm_l2(V, fields=[u]) 
        norm                = Norm.toarray()

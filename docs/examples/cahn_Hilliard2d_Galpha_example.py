@@ -6,7 +6,7 @@ Generalized Alpha Method for Adaptive Time Step
 author :  M. BAHARI
 """
 
-from pyrefiga import compile_kernel, apply_dirichlet, apply_periodic
+from pyrefiga import compile_kernel, apply_periodic
 
 from pyrefiga import SplineSpace
 from pyrefiga import TensorSpace

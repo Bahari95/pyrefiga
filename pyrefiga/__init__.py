@@ -99,7 +99,7 @@ from pyrefiga.results_f90 import ( pyccel_sol_field_2d,
                                     paraview_AdMeshMultipatch,
                                     paraview_SolutionMultipatch)
 
-from pyrefiga.api import (assemble_matrix, assemble_vector, assemble_scalar, compile_kernel, apply_dirichlet, apply_periodic, apply_zeros)
+from pyrefiga.api import (assemble_matrix, assemble_vector, assemble_scalar, compile_kernel, apply_dirichlet, apply_periodic)
 
 from pyrefiga.nurbs_utilities import(sol_field_NURBS_2d, sol_field_NURBS_3d, 
                                       prolongate_NURBS_mapping, least_square_NURBspline,

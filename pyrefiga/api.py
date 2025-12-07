@@ -198,425 +198,207 @@ def compile_kernel(core, arity, pyccel=True):
     elif arity == 0:
         return partial(assemble_scalar, core)
 
+#==============================================================================
+def apply_nitsch(V, stifness, u11_mph, u12_mph, interface):
+    if isinstance(stifness, StencilMatrix):
+        pass
+    else:
+        raise NotImplementedError("apply_nitsch: 'stifness' must be a StencilMatrix (other types not implemented)")
+    # ... nitsche assembly tools
+    from gallery import assemble_matrix_nitsche_ex00
+    assemble_stiffness_nitsche  = compile_kernel(assemble_matrix_nitsche_ex00, arity=2)
+    from gallery import assemble_matrix_nitsche_ex02
+    assemble_stiffness2_nitsche = compile_kernel(assemble_matrix_nitsche_ex02, arity=1)
+    
 
 #==============================================================================
-def apply_dirichlet(V, x, dirichlet = None, eliminate = False):
-    #TODO : DIRICHLET BY ELIMINATION
-    if dirichlet is None :
-        if isinstance(x, StencilMatrix):
-            if V.dim == 1:
-                n1 = V.nbasis
+def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = None):
+    """
+    Applies Dirichlet boundary conditions to a matrix or vector by elimination.
 
-                # ... resetting bnd dof to 0
-                x[0,:] = 0.
-                x[n1-1,:] = 0.
-                # ...
+    dirichlet can take different forms depending on how boundary conditions are specified:
+    A single boolean (True or False) meaning the same condition applies to all boundaries.
+    A list of booleans, e.g. [True, False], specifying the condition for each direction in 1D or 2D.
+    A nested list of booleans, specifying Dirichlet conditions in multiple dimensions:
+        2D example: [[True, False], [True, True]]
+        3D example: [[True, False], [True, True], [True, True]]
 
-                # boundary x = 0
-                x[0,0] = 1.
+    Parameters
+    ----------
+    V : TensorSpace
+        The function space containing basis and dimension information.
+    x : StencilMatrix or StencilVector
+        The matrix or vector to which Dirichlet conditions are applied.
+    dirichlet : list or tuple, optional
+        Specifies which boundaries have Dirichlet conditions (default: None).
+    dirichlet_patch2 : list or tuple, optional
+        Specifies a second patch for Dirichlet elimination (default: None).
+    update: StencilVector
+        Updates the boundary values of the solution using the exact Dirichlet data.
+    Returns
+    -------
+    ndarray
+        The matrix or vector with Dirichlet boundaries applied and reshaped accordingly.
+    """
+    if update is None :
+        if V.dim ==2:
+            if dirichlet is True:
+                dirichlet = [[True, True], [True, True]]
+            n1, n2  = V.nbasis
+            rhs     = False
+            #indeces for elimination
+            d1 = 1    if dirichlet[0][0] else 0 
+            d2 = n1-1 if dirichlet[0][1] else n1
+            d3 = 1    if dirichlet[1][0] else 0 
+            d4 = n2-1 if dirichlet[1][1] else n2
 
-                # boundary x = 1
-                x[n1-1,0] = 1.
-
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:,:,:] = 0.
-                x[n1-1,:,:,:] = 0.
-                x[:,0,:,:] = 0.
-                x[:,n2-1,:,:] = 0.
-                # ...
-
-                # boundary x = 0
-                x[0,:,0,0] = 1.
-
-                # boundary x = 1
-                x[n1-1,:,0,0] = 1.
-
-                # boundary y = 0
-                x[:,0,0,0] = 1.
-
-                # boundary y = 1
-                x[:,n2-1,0,0] = 1.
-
-                return x
-
-            elif V.dim == 3:
-                n1,n2,n3 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:,:,:,:,:] = 0.
-                x[n1-1,:,:,:,:,:] = 0.
-                x[:,0,:,:,:,:] = 0.
-                x[:,n2-1,:,:,:,:] = 0.
-                x[:,:,0,:,:,:] = 0.
-                x[:,:,n3-1,:,:,:] = 0.
-                # ...
-
-                # boundary x = 0
-                x[0,:,:, 0,0,0] = 1.
-    
-                # boundary x = 1
-                x[n1-1,:,:, 0,0,0] = 1.
-
-                # boundary y = 0
-                x[:,0,:, 0,0,0] = 1.
-
-                # boundary y = 1
-                x[:,n2-1,:, 0,0,0] = 1.
-
-                # boundary z = 0
-                x[:,:,0, 0,0,0] = 1.
-
-                # boundary z = 1
-                x[:,:,n3-1, 0,0,0] = 1.
-
-                return x
-            else :
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
-
-        elif isinstance(x, StencilVector):
-            if V.dim == 1:
-                n1 = V.nbasis
-
-                x[0] = 0.
-                x[n1-1] = 0.
-
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                x[0,:] = 0.
-                x[n1-1,:] = 0.
-                x[:,0] = 0.
-                x[:,n2-1] = 0.
-
-                return x
-
-            elif V.dim == 3:
-                n1, n2, n3 = V.nbasis
-
-                x[0,:,:] = 0.
-                x[n1-1,:,:] = 0.
-
-                x[:,0,:] = 0.
-                x[:,n2-1,:] = 0.
-
-                x[:,:,0] = 0.
-                x[:,:,n3-1] = 0.
-
-                return x
-
+            if isinstance(x, StencilMatrix):
+                x   = (x.tosparse()).toarray().reshape((n1,n2,n1,n2))
+            elif isinstance(x, StencilVector): # TODO 
+                if n1*n2 == x.toarray().shape[0]:
+                    x   = x.toarray().reshape((n1,n2))
+                    rhs = True
+                else:
+                    x   = x.toarray().reshape((n1,n2,n1,n2))
             else:
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
-
-        else:
-            raise TypeError('Expecting StencilMatrix or StencilVector')
-    if isinstance(dirichlet[0], list): 
-
-        if isinstance(x, StencilMatrix):
-            if V.dim == 1:
-                print('warning ! there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
-                n1 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:] = 0.
-                x[n1-1,:] = 0.
-                # ...
-
-                # boundary x = 0
-                x[0,0] = 1.
-
-                # boundary x = 1
-                x[n1-1,0] = 1.
-
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                if dirichlet[0][0] == True :
-                     x[0,:,:,:]    = 0.
-
-                if dirichlet[0][1] == True :
-                     x[n1-1,:,:,:] = 0.
-                     
-                if dirichlet[1][0] == True :
-
-                     x[:,0,:,:]    = 0.
-
-                if dirichlet[1][1] == True :
-                     x[:,n2-1,:,:] = 0.
-                # ...
-
-                # boundary x = 0 , 1
-                if dirichlet[0][0] == True :
-
-                     # boundary x = 0
-                     x[0,:,0,0]   = 1.
-                if dirichlet[0][1] == True :
-                     # boundary x = 1
-                     x[n1-1,:,0,0] = 1.
-                     
-                # boundary y = 0 , 1
-                if dirichlet[1][0] == True :
-
-                     # boundary y = 0
-                     x[:,0,0,0]   = 1.
-                if dirichlet[1][1] == True :
-                     # boundary y = 1
-                     x[:,n2-1,0,0] = 1.
-
-                return x
-
-            elif V.dim == 3:
-                n1,n2,n3 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                if dirichlet[0][0] == True :
-                     x[0,:,:,:,:,:]    = 0.
-                if dirichlet[0][1] == True :
-                     x[n1-1,:,:,:,:,:] = 0.
-
-                if dirichlet[1][0] == True :
-                     x[:,0,:,:,:,:]    = 0.
-                if dirichlet[1][1] == True :
-                     x[:,n2-1,:,:,:,:] = 0.
-
-                if dirichlet[2][0] == True :
-                     x[:,:,0,:,:,:]    = 0.
-                if dirichlet[2][1] == True :
-                     x[:,:,n3-1,:,:,:] = 0.
-                # ...
-                # boundary x = 0, 1
-                if dirichlet[0][0] == True :
-
-                     # boundary x = 0
-                     x[0,:,:, 0,0,0] = 1.
-                if dirichlet[0][1] == True :
-                     # boundary x = 1
-                     x[n1-1,:,:, 0,0,0] = 1.
-
-                # boundary y = 0, 1
-                if dirichlet[1][0] == True :
-
-                     # boundary y = 0
-                     x[:,0,:, 0,0,0] = 1.
-                if dirichlet[1][1] == True :
-                     # boundary y = 1
-                     x[:,n2-1,:, 0,0,0] = 1.
-
-                # boundary z = 0, 1
-                if dirichlet[2][0] == True :
-  
-                     # boundary z = 0
-                     x[:,:,0, 0,0,0] = 1.
-                if dirichlet[2][1] == True :
-                     # boundary z = 1
-                     x[:,:,n3-1, 0,0,0] = 1.
-
-                return x
-            else :
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
-
-        elif isinstance(x, StencilVector):
-            if V.dim == 1:
-                print('warning ! there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
-                n1 = V.nbasis
-
-                x[0] = 0.
-                x[n1-1] = 0.
-
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                if dirichlet[0][0] == True :
-                    x[0,:]    = 0.
-                if dirichlet[0][1] == True :
-                    x[n1-1,:] = 0.
-
-                if dirichlet[1][0] == True :
-                    x[:,0]    = 0.
-                if dirichlet[1][1] == True :
-                    x[:,n2-1] = 0.
-
-                return x
-
-            elif V.dim == 3:
-                n1, n2, n3 = V.nbasis
-
-                if dirichlet[0][0] == True :
-                    x[0,:,:] = 0.
-                if dirichlet[0][1] == True :
-                    x[n1-1,:,:] = 0.
-
-                if dirichlet[1][0] == True :
-                    x[:,0,:] = 0.
-                if dirichlet[1][1] == True :
-                    x[:,n2-1,:] = 0.
-
-                if dirichlet[2][0] == True :
-                    x[:,:,0] = 0.
-                if dirichlet[2][1] == True :
-                    x[:,:,n3-1] = 0.
-
-                return x
-
+                raise NotImplementedError('Not available')
+            #... apply Dirichlet
+            if dirichlet_patch2 is None:
+                if rhs:
+                    x   = x[d1:d2,d3:d4].reshape((d2-d1)*(d4-d3))
+                else:
+                    x   = x[d1:d2,d3:d4,d1:d2,d3:d4].reshape(((d2-d1)*(d4-d3), (d2-d1)*(d4-d3)))
             else:
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
+                #indeces for elimination
+                pd1 = 1    if dirichlet_patch2[0][0] else 0 
+                pd2 = n1-1 if dirichlet_patch2[0][1] else n1
+                pd3 = 1    if dirichlet_patch2[1][0] else 0 
+                pd4 = n2-1 if dirichlet_patch2[1][1] else n2
+                x   = x[pd1:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-pd1)*(pd4-pd3), (d2-d1)*(d4-d3)))
+            return  x
+        elif V.dim == 3:
+            if dirichlet is True:
+                dirichlet = [[True, True], [True, True], [True, True]]
+            n1, n2, n3  = V.nbasis
+            rhs         = False
+            #indeces for elimination
+            d1 = 1    if dirichlet[0][0] else 0 
+            d2 = n1-1 if dirichlet[0][1] else n1
+            d3 = 1    if dirichlet[1][0] else 0 
+            d4 = n2-1 if dirichlet[1][1] else n2
+            d5 = 1    if dirichlet[2][0] else 0 
+            d6 = n3-1 if dirichlet[2][1] else n3
 
-        else:
-            raise TypeError('Expecting StencilMatrix or StencilVector')
-    else :
-        if isinstance(x, StencilMatrix):
-            if V.dim == 1:
-                print('warning ! there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
-                n1 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:] = 0.
-                x[n1-1,:] = 0.
-                # ...
-
-                # boundary x = 0
-                x[0,0] = 1.
-
-                # boundary x = 1
-                x[n1-1,0] = 1.
-
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                if dirichlet[0] == True :
-
-                     x[0,:,:,:]    = 0.
-                     x[n1-1,:,:,:] = 0.
-                     
-                if dirichlet[1] == True :
-
-                     x[:,0,:,:]    = 0.
-                     x[:,n2-1,:,:] = 0.
-                # ...
-
-                # boundary x = 0 , 1
-                if dirichlet[0] == True :
-
-                     # boundary x = 0
-                     x[0,:,0,0]   = 1.
-                     # boundary x = 1
-                     x[n1-1,:,0,0] = 1.
-                     
-                # boundary y = 0 , 1
-                if dirichlet[1] == True :
-
-                     # boundary y = 0
-                     x[:,0,0,0]   = 1.
-                     # boundary y = 1
-                     x[:,n2-1,0,0] = 1.
-
-                return x
-
-            elif V.dim == 3:
-                n1,n2,n3 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                if dirichlet[0] == True :
-                     x[0,:,:,:,:,:]    = 0.
-                     x[n1-1,:,:,:,:,:] = 0.
-
-                if dirichlet[1] == True :
-                     x[:,0,:,:,:,:]    = 0.
-                     x[:,n2-1,:,:,:,:] = 0.
-
-                if dirichlet[2] == True :
-                     x[:,:,0,:,:,:]    = 0.
-                     x[:,:,n3-1,:,:,:] = 0.
-                # ...
-                # boundary x = 0, 1
-                if dirichlet[0] == True :
-
-                     # boundary x = 0
-                     x[0,:,:, 0,0,0] = 1.
-                     # boundary x = 1
-                     x[n1-1,:,:, 0,0,0] = 1.
-
-                # boundary y = 0, 1
-                if dirichlet[1] == True :
-
-                     # boundary y = 0
-                     x[:,0,:, 0,0,0] = 1.
-                     # boundary y = 1
-                     x[:,n2-1,:, 0,0,0] = 1.
-
-                # boundary z = 0, 1
-                if dirichlet[2] == True :
-  
-                     # boundary z = 0
-                     x[:,:,0, 0,0,0] = 1.
-                     # boundary z = 1
-                     x[:,:,n3-1, 0,0,0] = 1.
-
-                return x
-            else :
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
-
-        elif isinstance(x, StencilVector):
-            if V.dim == 1:
-                print('warning ! there is no specific case for 1D: Dirichlet is applied in both sides of the interval') 
-                n1 = V.nbasis
-
-                x[0] = 0.
-                x[n1-1] = 0.
-
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                if dirichlet[0] == True :
-                    x[0,:]    = 0.
-                    x[n1-1,:] = 0.
-
-                if dirichlet[1] == True :
-                    x[:,0]    = 0.
-                    x[:,n2-1] = 0.
-
-                return x
-
-            elif V.dim == 3:
-                n1, n2, n3 = V.nbasis
-
-                if dirichlet[0] == True :
-                    x[0,:,:] = 0.
-                    x[n1-1,:,:] = 0.
-
-                if dirichlet[1] == True :
-                    x[:,0,:] = 0.
-                    x[:,n2-1,:] = 0.
-
-                if dirichlet[2] == True :
-                    x[:,:,0] = 0.
-                    x[:,:,n3-1] = 0.
-
-                return x
-
+            if isinstance(x, StencilMatrix):
+                x   = (x.tosparse()).toarray().reshape((n1,n2,n3, n1,n2,n3))
+            elif isinstance(x, StencilVector): # TODO special case for Nitsch's
+                if n1*n2*n3 == x.toarray().shape[0]:
+                    x   = x.toarray().reshape((n1,n2,n3))
+                    rhs = True
+                else:
+                    x   = x.toarray().reshape((n1,n2,n3,n1,n2,n3))
             else:
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
+                raise NotImplementedError('Not available')
+            #... apply Dirichlet
+            if dirichlet_patch2 is None:
+                if rhs:
+                    x   = x[d1:d2,d3:d4,d5:d6].reshape((d2-d1)*(d4-d3)*(d6-d5))
+                else:
+                    x   = x[d1:d2,d3:d4,d5:d6,d1:d2,d3:d4,d5:d6].reshape(((d2-d1)*(d4-d3)*(d6-d5), (d2-d1)*(d4-d3)*(d6-d5)))
+            else:
+                #indeces for elimination
+                pd1 = 1    if dirichlet_patch2[0][0] else 0 
+                pd2 = n1-1 if dirichlet_patch2[0][1] else n1
+                pd3 = 1    if dirichlet_patch2[1][0] else 0 
+                pd4 = n2-1 if dirichlet_patch2[1][1] else n2
+                pd5 = 1    if dirichlet_patch2[2][0] else 0 
+                pd6 = n3-1 if dirichlet_patch2[2][1] else n3
+                x   = x[pd1:pd2,pd3:pd4,pd5:pd6,d1:d2,d3:d4,d5:d6].reshape(((pd2-pd1)*(pd4-pd3)*(pd6-pd5), (d2-d1)*(d4-d3)*(d6-d5)))
+            return  x        
+        elif V.dim == 1:
+            if dirichlet is True:
+                dirichlet = [True, True]
+            n1      = V.nbasis
+            rhs     = False
+            #indeces for elimination
+            d1 = 1    if dirichlet[0] else 0 
+            d2 = n1-1 if dirichlet[1] else n1
 
+            if isinstance(x, StencilMatrix):
+                x   = (x.tosparse()).toarray().reshape((n1,n1))
+            elif isinstance(x, StencilVector): # TODO 
+                if n1 == x.toarray().shape[0]:
+                    x   = x.toarray().reshape(n1)
+                    rhs = True
+                else:
+                    x   = x.toarray().reshape((n1,n1))
+            else:
+                raise NotImplementedError('Not available')
+            #... apply Dirichlet
+            if dirichlet_patch2 is None:
+                if rhs:
+                    x   = x[d1:d2].reshape((d2-d1))
+                else:
+                    x   = x[d1:d2,d1:d2].reshape(((d2-d1), (d2-d1)))
+            else:
+                #indeces for elimination
+                pd1 = 1    if dirichlet_patch2[0] else 0 
+                pd2 = n1-1 if dirichlet_patch2[1] else n1
+                x   = x[pd1:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-pd1), (d2-d1)))
+            return  x
         else:
-            raise TypeError('Expecting StencilMatrix or StencilVector')
-        
-
+            raise NotImplementedError('Only 1d, 2d and 3d are available')
+    else:
+        if isinstance(update, StencilVector):
+            pass
+        else:
+            raise NotImplementedError('Not available')
+        u   = StencilVector(V.vector_space)
+        # ...
+        if V.dim ==2:
+            if dirichlet is True:
+                dirichlet = [[True, True], [True, True]]
+            n1, n2  = V.nbasis
+            rhs     = False
+            #indeces for elimination
+            d1 = 1    if dirichlet[0][0] else 0 
+            d2 = n1-1 if dirichlet[0][1] else n1
+            d3 = 1    if dirichlet[1][0] else 0 
+            d4 = n2-1 if dirichlet[1][1] else n2
+            #... apply Dirichlet
+            u[:,:]         = update[:,:]
+            u[d1:d2,d3:d4] = x.reshape((d2-d1),(d4-d3))
+            return  u
+        elif V.dim == 3:
+            if dirichlet is True:
+                dirichlet = [[True, True], [True, True], [True, True]]
+            n1, n2, n3  = V.nbasis
+            rhs         = False
+            #indeces for elimination
+            d1 = 1    if dirichlet[0][0] else 0 
+            d2 = n1-1 if dirichlet[0][1] else n1
+            d3 = 1    if dirichlet[1][0] else 0 
+            d4 = n2-1 if dirichlet[1][1] else n2
+            d5 = 1    if dirichlet[2][0] else 0 
+            d6 = n3-1 if dirichlet[2][1] else n3
+            #... apply Dirichlet
+            u[:,:,:]             =   update[:,:,:] 
+            u[d1:d2,d3:d4,d5:d6] = x.reshape((d2-d1),(d4-d3),(d6-d5))
+            return  u
+        elif V.dim == 1:
+            if dirichlet is True:
+                dirichlet = [True, True]
+            n1      = V.nbasis
+            rhs     = False
+            #indeces for elimination
+            d1 = 1    if dirichlet[0] else 0 
+            d2 = n1-1 if dirichlet[1] else n1
+            #... apply Dirichlet
+            u[:]     =   update[:] 
+            u[d1:d2] = x.reshape(d2-d1)
+            return  u
+        else:
+            raise NotImplementedError('Only 1d, 2d and 3d are available')
 #==============================================================================
 def apply_periodic(V, x, periodic = None, update = None):
        
@@ -922,7 +704,6 @@ def apply_periodic(V, x, periodic = None, update = None):
     else:
         raise TypeError('ERROR 1 ! Expecting StencilMatrix or StencilVector')
 
-  
   else :
         if V.dim == 1:
             #... update the eliminated ghost regions
@@ -1136,152 +917,3 @@ def apply_periodic(V, x, periodic = None, update = None):
 
         else:
             raise NotImplementedError('Only 1d, 2d and 3d are available')
-            
-            
-
-#==============================================================================
-def apply_zeros(V, x, app_zeros = None):
-    if app_zeros is None :
-        if isinstance(x, StencilMatrix):
-            if V.dim == 1:
-                n1 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:] = 0.
-                x[n1-1,:] = 0.
-                # ...
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:,:,:] = 0.
-                x[n1-1,:,:,:] = 0.
-                x[:,0,:,:] = 0.
-                x[:,n2-1,:,:] = 0.
-                # ...
-                return x
-
-            elif V.dim == 3:
-                n1,n2,n3 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:,:,:,:,:] = 0.
-                x[n1-1,:,:,:,:,:] = 0.
-                x[:,0,:,:,:,:] = 0.
-                x[:,n2-1,:,:,:,:] = 0.
-                x[:,:,0,:,:,:] = 0.
-                x[:,:,n3-1,:,:,:] = 0.
-                # ...
-                return x
-            else :
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
-        else:
-            raise TypeError('Expecting StencilMatrix')
-    if isinstance(app_zeros[0], list): 
-
-        if isinstance(x, StencilMatrix):
-            if V.dim == 1:
-                print('warning ! there is no specific case for 1D: app_zeros is applied in both sides of the interval') 
-                n1 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:] = 0.
-                x[n1-1,:] = 0.
-                # ...
-
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                if app_zeros[0][0] == True :
-                     x[0,:,:,:]    = 0.
-
-                if app_zeros[0][1] == True :
-                     x[n1-1,:,:,:] = 0.
-                     
-                if app_zeros[1][0] == True :
-
-                     x[:,0,:,:]    = 0.
-
-                if app_zeros[1][1] == True :
-                     x[:,n2-1,:,:] = 0.
-                # ...
-                return x
-
-            elif V.dim == 3:
-                n1,n2,n3 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                if app_zeros[0][0] == True :
-                     x[0,:,:,:,:,:]    = 0.
-                if app_zeros[0][1] == True :
-                     x[n1-1,:,:,:,:,:] = 0.
-
-                if app_zeros[1][0] == True :
-                     x[:,0,:,:,:,:]    = 0.
-                if app_zeros[1][1] == True :
-                     x[:,n2-1,:,:,:,:] = 0.
-
-                if app_zeros[2][0] == True :
-                     x[:,:,0,:,:,:]    = 0.
-                if app_zeros[2][1] == True :
-                     x[:,:,n3-1,:,:,:] = 0.
-                # ...
-                return x
-            else :
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
-        else:
-            raise TypeError('Expecting StencilMatrix')
-    else :
-        if isinstance(x, StencilMatrix):
-            if V.dim == 1:
-                print('warning ! there is no specific case for 1D: app_zeros is applied in both sides of the interval') 
-                n1 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                x[0,:] = 0.
-                x[n1-1,:] = 0.
-                # ...
-                return x
-
-            elif V.dim == 2:
-                n1,n2 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                if app_zeros[0] == True :
-
-                     x[0,:,:,:]    = 0.
-                     x[n1-1,:,:,:] = 0.
-                     
-                if app_zeros[1] == True :
-
-                     x[:,0,:,:]    = 0.
-                     x[:,n2-1,:,:] = 0.
-                # ...
-                return x
-
-            elif V.dim == 3:
-                n1,n2,n3 = V.nbasis
-
-                # ... resetting bnd dof to 0
-                if app_zeros[0] == True :
-                     x[0,:,:,:,:,:]    = 0.
-                     x[n1-1,:,:,:,:,:] = 0.
-
-                if app_zeros[1] == True :
-                     x[:,0,:,:,:,:]    = 0.
-                     x[:,n2-1,:,:,:,:] = 0.
-
-                if app_zeros[2] == True :
-                     x[:,:,0,:,:,:]    = 0.
-                     x[:,:,n3-1,:,:,:] = 0.
-                # ...
-                return x
-            else :
-                raise NotImplementedError('Only 1d, 2d and 3d are available')
-        else:
-            raise TypeError('Expecting StencilMatrix')

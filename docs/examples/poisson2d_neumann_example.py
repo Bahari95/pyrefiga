@@ -6,7 +6,8 @@ A basic test for Neumann boundary conditions.(2D)
 author :  M. BAHARI
 """
 
-from pyrefiga import compile_kernel, apply_dirichlet
+from pyrefiga import compile_kernel 
+from pyrefiga import apply_dirichlet
 
 from pyrefiga import SplineSpace
 from pyrefiga import TensorSpace
@@ -19,8 +20,8 @@ from   pyrefiga                    import assemble_stiffness1D
 from   pyrefiga                    import assemble_mass1D     
 
 #---In Poisson equation
-from examples.gallery.gallery_section_02 import assemble_vector_ex01    #---1 : In uniform mesh
-from examples.gallery.gallery_section_02 import assemble_norm_ex01      #---1 : In uniform mesh
+from gallery.gallery_section_02 import assemble_vector_ex01    #---1 : In uniform mesh
+from gallery.gallery_section_02 import assemble_norm_ex01      #---1 : In uniform mesh
 
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
 assemble_norm_l2     = compile_kernel(assemble_norm_ex01, arity=1)
@@ -60,13 +61,11 @@ def poisson_solve(V1, V2, V):
 
        #..Stiffness and Mass matrix in 1D in the first deriction
        K1                  = assemble_stiffness1D(V1)
-       K1                  = K1.tosparse()
-       K1                  = K1.toarray()[1:-1,1:-1]
+       K1                  = apply_dirichlet(V1, K1)
        K1                  = csr_matrix(K1)
 
        M1                  = assemble_mass1D(V1)
-       M1                  = M1.tosparse()
-       M1                  = M1.toarray()[1:-1,1:-1]
+       M1                  = apply_dirichlet(V1, M1)
        M1                  = csr_matrix(M1)
 
        # Stiffness and Mass matrix in 1D in the second deriction
@@ -86,18 +85,13 @@ def poisson_solve(V1, V2, V):
        # ++++
        #--Assembles a right hand side of Poisson equation
        rhs                 = assemble_rhs( V, fields=[u] )
-       b                   = rhs.toarray()
-       b                   = b.reshape(V.nbasis)
-       b                   = b[1:-1, :]      
-       b                   = b.reshape((V1.nbasis-2)*(V2.nbasis))
+       b                   = apply_dirichlet(V, rhs, dirichlet=[[True, True], [False, False]])
        # ...
        xkron               = lu.solve(b)       
        xkron               = xkron.reshape([V1.nbasis-2,V2.nbasis])
        # ...
-       x                   = np.zeros(V.nbasis)
-       x[1:-1,  :]         = xkron
-       x                   = x.reshape(V.nbasis)
-       u.from_array(V, x)
+       u                   = apply_dirichlet(V, xkron, dirichlet=[[True, True], [False, False]], update = u)#zero Dirichlet
+       x                   = u.toarray().reshape(V.nbasis)
        # ...
        Norm                = assemble_norm_l2(V, fields=[u]) 
        norm                = Norm.toarray()
