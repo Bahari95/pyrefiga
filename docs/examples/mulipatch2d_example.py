@@ -75,7 +75,6 @@ def Eliminate_Dirichlet(V, x, dirichlet, dirichlet_patch2 = None):
     d3 = 1    if dirichlet[1][0] else 0 
     d4 = n2-1 if dirichlet[1][1] else n2
 
-    print("====================", d1, d2, d3, d4)
     if isinstance(x, StencilMatrix):
         x   = (x.tosparse()).toarray().reshape((n1,n2,n1,n2))
     elif isinstance(x, StencilVector): # TODO 
@@ -98,11 +97,11 @@ def Eliminate_Dirichlet(V, x, dirichlet, dirichlet_patch2 = None):
         pd2 = n1-1 if dirichlet_patch2[0][1] else n1
         pd3 = 1    if dirichlet_patch2[1][0] else 0 
         pd4 = n2-1 if dirichlet_patch2[1][1] else n2
-        print("====================)", pd1, pd2, pd3, pd4)
         x   = x[pd1:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-pd1)*(pd4-pd3), (d2-d1)*(d4-d3)))
     return  x
 
 def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, dirichlet_1, dirichlet_2):
+
     d1 = 1              if dirichlet_1[0][0] else 0 
     d2 = V.nbasis[0]-1  if dirichlet_1[0][1] else V.nbasis[0]
     d3 = 1              if dirichlet_1[1][0] else 0 
@@ -119,7 +118,7 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     #... computes coeffs for Nitsche's method
     stab          = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
     m_h           = (V.nbasis[0]*V.nbasis[1])
-    Kappa         = 2.*stab*m_h
+    Kappa         = 1e3#2.*stab*m_h
     # print("Kappa = ", Kappa)
     # ...
     normS         = 0.5
@@ -127,44 +126,23 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
 
     # Assemble stiffness matrix 11
     stiffness11   = assemble_stiffness_nitsche(V, fields=[u11_mph, u12_mph], knots=True, value=[V.omega[0],V.omega[1], interface[0], Kappa, normS])
-    # stiffness11   = (stiffness11.tosparse()).toarray().reshape(Vh.nbasis)
-    # stiffness11   = stiffness11[1:,1:-1,1:,1:-1]
-    # stiffness11   = (stiffness11 ).reshape((n_basis, n_basis))
-    print("st11")
     stiffness11   = Eliminate_Dirichlet(V, stiffness11, dirichlet_1)    
     M[:n_basis[0],:n_basis[0]]       = stiffness11[:,:]
 
     # Assemble stiffness matrix 22
     stiffness22   = assemble_stiffness_nitsche(V, fields=[u21_mph, u22_mph], knots=True, value=[V.omega[0],V.omega[1], interface[1], Kappa, normS])
-    # stiffness22   = (stiffness22.tosparse()).toarray().reshape(Vh.nbasis)
-    # stiffness22   = stiffness22[:-1,1:-1,:-1,1:-1]
-    # stiffness22   = (stiffness22 ).reshape((n_basis, n_basis))
-    print("st22")
     stiffness22   = Eliminate_Dirichlet(V, stiffness22, dirichlet_2)
     M[n_basis[0]:,n_basis[0]:]       = stiffness22[:,:]
 
     #=======================================
     # # # Assemble Nitsche's method matrices
     #=======================================
-    # import matplotlib.pyplot as plt
-    # import scipy.sparse as sp
-
     rhs = StencilVector(Vh.vector_space)  
     stiffness21   = assemble_stiffness2_nitsche(V, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[V.omega[0],V.omega[1], interface[0], Kappa, normS], out = rhs)
-    # stiffness21   =  stiffness21.toarray().reshape(Vh.nbasis)
-    # stiffness21   =  stiffness21[:-1,1:-1,1:,1:-1]
-    # stiffness21   =  stiffness21.reshape((n_basis, n_basis))
-    print("st33")
     stiffness21   = Eliminate_Dirichlet(V, stiffness21, dirichlet_1, dirichlet_2)
     # Assemble Nitsche's method matrices
     M[n_basis[0]:,:n_basis[0]]       = stiffness21[:,:]
     M[:n_basis[0],n_basis[0]:]       = stiffness21.T[:,:]
-
-    print("rhs")
-    # plt.spy(M, markersize=2, marker='+')
-    # plt.show()
-    # print("Test if Nitsche matrix is symmetric: ", np.allclose(stiffness12, stiffness21.T))
-
 
     # Assemble right-hand side vector
     rhs                          = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d1])
@@ -234,16 +212,16 @@ g         = ['x**2+y**2']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-# geometry = load_xml('unitSquare.xml')
+geometry = load_xml('unitSquare.xml')
 # geometry = load_xml('circle.xml')
 # geometry = load_xml('quart_annulus.xml')
-geometry = load_xml('annulus.xml')
+# geometry = load_xml('annulus.xml')
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 
 # Extract geometry mapping
-mp              = getGeometryMap(geometry,0)# .. First patch 
-mp1             = getGeometryMap(geometry,1)# .. Second patch
+mp              = getGeometryMap(geometry,2)# .. First patch 
+mp1             = getGeometryMap(geometry,0)# .. Second patch
 degree          = mp.degree # Use same degree as geometry
 quad_degree     = max(degree[0],degree[1])+1 # Quadrature degree
 mp.nurbs_check  = True # Activate NURBS if geometry uses NURBS
