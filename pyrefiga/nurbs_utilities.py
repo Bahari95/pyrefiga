@@ -438,7 +438,7 @@ import os
 #----------------------------------------------------------------------------------------------------------------------------------------
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = None, adspace = None, solution = None, functions = None, precomputed = None, filename = "figs/admultipatch_multiblock", plot = True): 
+def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = None, Vg = None, adspace = None, solution = None, functions = None, precomputed = None, filename = "figs/admultipatch_multiblock", plot = True): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -456,6 +456,10 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
        List of control points for the adaptive mesh in z direction (for 3D).
    zmp : list, optional
        List of control points for the initial mapping in z direction (for 3D). 
+   Vg: TensorSpace 
+      for mapping is defined independently of the solution space V.
+   adSpace: TensorSpace space 
+      used for the adaptive mapping is defined independently of the solution space V.
    solution : list, optional
        List of solution control points for each patch and its name.
        solutions = [
@@ -492,7 +496,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
          Vy = V
       else:
          Vx = V
-         Vy = V      
+         Vy = V     
          Vz = V      
    else:
       #... different spaces for adaptive mapping
@@ -503,6 +507,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
          Vx = adspace[0]
          Vy = adspace[1]      
          Vz = adspace[2]      
+   if Vg is None:
+      Vg = V
 
    numPaches = len(V)
    # Handle the case where the user uses a B-spline space and wants to plot using this function
@@ -510,6 +516,10 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
       for j in range(numPaches):
             for i in range(V[j].dim):
                V[j].spaces[i]._omega = np.ones(V[j].nbasis[i])
+   if Vg[0].omega is None or all(x is None for x in Vg[0].omega):
+      for j in range(numPaches):
+            for i in range(Vg[j].dim):
+               Vg[j].spaces[i]._omega = np.ones(Vg[j].nbasis[i])
    if zad is None :
       if Vx[0].omega is None or all(x is None for x in Vx[0].omega):
          for j in range(numPaches):
@@ -535,8 +545,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vx[i].omega, Vx[i].knots, Vx[i].degree)[0:3]
                sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:3]
                #---Compute a image by initial mapping
-               x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
                #...Compute a Jacobian
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
@@ -562,8 +572,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vx[i].omega, Vx[i].knots, Vx[i].degree)[0:3]
                sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:3]
                #---Compute a image by initial mapping
-               x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
                #...Compute a Jacobian
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
@@ -595,8 +605,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vx[i].omega, Vx[i].knots, Vx[i].degree)[0:3]
                sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:3]
                #---Compute a image by initial mapping
-               x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
                #...Compute a Jacobian
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
@@ -626,8 +636,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vx[i].omega, Vx[i].knots, Vx[i].degree)[0:3]
                sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:3]
                #---Compute a image by initial mapping
-               x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
 
                #...Compute a Jacobian
                #Jf = (F1x*F2y - F1y*F2x)
@@ -664,9 +674,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vx[i].omega, Vx[i].knots, Vx[i].degree)[0:3]
                   sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:3]
                   #---Compute a image by initial mapping
-                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
                   #...Compute dirivatives
                   xu = sxx*F1x + syx*F1y
                   yu = sxx*F2x + syx*F2y
@@ -706,9 +716,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vx[i].omega, Vx[i].knots, Vx[i].degree)[0:3]
                   sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:3]
                   #---Compute a image by initial mapping
-                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
                   #...Compute dirivatives
                   xu = sxx*F1x + syx*F1y
                   yu = sxx*F2x + syx*F2y
@@ -755,9 +765,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vx[i].omega, Vx[i].knots, Vx[i].degree)[0:3]
                   sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:3]
                   #---Compute a image by initial mapping
-                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
                   #...Compute dirivatives
                   xu = sxx*F1x + syx*F1y
                   yu = sxx*F2x + syx*F2y
@@ -803,9 +813,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vx[i].omega, Vx[i].knots, Vx[i].degree)[0:3]
                   sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:3]
                   #---Compute a image by initial mapping
-                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
-                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy))[0:3]
+                  x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+                  y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
+                  z, F3x, F3y = sol_field_NURBS_2d((None, None), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy))[0:3]
                   #...Compute dirivatives
                   xu = sxx*F1x + syx*F1y
                   yu = sxx*F2x + syx*F2y
@@ -857,9 +867,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   sy, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0:4]
                   sz, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vz[i].omega, Vz[i].knots, Vz[i].degree)[0:4]
                   #---Compute a image by initial mapping
-                  x           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
-                  y           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
-                  z           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
+                  x           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
+                  y           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
+                  z           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
                   #...Compute a Jacobian in  i direction
                   Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
                   # .... 
@@ -884,9 +894,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0]
                   sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vz[i].omega, Vz[i].knots, Vz[i].degree)[0]
                   #---Compute a image by initial mapping
-                  x           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
-                  y           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
-                  z           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
+                  x           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
+                  y           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
+                  z           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -914,9 +924,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0]
                   sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vz[i].omega, Vz[i].knots, Vz[i].degree)[0]
                   #---Compute a image by initial mapping
-                  x           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
-                  y           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
-                  z           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
+                  x           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
+                  y           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
+                  z           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -942,9 +952,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                   sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vy[i].omega, Vy[i].knots, Vy[i].degree)[0]
                   sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vz[i].omega, Vz[i].knots, Vz[i].degree)[0]
                   #---Compute a image by initial mapping
-                  x           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
-                  y           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
-                  z           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree, meshes=(sx, sy, sz))[0]
+                  x           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
+                  y           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
+                  z           = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree, meshes=(sx, sy, sz))[0]
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -973,7 +983,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = None, functions = None, precomputed = None, filename = "figs/multipatch_solution", plot = True): 
+def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, Vg = None, solution = None, functions = None, precomputed = None, filename = "figs/multipatch_solution", plot = True): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -989,6 +999,8 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
        List of weights in one direction for each patch
    zmp : list, optional
        List of control points for the initial mapping in z direction (for 3D).
+   Vg: TensorSpace 
+      for mapping is defined independently of the solution space V.
    solution : list, optional
        List of solution control points for each patch and name.
        solutions = [
@@ -1022,11 +1034,18 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
    """
    #---Compute a solution
    numPaches = len(V)
+   # ...
+   if Vg is None:
+      Vg = V
    # Handle the case where the user uses a B-spline space and wants to plot using this function
    for j in range(numPaches):
       if V[j].omega is None or all(x is None for x in V[j].omega):
          for i in range(V[j].dim):
             V[j].spaces[i]._omega = np.ones(V[j].nbasis[i])
+   if Vg[0].omega is None or all(x is None for x in Vg[0].omega):
+      for j in range(numPaches):
+            for i in range(Vg[j].dim):
+               Vg[j].spaces[i]._omega = np.ones(Vg[j].nbasis[i])
    os.makedirs("figs", exist_ok=True)
    multiblock = pv.MultiBlock()
    if zmp is None:
@@ -1034,8 +1053,8 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
-               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
                #...
@@ -1057,8 +1076,8 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          else:
             for i in range(numPaches):
                #---Compute a physical domain
-               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
                #...
@@ -1087,8 +1106,8 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
-               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
                #...
@@ -1113,8 +1132,8 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          else:
             for i in range(numPaches):
                #---Compute a physical domain
-               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
                #...
@@ -1146,9 +1165,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
-               x, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:4]
-               y, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:4]
-               z, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0:4]
+               x, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:4]
+               y, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:4]
+               z, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:4]
                #...Compute a Jacobian
                Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
                # .... 
@@ -1169,9 +1188,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          else:
             for i in range(numPaches):
                #---Compute a physical domain
-               x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+               x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                # .... 
                points = np.stack((x, y, z), axis=-1)
 
@@ -1195,9 +1214,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
-               x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+               x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                # .... 
                points = np.stack((x, y, z), axis=-1)
 
@@ -1219,9 +1238,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          else:
             for i in range(numPaches):
                #---Compute a physical domain
-               x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+               x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                # .... 
                points = np.stack((x, y, z), axis=-1)
 
@@ -1249,9 +1268,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
-               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-               z, F3x, F3y = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+               x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+               y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+               z, F3x, F3y = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
                #...
@@ -1272,9 +1291,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          else:
             for i in range(numPaches):
                #---Compute a physical domain
-               x, xu, xv = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-               y, yu, yv = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-               z, zu, zv = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+               x, xu, xv = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+               y, yu, yv = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+               z, zu, zv = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                #...
                r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
                r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
@@ -1312,9 +1331,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          if functions is None:
             for i in range(numPaches):
                #---Compute a physical domain
-               x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+               x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                #...
                points = np.stack((x, y, z), axis=-1)
 
@@ -1334,9 +1353,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, solution = 
          else:
             for i in range(numPaches):
                #---Compute a physical domain
-               x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-               z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+               x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+               z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                #...
                points = np.stack((x, y, z), axis=-1)
 
@@ -1389,8 +1408,8 @@ def ViewGeo(geometry, RefParm, Nump, nbpts=50, functions = None, plot = True):
       for i in range(Nump):
          mp             = getGeometryMap(geometry,i)
          mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
-         weight, mx, my, mz  = mp.RefineGeometryMap(numElevate= RefParm)
-         wm1, wm2, wm3 = weight[:,0,0], weight[0,:,0], weight[0,0,:]
+         mx, my, mz     = mp.coefs()
+         wm1, wm2, wm3  = mp.weights()
          xmp.append(mx)
          ymp.append(my)
          zmp.append(mz)
@@ -1398,25 +1417,25 @@ def ViewGeo(geometry, RefParm, Nump, nbpts=50, functions = None, plot = True):
          #... space
          #==============================================
          # Create spline spaces for each direction
-         V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,None, numElevate=RefParm), omega = wm1)
-         V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,None, numElevate=RefParm), omega = wm2)
-         V3 = SplineSpace(degree=degree[2], grid = mp.Refinegrid(2,None, numElevate=RefParm), omega = wm3)
+         V1 = SplineSpace(degree=degree[0], grid = mp.grids[0], omega = wm1)
+         V2 = SplineSpace(degree=degree[1], grid = mp.grids[1], omega = wm2)
+         V3 = SplineSpace(degree=degree[2], grid = mp.grids[2], omega = wm3)
          Vh = TensorSpace(V1, V2, V3)
          V.append(Vh)
    elif mp.geo_dim == 2 :
       for i in range(Nump):
          mp             = getGeometryMap(geometry,i)
          mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
-         weight, mx, my  = mp.RefineGeometryMap(numElevate= RefParm)
-         wm1, wm2 = weight[:,0], weight[0,:]
+         mx, my         = mp.coefs()
+         wm1, wm2       = mp.weights()
          xmp.append(mx)
          ymp.append(my)
          #==============================================
          #... spaces
          #==============================================
          # Create spline spaces for each direction
-         V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,None, numElevate=RefParm), omega = wm1)
-         V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,None, numElevate=RefParm), omega = wm2)
+         V1 = SplineSpace(degree=degree[0], grid = mp.grids[0], omega = wm1)
+         V2 = SplineSpace(degree=degree[1], grid = mp.grids[1], omega = wm2)
          Vh              = TensorSpace(V1, V2)
          V.append(Vh)
 
@@ -1424,9 +1443,8 @@ def ViewGeo(geometry, RefParm, Nump, nbpts=50, functions = None, plot = True):
       for i in range(Nump):
          mp             = getGeometryMap(geometry,i)
          mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
-         weight, mx, my, mz  = mp.RefineGeometryMap(numElevate= RefParm)
-         wm1         = weight[:,0] 
-         wm2         = weight[0,:] 
+         mx, my, mz     = mp.coefs()
+         wm1, wm2       = mp.weights() 
          xmp.append(mx)
          ymp.append(my)
          zmp.append(mz)
@@ -1434,8 +1452,8 @@ def ViewGeo(geometry, RefParm, Nump, nbpts=50, functions = None, plot = True):
          #... spaces
          #==============================================
          # Create spline spaces for each direction
-         V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,None, numElevate=RefParm), omega = wm1)
-         V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,None, numElevate=RefParm), omega = wm2)
+         V1 = SplineSpace(degree=degree[0], grid = mp.grids[0], omega = wm1)
+         V2 = SplineSpace(degree=degree[1], grid = mp.grids[1], omega = wm2)
          Vh = TensorSpace(V1, V2)
          V.append(Vh)
    # ... save a solution as .vtm for paraview
@@ -1475,6 +1493,8 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
        Lists of control points for the initial mapping in x and y directions.
    zmp : list, optional
        List of control points for the initial mapping in z direction (for 3D).
+   Vg: TensorSpace 
+      for mapping is defined independently of the solution space V.
    LStime: liste of times
    solution : list, optional
        List of solution control points for each patch and name.
@@ -1526,8 +1546,8 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                      #...Compute a Jacobian
                      Jf = F1x*F2y - F1y*F2x
                      #...
@@ -1558,8 +1578,8 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                      #...Compute a Jacobian
                      Jf = F1x*F2y - F1y*F2x
                      #...
@@ -1597,8 +1617,8 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                      #...Compute a Jacobian
                      Jf = F1x*F2y - F1y*F2x
                      #...
@@ -1632,8 +1652,8 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                      #...Compute a Jacobian
                      Jf = F1x*F2y - F1y*F2x
                      #...
@@ -1675,9 +1695,9 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:4]
-                     y, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:4]
-                     z, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0:4]
+                     x, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:4]
+                     y, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:4]
+                     z, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:4]
                      #...Compute a Jacobian
                      Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
                      # .... 
@@ -1707,9 +1727,9 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                      # .... 
                      points = np.stack((x, y, z), axis=-1)
 
@@ -1742,9 +1762,9 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                      # .... 
                      points = np.stack((x, y, z), axis=-1)
 
@@ -1775,9 +1795,9 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                      # .... 
                      points = np.stack((x, y, z), axis=-1)
 
@@ -1815,9 +1835,9 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
-                     z, F3x, F3y = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0:3]
+                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
+                     z, F3x, F3y = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0:3]
                      #...Compute a Jacobian
                      Jf = F1x*F2y - F1y*F2x
                      #...
@@ -1847,9 +1867,9 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                      #...
                      points = np.stack((x, y, z), axis=-1)
 
@@ -1881,9 +1901,9 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                      #...
                      points = np.stack((x, y, z), axis=-1)
 
@@ -1912,9 +1932,9 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, LStime = Non
                   multiblock = pv.MultiBlock()
                   for i in range(numPaches):
                      #---Compute a physical domain
-                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], V[i].omega, V[i].knots, V[i].degree)[0]
-                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], V[i].omega, V[i].knots, V[i].degree)[0]
+                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
+                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg[i].omega, Vg[i].knots, Vg[i].degree)[0]
                      #...
                      points = np.stack((x, y, z), axis=-1)
 

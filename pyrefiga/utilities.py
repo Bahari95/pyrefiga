@@ -381,18 +381,22 @@ class getGeometryMap:
     @property
     def grids(self):
         return self._grids
-    @property
     def weights(self):
         Omega = self._weights.reshape(self._nbasis)
-        if self.geo_dim == 2:
-            return Omega[0,:], Omega[:,0]
-        elif self.geo_dim == 3:
+        if self.dim == 2:
+            return Omega[:,0], Omega[0,:]
+        elif self.dim == 3:
             return Omega[:,0,0], Omega[0,:,0], Omega[0,0,:]
         else:
             return Omega
-    def coefs(self):
-        return self._coefs      
-    
+    def coefs(self):    
+        if self.geo_dim == 2:
+            return self._coefs[0].reshape(self._nbasis), self._coefs[1].reshape(self._nbasis)
+        elif self.geo_dim == 3:
+            return self._coefs[0].reshape(self._nbasis), self._coefs[1].reshape(self._nbasis), self._coefs[2].reshape(self._nbasis)
+        else:
+            return self._coefs
+
     def Refinegrid(self, j_direct, Nelements = None, numElevate = 1):
         assert(numElevate >= 1)
         #... refine the grid numElevate times
@@ -457,11 +461,11 @@ class getGeometryMap:
         if self.nurbs_check:
             coefs_data.append( (M_mp.dot(self._weights)).reshape(Vh.nbasis))
             for i in range(self.geo_dim):
-                coefs_data.append( (M_mp.dot(self._weights*self.coefs()[i].reshape(nbasis_tot))).reshape(Vh.nbasis) / coefs_data[0])
+                coefs_data.append( (M_mp.dot(self._weights*self._coefs[i].reshape(nbasis_tot))).reshape(Vh.nbasis) / coefs_data[0])
             return coefs_data
         else:
             for i in range(self.geo_dim):
-                coefs_data.append( (M_mp.dot(self.coefs()[i].reshape(nbasis_tot))).reshape(Vh.nbasis) )
+                coefs_data.append( (M_mp.dot(self._coefs[i].reshape(nbasis_tot))).reshape(Vh.nbasis) )
             return coefs_data
     def Refinesolution(self, solution, VH, Vh):
         """
@@ -482,7 +486,7 @@ class getGeometryMap:
             V1        = SplineSpace(degree=self.degree[0], grid= self._grids[0])
             V2        = SplineSpace(degree=self.degree[1], grid= self._grids[1])
             V3        = SplineSpace(degree=self.degree[2], grid= self._grids[2])
-            V          = TensorSpace(V1, V2, V3)# after refinement
+            V         = TensorSpace(V1, V2, V3)# after refinement
 
         if self.nurbs_check:
             #.. TODO: normally spaces containes weights, but here we assume that the weights are not provided.

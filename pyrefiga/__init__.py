@@ -95,9 +95,7 @@ from pyrefiga.results_f90 import ( pyccel_sol_field_2d,
                                     plot_MeshMultipatch,
                                     plot_AdMeshMultipatch,
                                     plot_FunctMultipatch,
-                                    plot_JacobianMultipatch,
-                                    paraview_AdMeshMultipatch,
-                                    paraview_SolutionMultipatch)
+                                    plot_JacobianMultipatch)
 
 from pyrefiga.api import (assemble_matrix, assemble_vector, assemble_scalar, compile_kernel, apply_dirichlet, apply_periodic)
 

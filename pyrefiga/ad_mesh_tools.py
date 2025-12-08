@@ -6,7 +6,7 @@ Author: M. BAHARI
 """
 from   .linalg           import StencilVector
 from   numpy             import zeros
-from   numpy             import double
+from   numpy             import float64
 from   .                 import ad_mesh_core as core
 from   .                 import nurbs_core   as nurbscore
 class quadratures_in_admesh(object):
@@ -97,8 +97,8 @@ class quadratures_in_admesh(object):
 				args += list(V.omega)	
 			#...
 			p1, p2, p3   = V.degree[-3:]
-			nx, ny, nz   = V.nelements[-3:]
-			wx, wy, wz   = V.weights[-3:]
+			nx, ny, nz   = V.nelements[:3]
+			wx, wy, wz   = V.weights[:3]
 			# ...
 			k1           = wx.shape[1]
 			k2           = wy.shape[1]
@@ -128,8 +128,8 @@ class quadratures_in_admesh(object):
 				args += list(V.omega[-2:])#last two spaces are for nurbs mapping
 			#...
 			p1, p2       = V.degree[-2:]
-			nx, ny       = V.nelements[-2:]
-			wx, wy       = V.weights[-2:]
+			nx, ny       = V.nelements[:2]
+			wx, wy       = V.weights[:2]
 			# ...
 			k1           = wx.shape[1]
 			k2           = wy.shape[1]
@@ -149,8 +149,8 @@ class quadratures_in_admesh(object):
 		# ...
 		if isinstance(u_mae, StencilVector):
 			# ...
-			basis_ad1  = zeros(self.nb_vec0, dtype = double)
-			basis_ad2  = zeros(self.nb_vec1, dtype = double)
+			basis_ad1  = zeros(self.nb_vec0, dtype = float64)
+			basis_ad2  = zeros(self.nb_vec1, dtype = float64)
 			spans_ad1  = zeros(self.ns_vec, int)
 			spans_ad2  = zeros(self.ns_vec, int)
 			# ...
@@ -167,9 +167,9 @@ class quadratures_in_admesh(object):
 		'''
 		if isinstance(u11_mae, StencilVector):
 			# ... !3D
-			basis_ad1  = zeros(self.nb_vec0, dtype = double)
-			basis_ad2  = zeros(self.nb_vec1, dtype = double)
-			basis_ad3  = zeros(self.nb_vec2, dtype = double)
+			basis_ad1  = zeros(self.nb_vec0, dtype = float64)
+			basis_ad2  = zeros(self.nb_vec1, dtype = float64)
+			basis_ad3  = zeros(self.nb_vec2, dtype = float64)
 			spans_ad1  = zeros(self.ns_vec, int)
 			spans_ad2  = zeros(self.ns_vec, int)
 			spans_ad3  = zeros(self.ns_vec, int)
@@ -178,8 +178,8 @@ class quadratures_in_admesh(object):
 			return spans_ad1, spans_ad2, spans_ad3, basis_ad1, basis_ad2, basis_ad3
 		elif isinstance(u10_mae, StencilVector):
 			# ... !2D and 2.5D
-			basis_ad1  = zeros(self.nb_vec0, dtype = double)
-			basis_ad2  = zeros(self.nb_vec1, dtype = double)
+			basis_ad1  = zeros(self.nb_vec0, dtype = float64)
+			basis_ad2  = zeros(self.nb_vec1, dtype = float64)
 			spans_ad1  = zeros(self.ns_vec, int)
 			spans_ad2  = zeros(self.ns_vec, int)
 			# ...
@@ -188,7 +188,7 @@ class quadratures_in_admesh(object):
 
 		elif self.sp_dim == 1 :
 			# ... !1D
-			basis_ad  = zeros(self.nb_vec, dtype = double)
+			basis_ad  = zeros(self.nb_vec, dtype = float64)
 			spans_ad  = zeros(self.ns_vec, int)
 			# ...
 			self.basis_spans_in_adquadrature_1d(*self.args, u01_mae._data, spans_ad, basis_ad, self.nders)
