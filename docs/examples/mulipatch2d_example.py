@@ -6,7 +6,7 @@ Example multipatch: Solving Poisson's Equation on a 2D complex geometry using B-
 Author: M. Bahari
 """
 from   pyrefiga                         import compile_kernel
-from   pyrefiga                         import apply_dirichlet
+from   pyrefiga                         import apply_dirichlet_setdiag
 from   pyrefiga                         import SplineSpace
 from   pyrefiga                         import TensorSpace
 from   pyrefiga                         import StencilMatrix
@@ -32,7 +32,7 @@ assemble_stiffness_nitsche  = compile_kernel(assemble_matrix_nitsche_ex00, arity
 from gallery.gallery_nitsche_00 import assemble_matrix_nitsche_ex02
 assemble_stiffness2_nitsche = compile_kernel(assemble_matrix_nitsche_ex02, arity=1)
 
-from   scipy.sparse                      import csr_matrix
+from   scipy.sparse                      import csr_matrix, coo_matrix
 from   scipy.sparse                      import csc_matrix, linalg as sla
 from   numpy                             import zeros
 from   tabulate                          import tabulate
@@ -65,19 +65,11 @@ os.makedirs("figs", exist_ok=True)
 #------------------------------------------------------------------------------
 def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, dirichlet_1, dirichlet_2):
 
-    d1 = 1              if dirichlet_1[0][0] else 0 
-    d2 = V.nbasis[0]-1  if dirichlet_1[0][1] else V.nbasis[0]
-    d3 = 1              if dirichlet_1[1][0] else 0 
-    d4 = V.nbasis[1]-1  if dirichlet_1[1][1] else V.nbasis[1]
-    #...
-    pd1 = 1             if dirichlet_2[0][0] else 0 
-    pd2 = V.nbasis[0]-1 if dirichlet_2[0][1] else V.nbasis[0]
-    pd3 = 1             if dirichlet_2[1][0] else 0 
-    pd4 = V.nbasis[1]-1 if dirichlet_2[1][1] else V.nbasis[1]
-    # Build global linear system
-    n_basis       = ((d2-d1) * (d4-d3), (pd2-pd1) * (pd4-pd3))
+    from pyrefiga import apply_dirichlet, StencilNitscheMatrix
 
-    M             = zeros((n_basis[0]+n_basis[1],n_basis[0]+n_basis[1]))
+    Ni            = StencilNitscheMatrix(V, V, [dirichlet_1,dirichlet_2], interfaces=[interface])# coo_matrix(([], ([], [])), shape=(n_basis[0]+n_basis[1],n_basis[0]+n_basis[1]), dtype=np.float64)
+    #...
+    M             = zeros(Ni._Nitshedim)
     #... computes coeffs for Nitsche's method
     stab          = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
     m_h           = (V.nbasis[0]*V.nbasis[1])
@@ -88,41 +80,53 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
 
     # Assemble stiffness matrix 11
     stiffness11   = assemble_stiffness_nitsche(V, fields=[u11_mph, u12_mph], knots=True, value=[V.omega[0],V.omega[1], interface[0], Kappa, normS])
-    stiffness11   = apply_dirichlet(V, stiffness11, dirichlet_1)    
-    M[:n_basis[0],:n_basis[0]]       = stiffness11[:,:]
+
+    stiffness00   = apply_dirichlet(V, stiffness11, dirichlet = dirichlet_1)
+    Ni.appendBlock(stiffness00, [0,0])
+    stiffness11   = apply_dirichlet_setdiag(V, stiffness11, dirichlet_1)    
+    print()
+    M[:Ni._nbasis[0],:Ni._nbasis[0]]       = stiffness11[:,:]
 
     # Assemble stiffness matrix 22
     stiffness22   = assemble_stiffness_nitsche(V, fields=[u21_mph, u22_mph], knots=True, value=[V.omega[0],V.omega[1], interface[1], Kappa, normS])
-    stiffness22   = apply_dirichlet(V, stiffness22, dirichlet_2)
-    M[n_basis[0]:,n_basis[0]:]       = stiffness22[:,:]
+    stiffness00   = apply_dirichlet(V, stiffness22, dirichlet_2)
+    Ni.appendBlock(stiffness00, [1,1])
+    # print(stiffness00.row.copy()+n_basis[0])
+    # Ni           += coo_matrix((stiffness00.data.copy(), (n_basis[0]+stiffness00.row.copy(), n_basis[0]+stiffness00.col.copy())),Ni.shape)
+    stiffness22   = apply_dirichlet_setdiag(V, stiffness22, dirichlet_2)
+    M[Ni._nbasis[0]:,Ni._nbasis[0]:]       = stiffness22[:,:]
 
     #=======================================
     # # # Assemble Nitsche's method matrices
     #=======================================
     rhs = StencilVector(Vh.vector_space)  
     stiffness21   = assemble_stiffness2_nitsche(V, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[V.omega[0],V.omega[1], interface[0], Kappa, normS], out = rhs)
-    stiffness21   = apply_dirichlet(V, stiffness21, dirichlet_1, dirichlet_2)
+    stiffness21   = apply_dirichlet_setdiag(V, stiffness21, dirichlet_1, dirichlet_2)
     # Assemble Nitsche's method matrices
-    M[n_basis[0]:,:n_basis[0]]       = stiffness21[:,:]
-    M[:n_basis[0],n_basis[0]:]       = stiffness21.T[:,:]
+    M[Ni._nbasis[0]:,:Ni._nbasis[0]]       = stiffness21[:,:]
+    M[:Ni._nbasis[0],Ni._nbasis[0]:]       = stiffness21.T[:,:]
 
+    import matplotlib.pyplot as plt
+    import scipy.sparse as sp
+    plt.spy(Ni.tosparse(), markersize=2)
+    plt.show()
     # Assemble right-hand side vector
     rhs                          = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d1])
-    rhs1   = apply_dirichlet(V, rhs, dirichlet_1)    
+    rhs1   = apply_dirichlet_setdiag(V, rhs, dirichlet_1)    
     # Assemble right-hand side vector
     rhs                       = assemble_rhs_un( V, fields=[u21_mph, u22_mph, u_d2])
-    rhs2   = apply_dirichlet(V, rhs, dirichlet_2)    
+    rhs2   = apply_dirichlet_setdiag(V, rhs, dirichlet_2)    
     # Assemble right-hand side vector
-    b                          = zeros(n_basis[0]+n_basis[1])
-    b[:n_basis[0]]                = rhs1[:]
-    b[n_basis[0]:]                = rhs2[:]
+    b                          = zeros(Ni._nbasis[0]+Ni._nbasis[1])
+    b[:Ni._nbasis[0]]                = rhs1[:]
+    b[Ni._nbasis[0]:]                = rhs2[:]
 
     # Solve the linear system using CGS
     x, inf          = sla.cg(M, b)
 
     # ... Extract solution
-    u1              = apply_dirichlet(V, x[:n_basis[0]], dirichlet = dirichlet_1, update= u_d1)#  StencilVector(V.vector_space)
-    u2              = apply_dirichlet(V, x[n_basis[0]:], dirichlet = dirichlet_2, update= u_d2)#StencilVector(V.vector_space)
+    u1              = apply_dirichlet_setdiag(V, x[:Ni._nbasis[0]], dirichlet = dirichlet_1, update= u_d1)#  StencilVector(V.vector_space)
+    u2              = apply_dirichlet_setdiag(V, x[Ni._nbasis[0]:], dirichlet = dirichlet_2, update= u_d2)#StencilVector(V.vector_space)
     # ... to array
     x1              = u1.toarray().reshape(V.nbasis)
     x2              = u2.toarray().reshape(V.nbasis)

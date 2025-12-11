@@ -27,7 +27,10 @@ from   .nurbs_utilities import least_square_NURBspline
 __all__ = ['plot_field_1d', 
            'prolongation_matrix',
            'save_geometry_to_xml',
-           'getGeometryMap']
+           'getGeometryMap',
+           'pyrefInterface',
+           'load_xml',
+           'cond_sparse']
 
 # ==========================================================
 def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None, label = None):
@@ -77,6 +80,9 @@ def prolongation_matrix(VH, Vh):
 
     return M
 
+#========================================================================
+# ... build Dirichlet in two dimensions from analytic form
+#========================================================================
 def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
     '''
     V    : FE space
@@ -208,9 +214,11 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
     u_d.from_array(V, x_d)
     return x_d, u_d
 
+#========================================================================
+# ... save geometry patch from a given mapping into cml file
+#========================================================================
 import xml.etree.ElementTree as ET
 import numpy as np
-
 def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
     """
     save_geometry_to_xml : save the coefficients table, knots table, and degree in an XML file.
@@ -300,6 +308,10 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
     
     print(f"File saved as {filename}")
 
+#========================================================================
+#... class patches from xml files : one patch
+# TODO doesn"t suuport multipatches 
+#========================================================================
 class getGeometryMap:
     """
     getGeometryMap : extracts the coefficients table, knots table, and degree from an XML file based on a given id.
@@ -501,7 +513,10 @@ class getGeometryMap:
             M_mp      = prolongation_matrix(VH, Vh)
             return (M_mp.dot(solution.reshape(nbasis_tot))).reshape(Vh.nbasis)
         
-# ==========================================================
+#========================================================================
+#... construct connectivity between patches: 
+# TODO doesn't support different oriontation
+#========================================================================
 class pyrefInterface(object):
     """
     Detect interface between patches.
@@ -581,7 +596,10 @@ class pyrefInterface(object):
         else:
             raise ValueError("Invalid interface configuration")
         return xd1, xd2
-    
+
+#========================================================================
+# ... loadf xml file from pyrefiga
+#========================================================================    
 import pyrefiga
 from pathlib import Path
 
@@ -611,3 +629,69 @@ def load_xml(name: str) -> str:
         return str(dev_path)
 
     raise FileNotFoundError(f"Cannot find XML file '{name}' in fields/")
+
+#========================================================================
+# .. Compute an estimate of the condition number of a given sparse matrix
+#========================================================================
+from scipy.sparse.linalg import splu, LinearOperator, onenormest
+from scipy.sparse import isspmatrix_csc
+
+def cond_sparse(A, symmetric=True):
+    """
+    Compute an estimate of the condition number of a sparse matrix A
+    using onenormest(A^{-1}) without converting to dense.
+
+    Parameters
+    ----------
+    A : scipy sparse matrix
+        The matrix must be square.
+    symmetric : bool
+        If True, assumes A = A.T (SPD typical in IGA),
+        and uses a single LU factorization.
+
+    Returns
+    -------
+    float
+        Estimated condition number.
+    """
+
+    # Convert to CSC for LU
+    if not isspmatrix_csc(A):
+        A = A.tocsc()
+
+    # 1-norm of A (cheap)
+    normA = abs(A).sum(axis=0).max()
+
+    # ---- Factorization ----
+    lu = splu(A)             # LU of A
+
+    if symmetric:
+        # Only one LU factorization needed
+        def mv(x):
+            return lu.solve(x)
+
+        def rmv(x):
+            return lu.solve(x)
+
+    else:
+        # Need LU of A.T unless symmetric
+        luT = splu(A.T)
+
+        def mv(x):
+            return lu.solve(x)
+
+        def rmv(x):
+            return luT.solve(x)
+
+    # Linear operator representing A^{-1}
+    Ainv = LinearOperator(
+        shape=A.shape,
+        matvec=mv,
+        rmatvec=rmv,
+        dtype=A.dtype
+    )
+
+    # Estimate ||A^{-1}||_1
+    normAinv = onenormest(Ainv)
+
+    return 0.5*normA * normAinv

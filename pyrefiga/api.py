@@ -211,15 +211,15 @@ def apply_nitsch(V, stifness, u11_mph, u12_mph, interface):
     assemble_stiffness2_nitsche = compile_kernel(assemble_matrix_nitsche_ex02, arity=1)
     
 
-#==============================================================================
-def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = None):
+#============================================================================== TODO STAY IN STENCIL FORMAT To delet
+def apply_dirichlet_setdiag(V, x, dirichlet = True, dirichlet_patch2 = None, update = None):
     """
-    Applies Dirichlet boundary conditions to a matrix or vector by elimination.
+    Applies dirichlet boundary conditions to a matrix or vector by elimination.
 
     dirichlet can take different forms depending on how boundary conditions are specified:
     A single boolean (True or False) meaning the same condition applies to all boundaries.
     A list of booleans, e.g. [True, False], specifying the condition for each direction in 1D or 2D.
-    A nested list of booleans, specifying Dirichlet conditions in multiple dimensions:
+    A nested list of booleans, specifying dirichlet conditions in multiple dimensions:
         2D example: [[True, False], [True, True]]
         3D example: [[True, False], [True, True], [True, True]]
 
@@ -228,17 +228,17 @@ def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = No
     V : TensorSpace
         The function space containing basis and dimension information.
     x : StencilMatrix or StencilVector
-        The matrix or vector to which Dirichlet conditions are applied.
+        The matrix or vector to which dirichlet conditions are applied.
     dirichlet : list or tuple, optional
-        Specifies which boundaries have Dirichlet conditions (default: None).
+        Specifies which boundaries have dirichlet conditions (default: None).
     dirichlet_patch2 : list or tuple, optional
-        Specifies a second patch for Dirichlet elimination (default: None).
+        Specifies a second patch for dirichlet elimination (default: None).
     update: StencilVector
-        Updates the boundary values of the solution using the exact Dirichlet data.
+        Updates the boundary values of the solution using the exact dirichlet data.
     Returns
     -------
     ndarray
-        The matrix or vector with Dirichlet boundaries applied and reshaped accordingly.
+        The matrix or vector with dirichlet boundaries applied and reshaped accordingly.
     """
     if update is None :
         if V.dim ==2:
@@ -262,7 +262,7 @@ def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = No
                     x   = x.toarray().reshape((n1,n2,n1,n2))
             else:
                 raise NotImplementedError('Not available')
-            #... apply Dirichlet
+            #... apply dirichlet
             if dirichlet_patch2 is None:
                 if rhs:
                     x   = x[d1:d2,d3:d4].reshape((d2-d1)*(d4-d3))
@@ -299,7 +299,7 @@ def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = No
                     x   = x.toarray().reshape((n1,n2,n3,n1,n2,n3))
             else:
                 raise NotImplementedError('Not available')
-            #... apply Dirichlet
+            #... apply dirichlet
             if dirichlet_patch2 is None:
                 if rhs:
                     x   = x[d1:d2,d3:d4,d5:d6].reshape((d2-d1)*(d4-d3)*(d6-d5))
@@ -334,7 +334,7 @@ def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = No
                     x   = x.toarray().reshape((n1,n1))
             else:
                 raise NotImplementedError('Not available')
-            #... apply Dirichlet
+            #... apply dirichlet
             if dirichlet_patch2 is None:
                 if rhs:
                     x   = x[d1:d2].reshape((d2-d1))
@@ -365,7 +365,7 @@ def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = No
             d2 = n1-1 if dirichlet[0][1] else n1
             d3 = 1    if dirichlet[1][0] else 0 
             d4 = n2-1 if dirichlet[1][1] else n2
-            #... apply Dirichlet
+            #... apply dirichlet
             u[:,:]         = update[:,:]
             u[d1:d2,d3:d4] = x.reshape((d2-d1),(d4-d3))
             return  u
@@ -381,7 +381,7 @@ def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = No
             d4 = n2-1 if dirichlet[1][1] else n2
             d5 = 1    if dirichlet[2][0] else 0 
             d6 = n3-1 if dirichlet[2][1] else n3
-            #... apply Dirichlet
+            #... apply dirichlet
             u[:,:,:]             =   update[:,:,:] 
             u[d1:d2,d3:d4,d5:d6] = x.reshape((d2-d1),(d4-d3),(d6-d5))
             return  u
@@ -393,13 +393,262 @@ def apply_dirichlet(V, x, dirichlet = True, dirichlet_patch2 = None, update = No
             #indeces for elimination
             d1 = 1    if dirichlet[0] else 0 
             d2 = n1-1 if dirichlet[1] else n1
-            #... apply Dirichlet
+            #... apply dirichlet
             u[:]     =   update[:] 
             u[d1:d2] = x.reshape(d2-d1)
             return  u
         else:
             raise NotImplementedError('Only 1d, 2d and 3d are available')
 #==============================================================================
+from scipy.sparse import coo_matrix
+import numpy as np
+import numpy as np
+from scipy.sparse import coo_matrix
+
+def eliminate_rows_cols(A: coo_matrix, rows_D, cols_D):
+    """
+    Remove specified rows and columns from a COO matrix
+    and shift indices accordingly.
+
+    Parameters
+    ----------
+    A : coo_matrix
+        Input sparse matrix.
+    rows_D : list[int]
+        List of row indices to eliminate.
+    cols_D : list[int]
+        List of column indices to eliminate.
+
+    Returns
+    -------
+    A_new : coo_matrix
+        New compacted COO matrix with eliminated rows/cols removed
+        and indices shifted.
+    """
+
+    A = A.tocoo()
+
+    # Convert to numpy arrays
+    rows_D = np.array(rows_D, dtype=int)
+    cols_D = np.array(cols_D, dtype=int)
+
+    # --- Build KEEP sets ---
+    all_rows = np.arange(A.shape[0])
+    all_cols = np.arange(A.shape[1])
+
+    keep_rows = np.setdiff1d(all_rows, rows_D)
+    keep_cols = np.setdiff1d(all_cols, cols_D)
+
+    # --- Build mapping from old → new ---
+    row_map = -np.ones(A.shape[0], dtype=int)
+    col_map = -np.ones(A.shape[1], dtype=int)
+
+    row_map[keep_rows] = np.arange(len(keep_rows))
+    col_map[keep_cols] = np.arange(len(keep_cols))
+
+    # --- Filter out eliminated rows/cols ---
+    mask = (row_map[A.row] != -1) & (col_map[A.col] != -1)
+
+    new_rows = row_map[A.row[mask]]
+    new_cols = col_map[A.col[mask]]
+    new_data = A.data[mask]
+
+    # --- Build new matrix ---
+    A_new = coo_matrix(
+        (new_data, (new_rows, new_cols)),
+        shape=(len(keep_rows), len(keep_cols))
+    )
+
+    return A_new
+
+def apply_dirichlet(V, x, dirichlet = True, update = None):
+    """
+    Applies dirichlet boundary conditions to a matrix or vector by elimination.
+
+    dirichlet can take different forms depending on how boundary conditions are specified:
+    A single boolean (True or False) meaning the same condition applies to all boundaries.
+    A list of booleans, e.g. [True, False], specifying the condition for each direction in 1D or 2D.
+    A nested list of booleans, specifying dirichlet conditions in multiple dimensions:
+        2D example: [[True, False], [True, True]]
+        3D example: [[True, False], [True, True], [True, True]]
+
+    Parameters
+    ----------
+    V : TensorSpace
+        The function space containing basis and dimension information.
+    x : StencilMatrix or StencilVector
+        The matrix or vector to which dirichlet conditions are applied.
+    dirichlet : list or tuple, optional
+        Specifies which boundaries have dirichlet conditions (default: True).
+    dirichlet_patch2 : list or tuple, optional
+        Specifies a second patch for dirichlet elimination (default: False).
+    update: StencilVector
+        Updates the boundary values of the solution using the exact dirichlet data.
+    Returns
+    -------
+    ndarray
+        The matrix or vector with dirichlet boundaries applied and reshaped accordingly.
+    """
+    if dirichlet is True :
+        if V.dim == 1:
+            dirichlet = [dirichlet, dirichlet]
+        elif V.dim == 2:
+            dirichlet = [[dirichlet, dirichlet],[dirichlet, dirichlet]]
+        elif V.dim == 3:
+            dirichlet = [[dirichlet, dirichlet],[dirichlet, dirichlet],[dirichlet, dirichlet]]
+    elif dirichlet[0] is True and V.dim >1:
+        if V.dim == 2:
+            dirichlet = [[dirichlet[0], dirichlet[0]],[dirichlet[1], dirichlet[1]]]
+        elif V.dim == 3:
+            dirichlet = [[dirichlet[0], dirichlet[0]],[dirichlet[1], dirichlet[1]],[dirichlet[2], dirichlet[2]]]
+
+    if update is None :
+        #--------------------------------------------------------------------------
+        if isinstance(x, StencilMatrix):
+            if V.dim == 1:
+                n1 = V.nbasis
+                rows_D = [0, n1-1] 
+
+                return eliminate_rows_cols(x.tosparse(), rows_D, rows_D)
+
+            elif V.dim == 2:
+                n1,n2  = V.nbasis
+                vecx   = np.arange(n1)
+                vecy   = np.arange(n2)
+                rows_D = [] 
+                # boundary x = 0
+                if dirichlet[0][0]:
+                    rows_D +=  list(0+n1*vecy)
+                # boundary x = 1
+                if dirichlet[0][1]:
+                    rows_D +=  list(n1-1+n1*vecy)
+                # boundary y = 0
+                if dirichlet[1][0]:
+                    rows_D +=  list(vecx)
+                # boundary y = 1
+                if dirichlet[1][1]:
+                    rows_D +=  list(vecx+n1*(n2-1))
+                return eliminate_rows_cols(x.tosparse(), rows_D, rows_D)
+
+            elif V.dim == 3:
+                n1,n2,n3 = V.nbasis
+                vecx = np.arange(n1)
+                vecy = np.arange(n2)
+                vecz = np.arange(n3)
+                rows_D = [] 
+                # ... resetting bnd dof to 0, x = 0
+                if dirichlet[0][0]:
+                    rows_D +=  list(n1*vecy+n1*n2*vecz)
+                # ... resetting bnd dof to 0, x = 1
+                if dirichlet[0][1]:
+                    rows_D +=  list(n1-1+n1*vecy+n1*n2*vecz)
+                # ... resetting bnd dof to 0, y = 0
+                if dirichlet[1][0]:
+                    rows_D +=  list(vecx+n1*n2*vecz)
+                # ... resetting bnd dof to 0, y = 1
+                if dirichlet[1][1]:
+                    rows_D +=  list(vecx+n1*(n2-1)+n1*n2*vecz)
+                # ... resetting bnd dof to 0, z = 0
+                if dirichlet[2][0]:
+                    rows_D +=  list(vecx+n1*vecy)
+                # ... resetting bnd dof to 0, z = 1
+                if dirichlet[2][1]:
+                    rows_D +=  list(vecx+n1*vecy+n1*n2*(n3-1))
+                return eliminate_rows_cols(x.tosparse(), rows_D, rows_D)
+            else :
+                raise NotImplementedError('Only 1d, 2d and 3d are available')
+
+        elif isinstance(x, StencilVector):
+            if V.dim == 1:
+                n1 = V.nbasis
+
+                #indeces for elimination
+                d1 = 1    if dirichlet[0] else 0 
+                d2 = n1-1 if dirichlet[1] else n1
+
+                x   = x.toarray().reshape(n1)
+                x   = x[d1:d2].reshape((d2-d1))
+                return x
+
+            elif V.dim == 2:
+                n1,n2 = V.nbasis
+                #indeces for elimination
+                d1 = 1    if dirichlet[0][0] else 0 
+                d2 = n1-1 if dirichlet[0][1] else n1
+                d3 = 1    if dirichlet[1][0] else 0 
+                d4 = n2-1 if dirichlet[1][1] else n2
+
+                x   = x.toarray().reshape((n1,n2))
+                #... apply dirichlet
+                x   = x[d1:d2,d3:d4].reshape((d2-d1)*(d4-d3))
+                return x
+
+            elif V.dim == 3:
+                n1, n2, n3 = V.nbasis
+
+                #indeces for elimination
+                d1 = 1    if dirichlet[0][0] else 0 
+                d2 = n1-1 if dirichlet[0][1] else n1
+                d3 = 1    if dirichlet[1][0] else 0 
+                d4 = n2-1 if dirichlet[1][1] else n2
+                d5 = 1    if dirichlet[2][0] else 0 
+                d6 = n3-1 if dirichlet[2][1] else n3
+
+                x   = x.toarray().reshape((n1,n2,n3))
+                x   = x[d1:d2,d3:d4,d5:d6].reshape((d2-d1)*(d4-d3)*(d6-d5))
+                return x
+
+            else:
+                raise NotImplementedError('Only 1d, 2d and 3d are available')
+
+        else:
+            raise TypeError('Expecting StencilMatrix or StencilVector')
+    
+    else:
+        if isinstance(update, StencilVector):
+            pass
+        else:
+            raise NotImplementedError('Not available only StencilVector')
+        u   = StencilVector(V.vector_space)
+        # ...
+        if V.dim == 1:
+            n1      = V.nbasis
+            #indeces for elimination
+            d1 = 1    if dirichlet[0] else 0 
+            d2 = n1-1 if dirichlet[1] else n1
+            #... apply dirichlet
+            u[:]     =   update[:] 
+            u[d1:d2] = x.reshape(d2-d1)
+            return  u
+        elif V.dim ==2:
+            n1, n2  = V.nbasis
+            #indeces for elimination
+            d1 = 1    if dirichlet[0][0] else 0 
+            d2 = n1-1 if dirichlet[0][1] else n1
+            d3 = 1    if dirichlet[1][0] else 0 
+            d4 = n2-1 if dirichlet[1][1] else n2
+            #... apply dirichlet
+            u[:,:]         = update[:,:]
+            u[d1:d2,d3:d4] = x.reshape((d2-d1),(d4-d3))
+            return  u
+        elif V.dim == 3:
+            n1, n2, n3  = V.nbasis
+            #indeces for elimination
+            d1 = 1    if dirichlet[0][0] else 0 
+            d2 = n1-1 if dirichlet[0][1] else n1
+            d3 = 1    if dirichlet[1][0] else 0 
+            d4 = n2-1 if dirichlet[1][1] else n2
+            d5 = 1    if dirichlet[2][0] else 0 
+            d6 = n3-1 if dirichlet[2][1] else n3
+            #... apply dirichlet
+            u[:,:,:]             =   update[:,:,:] 
+            u[d1:d2,d3:d4,d5:d6] = x.reshape((d2-d1),(d4-d3),(d6-d5))
+            return  u
+        else:
+            raise NotImplementedError('Only 1d, 2d and 3d are available')
+
+
+#============================================================================== TODO SHOULD STAY IN STENCIL FORMAT
 def apply_periodic(V, x, periodic = None, update = None):
        
   if update is None :

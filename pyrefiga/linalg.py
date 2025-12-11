@@ -381,3 +381,98 @@ class StencilMatrix( object ):
         M.eliminate_zeros()
 
         return M
+
+import numpy as np
+from scipy.sparse import coo_matrix
+
+class StencilNitscheMatrix(object):
+    """
+    Nitsche's Stencil Matrix in n-dimensional stencil format for multipatch IGA.
+
+    Diagonal blocks: standard single-patch StencilMatrix.
+    Off-diagonal blocks: Nitsche interface coupling (can be diagonal or sparse).
+    """
+    def __init__(self, V, W, dirichlet, interfaces):
+        
+        nmp            = len(dirichlet)
+        self._pads     = V.degree
+        self._ndim     = V.dim
+        self._domain   = V
+        self._codomain = W
+        self._nmp      = nmp  # number of patches
+        self._type     = V.vector_space.dtype
+
+        pd1            = np.zeros((nmp,self._ndim, 2), dtype = int) 
+        pd2            = np.zeros((nmp,self._ndim, 2), dtype = int) 
+        for i in range(nmp):
+            for j in range(self._ndim):
+                pd1[i,j,0] = 1             if dirichlet[i][j][0] else 0
+                pd2[i,j,1] = V.nbasis[j]-1 if dirichlet[i][j][1] else V.nbasis[0]
+        # Build nbasis for each patch
+        nbasis         = []
+        for j in range(nmp):
+            nb = (pd2[j,0,1]-pd1[j,0,0])
+            for i in range(1, V.dim):
+                nb = nb * (pd2[j,i,1]-pd1[j,i,0]) 
+            nbasis.append(nb)
+        self._Nitshedim = (sum(nbasis), sum(nbasis))
+        self._nbasis    = nbasis
+        self.dimbd0     = pd1 # [nmpatch, dim, 2] local matrix start from
+        self.dimbd1     = pd1 # [nmpatch, dim, 2] local matrix ends at
+        self.interfaces = interfaces
+        #------------------------------------------------------
+        #Build a global multipatch sparse matrix in COO format.
+        #Diagonal blocks: full patch stencil.
+        #Off-diagonal blocks: Nitsche coupling (diagonal entries only).
+        #------------------------------------------------------
+        rows, cols, data = [], [], []
+        self.stencilNitsche = coo_matrix(
+            (data, (rows, cols)),
+            shape = self._Nitshedim,
+            dtype = self._type
+        )
+        self.stencilNitsche.eliminate_zeros()
+
+    #--------------------------------------
+    # Abstract interface
+    #--------------------------------------
+    @property
+    def domain( self ):
+        return self._domain
+
+    # ...
+    @property
+    def codomain( self ):
+        return self._codomain
+    
+    # ...
+    def tosparse( self):
+        return self.stencilNitsche
+    
+    # #...
+    # def add_NitscheBlocks(self):
+    #     B = 
+    #     self.stencilNitsche += coo_matrix(
+    #         (B.data.copy(), (index_B[0]*self._nbasis[0]+B.row.copy(), index_B[1]*self._nbasis[0]+B.col.copy())),
+    #         shape = self._Nitshedim,
+    #         dtype = self._type
+    #     )
+    #     self.stencilNitsche.eliminate_zeros()
+    #     #..
+    #--------------------------------------
+    # append block COO matrix
+    #--------------------------------------
+    def appendBlock(self, B, index_B):
+        """
+        assemble block matrices B
+        """
+        if isinstance(B, StencilMatrix):
+            B= B.tosparse()
+
+        self.stencilNitsche += coo_matrix(
+            (B.data.copy(), (index_B[0]*self._nbasis[0]+B.row.copy(), index_B[1]*self._nbasis[0]+B.col.copy())),
+            shape = self._Nitshedim,
+            dtype = self._type
+        )
+
+        self.stencilNitsche.eliminate_zeros()
