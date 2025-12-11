@@ -59,15 +59,12 @@ def poisson_solve(V, VT, u11_mph, u12_mph, u_d):
     u   = StencilVector(V.vector_space)
 
     # Assemble stiffness matrix
-    stiffness     = StencilMatrix(V.vector_space, V.vector_space)
+    stiffness  = StencilMatrix(V.vector_space, V.vector_space)
     stiffness  = assemble_matrix_un(VT, fields=[u11_mph, u12_mph], out=stiffness)
+    stiffness1 = apply_dirichlet_setdiag(V, stiffness)
 
-    # print(K1.tosparse())
-    stiffness1                  =    apply_dirichlet_setdiag(V, stiffness)
-    # print(stiffness1.toarray().reshape(((V.nbasis[0]-2)*(V.nbasis[1]-2), (V.nbasis[0]-2)*(V.nbasis[1]-2))))
-    # print(stiffness.tosparse())
     # Assemble right-hand side vector
-    rhs           = StencilVector(V.vector_space)
+    rhs        = StencilVector(V.vector_space)
     rhs        = assemble_rhs_un( VT, fields=[u11_mph, u12_mph, u_d], out= rhs)
 
     #... apply Dirichlet

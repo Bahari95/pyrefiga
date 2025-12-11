@@ -76,7 +76,7 @@ from pyrefiga.utilities import ( plot_field_1d,
                                   getGeometryMap,
                                   save_geometry_to_xml,
                                   pyrefInterface,
-                                  load_xml, cond_sparse)
+                                  load_xml)
 
 from pyrefiga.results import ( sol_field_2d)
 
