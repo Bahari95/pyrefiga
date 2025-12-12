@@ -56,6 +56,7 @@ class RunPyccelCommand(Command):
         # List of files to process
         files_to_process = [
             'pyrefiga/nurbs_core.py',
+            'pyrefiga/nitsche_core.py',
             'pyrefiga/ad_mesh_core.py',
             'pyrefiga/results_f90_core.py',
             'pyrefiga/fast_diag_core.py',

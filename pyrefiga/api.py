@@ -198,18 +198,350 @@ def compile_kernel(core, arity, pyccel=True):
     elif arity == 0:
         return partial(assemble_scalar, core)
 
-#==============================================================================
-def apply_nitsch(V, stifness, u11_mph, u12_mph, interface):
-    if isinstance(stifness, StencilMatrix):
-        pass
-    else:
-        raise NotImplementedError("apply_nitsch: 'stifness' must be a StencilMatrix (other types not implemented)")
-    # ... nitsche assembly tools
-    from gallery import assemble_matrix_nitsche_ex00
-    assemble_stiffness_nitsche  = compile_kernel(assemble_matrix_nitsche_ex00, arity=2)
-    from gallery import assemble_matrix_nitsche_ex02
-    assemble_stiffness2_nitsche = compile_kernel(assemble_matrix_nitsche_ex02, arity=1)
-    
+
+from scipy.sparse import coo_matrix
+from .            import nitsche_core as  core
+
+
+def eliminated_rows_cols(n1, n2, 
+                         pd1, pd2, pd3, pd4,    # row slice: i1 in [pd1:pd2], i2 in [pd3:pd4]
+                         d1, d2, d3, d4):       # col slice: j1 in [d1:d2],  j2 in [d3:d4]
+    """
+    Given a 4D slice M[pd1:pd2, pd3:pd4, d1:d2, d3:d4], return the eliminated
+    global rows and columns relative to (n1*n2 × n1*n2) global matrix.
+    """
+
+    # --- all possible row indices (i1,i2) ---
+    all_i1 = np.arange(n1)
+    all_i2 = np.arange(n2)
+
+    # kept rows
+    keep_i1 = np.arange(pd1, pd2)
+    keep_i2 = np.arange(pd3, pd4)
+
+    # eliminated rows = complement
+    elim_rows = []
+    for i2 in all_i2:
+        for i1 in all_i1:
+            if not (pd1 <= i1 < pd2 and pd3 <= i2 < pd4):
+                elim_rows.append(i1 + n1 * i2)
+    elim_rows = np.array(elim_rows, dtype=int)
+
+    # --- all possible col indices (j1,j2) ---
+    all_j1 = np.arange(n1)
+    all_j2 = np.arange(n2)
+
+    # kept columns: j1 in [d1:d2], j2 in [d3:d4]
+    elim_cols = []
+    for j2 in all_j2:
+        for j1 in all_j1:
+            if not (d1 <= j1 < d2 and d3 <= j2 < d4):
+                elim_cols.append(j1 + n1 * j2)
+    elim_cols = np.array(elim_cols, dtype=int)
+
+    return elim_rows, elim_cols
+
+
+class StencilNitsche(object):
+    """
+    Nitsche's Stencil Matrices in n-dimensional stencil format for multipatch IGA.
+
+    Diagonal blocks: standard single-patch StencilMatrix.
+    Off-diagonal blocks: Nitsche interface coupling (can be diagonal or sparse).
+    """
+    def __init__(self, V, W, dirichlet, interfaces):
+        assert isinstance( V, TensorSpace)
+        assert isinstance( W, TensorSpace)
+
+        nmp            = len(dirichlet)
+        # -------
+        self._pads     = V.degree
+        self._ndim     = V.dim
+        self._domain   = V
+        self._codomain = W
+        self._nmp      = nmp  # number of patches
+        self._type     = V.vector_space.dtype
+        self._nbs      = V.vector_space.npts
+        # ------
+        elim_index     = np.zeros((nmp,self._ndim, 2), dtype = int) 
+        for i in range(nmp):
+            for j in range(self._ndim):
+                elim_index[i,j,0] = 1             if dirichlet[i][j][0] else 0
+                elim_index[i,j,1] = V.nbasis[j]-1 if dirichlet[i][j][1] else V.nbasis[0]
+        # Build nbasis for each patch
+        nbasis         = []
+        for j in range(nmp):
+            nb = (elim_index[j,0,1]-elim_index[j,0,0])
+            for i in range(1, V.dim):
+                nb = nb * (elim_index[j,i,1]-elim_index[j,i,0]) 
+            nbasis.append(nb)
+        self._Nitshedim = (sum(nbasis), sum(nbasis))
+        self._nbasis    = nbasis
+        self.elim_index = elim_index # [nmpatch, dim, 2] local matrix start from
+        self.interfaces = interfaces
+        self.dirichlet  = dirichlet
+        #
+        #... computes coeffs for Nitsche's method
+        stab          = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
+        m_h           = (V.nbasis[0]*V.nbasis[1])
+        self.Kappa    = 2.*stab*m_h
+        # ...
+        self.normS    = 0.5
+        #------------------------------------------------------
+        #Build a global multipatch sparse matrix in COO format.
+        #Diagonal blocks: full patch stencil.
+        #Off-diagonal blocks: Nitsche coupling (diagonal entries only).
+        #------------------------------------------------------
+        rows, cols, data = [], [], []
+        self.stencilNitsche = coo_matrix(
+            (data, (rows, cols)),
+            shape = self._Nitshedim,
+            dtype = self._type
+        )
+        self.stencilNitsche.eliminate_zeros()
+        #-------------------------------
+        # .. assemble Nitsche's matrices
+        #-------------------------------
+        self.assemble_nitsche2dDiag    = partial(assemble_matrix, core.assemble_matrix_diagnitsche)
+        self.assemble_nitsche2doffDiag = partial(assemble_matrix, core.assemble_matrix_offdiagnitsche)        
+    #--------------------------------------
+    # Abstract interface
+    #--------------------------------------
+    @property
+    def domain( self ):
+        return self._domain
+
+    # ...
+    @property
+    def codomain( self ):
+        return self._codomain
+
+    #...
+    def apply_NitscheDirichlet(self, x, nb_r, nb_c):
+        #----------------------------------------------------------------------------------
+        # .. apply dirichlet with respect to v2(id_r)*u1(id_c)
+        #----------------------------------------------------------------------------------
+        n1,n2  = self._domain.nbasis
+        id_r   = nb_r-1
+        id_c   = nb_c-1
+        vecx   = np.arange(n1)
+        vecy   = np.arange(n2)
+        rows_D = [] 
+        # boundary x = 0
+        if self.dirichlet[id_r][0][0]:
+            rows_D +=  list(0+n1*vecy)
+            print(".x0")
+        # boundary x = 1
+        if self.dirichlet[id_r][0][1]:
+            rows_D +=  list(n1-1+n1*vecy)
+            print(".x1")
+        # boundary y = 0
+        if self.dirichlet[id_r][1][0]:
+            rows_D +=  list(vecx)
+            print(".y0")
+        # boundary y = 1
+        if self.dirichlet[id_r][1][1]:
+            rows_D +=  list(vecx+n1*(n2-1))
+            print(".y1")
+        cols_D = [] 
+        # boundary x = 0
+        if self.dirichlet[id_c][0][0]:
+            cols_D +=  list(0+n1*vecy)
+            print("..x0")
+        # boundary x = 1
+        if self.dirichlet[id_c][0][1]:
+            cols_D +=  list(n1-1+n1*vecy)
+            print("..x1")
+        # boundary y = 0
+        if self.dirichlet[id_c][1][0]:
+            cols_D +=  list(vecx)
+            print("..y0")
+        # boundary y = 1
+        if self.dirichlet[id_c][1][1]:
+            cols_D +=  list(vecx+n1*(n2-1))
+            print("..y1")
+
+        #indeces for elimination
+        d1 = 1    if self.dirichlet[id_c][0][0] else 0 
+        d2 = n1-1 if self.dirichlet[id_c][0][1] else n1
+        d3 = 1    if self.dirichlet[id_c][1][0] else 0 
+        d4 = n2-1 if self.dirichlet[id_c][1][1] else n2
+        #indeces for elimination
+        elim_index = 1    if self.dirichlet[id_r][0][0] else 0 
+        pd2 = n1-1 if self.dirichlet[id_r][0][1] else n1
+        pd3 = 1    if self.dirichlet[id_r][1][0] else 0 
+        pd4 = n2-1 if self.dirichlet[id_r][1][1] else n2
+        print("before doing anything---",x.toarray().reshape((n1*n2,n1*n2)) )
+        M   = x.toarray().reshape((n1,n2,n1,n2))[elim_index:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-elim_index)*(pd4-pd3), (d2-d1)*(d4-d3)))
+        print("----before doing anything: matrix shape ",x.shape, "rows to eliminate", rows_D,"cols to eliminate", cols_D)
+        Mr = eliminate_rows_cols(x, rows_D, cols_D)
+        print("exact",M)
+        print("shape after appling rows cols elimination",Mr.shape)
+        print("after appling rows cols elimination",Mr)
+
+        import matplotlib.pyplot as plt
+        import scipy.sparse as sp
+        plt.spy(M, markersize=2, color= 'g')
+        plt.show()
+        return eliminate_rows_cols(x, rows_D, cols_D)
+    #...
+    def correct_indexation(self, stiffnessoffdiag, nb_patch):
+        '''
+        Docstring pour correct_indexation 
+        [i,j, i-p:i+p, j-p,j+p] to [i,j, n-i-p:n-i+p, j-p,j+p]
+        
+        :param stiffnessoffdiag: matrix off diagonal
+        :param nb_patch patch number
+        '''
+        # Shortcuts
+        nr = stiffnessoffdiag._codomain.npts
+        nd = stiffnessoffdiag._ndim
+        nc = stiffnessoffdiag._domain.npts
+        ss = stiffnessoffdiag._codomain.starts
+        pp = stiffnessoffdiag._codomain.pads
+
+        ravel_multi_index = np.ravel_multi_index
+
+        # COO storage
+        rows = []
+        cols = []
+        data = []
+
+        # Range of data owned by local process (no ghost regions)
+        local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
+        if self.interfaces[nb_patch] == 1 or self.interfaces[nb_patch] == 2:
+            for (index,value) in np.ndenumerate( stiffnessoffdiag._data[local] ):
+
+                # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
+
+                xx = index[:nd]  # x=i-s
+                ll = index[nd:]  # l=p+k
+
+                ii = [s+x for s,x in zip(ss,xx)]
+                jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,self._pads)]
+                #...correct index ix -> nx-1-ix
+                jj[0] = nc[0]-1-jj[0]
+
+                I = ravel_multi_index( ii, dims=nr, order='C' )
+                J = ravel_multi_index( jj, dims=nc, order='C' )
+
+                rows.append( I )
+                cols.append( J )
+                data.append( value )
+        else:
+            for (index,value) in np.ndenumerate( stiffnessoffdiag._data[local] ):
+
+                # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
+
+                xx = index[:nd]  # x=i-s
+                ll = index[nd:]  # l=p+k
+
+                ii = [s+x for s,x in zip(ss,xx)]
+                jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,self._pads)]
+                #...correct index iy -> ny-1-iy
+                jj[-1] = nc[-1]-1-jj[-1]
+
+                I = ravel_multi_index( ii, dims=nr, order='C' )
+                J = ravel_multi_index( jj, dims=nc, order='C' )
+
+                rows.append( I )
+                cols.append( J )
+                data.append( value )
+
+        M = coo_matrix(
+                (data,(rows,cols)),
+                shape = [np.prod(nr),np.prod(nc)],
+                dtype = self._type
+        )
+        M.eliminate_zeros()
+        return M
+    #...
+    def addNitscheoffDiag(self, u11_mph, u12_mph, u21_mph, u22_mph):
+        '''
+        Docstring pour addNitscheoffDiag
+        
+        :param u11_mph: mapping component
+        :param u12_mph: Description
+        :param u21_mph: Description
+        :param u22_mph: Description
+        '''
+        nb_patch   = 1
+        nb_patch_n = 2
+
+        stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
+        self.assemble_nitsche2doffDiag(self._domain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], self.interfaces[nb_patch-1], self.Kappa, self.normS], out = stiffnessoffdiag)
+        #... correct coo matrix        
+        stiffnessoffdiag = self.correct_indexation(stiffnessoffdiag, nb_patch)
+
+        import matplotlib.pyplot as plt
+        import scipy.sparse as sp
+        plt.spy(stiffnessoffdiag, markersize=2)
+        plt.show()
+
+        #... apply dirichlet
+        stiffnessoffdiag = self.apply_NitscheDirichlet(stiffnessoffdiag, nb_patch_n, nb_patch) # v2*u1
+        import matplotlib.pyplot as plt
+        import scipy.sparse as sp
+        plt.spy(stiffnessoffdiag, markersize=2)
+        plt.show()
+        return stiffnessoffdiag
+        # self.appendBlock(stiffnessoffdiag, nb_patch_n, nb_patch)
+        #..
+    # ...
+    def tosparse( self ):
+        return self.stencilNitsche
+
+    # #...
+    def applyNitsche(self, stiffness, u11_mph, u12_mph, id_patch):
+        '''
+        Docstring pour applyNitsche for diagonal matrices
+        
+        :param self: Description
+        :param stiffness: stifness matrix 
+        :param u11_mph: mapping correspond to id_patch comp 1
+        :param u12_mph: mapping correspond to id_patch comp 2
+        :param id_patch: patch number start from 1
+        '''
+        if not (1 <= id_patch <= self._nmp):
+            raise ValueError(f"id_patch={id_patch} out of range 1..{self._nmp}")
+
+        self.assemble_nitsche2dDiag(self._domain, fields=[u11_mph, u12_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], self.interfaces[id_patch-1], self.Kappa, self.normS], out = stiffness)
+        #..
+
+    #--------------------------------------
+    # append block COO matrix
+    #--------------------------------------
+    def appendBlock(self, B, nb_patch, nb_patch_n = None):
+        '''
+        assemble block matrices B in global Nitsche's matrix
+        
+        :param B: stiffness matrix
+        :param nb_patch: patch number
+        :param nb_patch_n: patch number of neighbor patch
+        '''
+        if not (1 <= nb_patch <= self._nmp):
+            raise ValueError(f"id_patch={nb_patch} out of range 1..{self._nmp}")
+
+        if isinstance(B, StencilMatrix):
+            B = B.tosparse()
+
+        # compute position of block matrix in global Nitsche's matrix
+        row = 0
+        for i in range(nb_patch-1):
+            row += self._nbasis[i]
+        col = row
+        if nb_patch_n is not None :
+            col = 0
+            for i in range(nb_patch_n-1):
+                col += self._nbasis[i]
+        # ...
+        self.stencilNitsche += coo_matrix(
+            (B.data.copy(), (row+B.row.copy(), col+B.col.copy())),
+            shape = self._Nitshedim,
+            dtype = self._type
+        )
+
+        self.stencilNitsche.eliminate_zeros()
 
 #============================================================================== TODO STAY IN STENCIL FORMAT To delet
 def apply_dirichlet_setdiag(V, x, dirichlet = True, dirichlet_patch2 = None, update = None):
@@ -270,11 +602,11 @@ def apply_dirichlet_setdiag(V, x, dirichlet = True, dirichlet_patch2 = None, upd
                     x   = x[d1:d2,d3:d4,d1:d2,d3:d4].reshape(((d2-d1)*(d4-d3), (d2-d1)*(d4-d3)))
             else:
                 #indeces for elimination
-                pd1 = 1    if dirichlet_patch2[0][0] else 0 
+                elim_index = 1    if dirichlet_patch2[0][0] else 0 
                 pd2 = n1-1 if dirichlet_patch2[0][1] else n1
                 pd3 = 1    if dirichlet_patch2[1][0] else 0 
                 pd4 = n2-1 if dirichlet_patch2[1][1] else n2
-                x   = x[pd1:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-pd1)*(pd4-pd3), (d2-d1)*(d4-d3)))
+                x   = x[elim_index:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-elim_index)*(pd4-pd3), (d2-d1)*(d4-d3)))
             return  x
         elif V.dim == 3:
             if dirichlet is True:
@@ -307,13 +639,13 @@ def apply_dirichlet_setdiag(V, x, dirichlet = True, dirichlet_patch2 = None, upd
                     x   = x[d1:d2,d3:d4,d5:d6,d1:d2,d3:d4,d5:d6].reshape(((d2-d1)*(d4-d3)*(d6-d5), (d2-d1)*(d4-d3)*(d6-d5)))
             else:
                 #indeces for elimination
-                pd1 = 1    if dirichlet_patch2[0][0] else 0 
+                elim_index = 1    if dirichlet_patch2[0][0] else 0 
                 pd2 = n1-1 if dirichlet_patch2[0][1] else n1
                 pd3 = 1    if dirichlet_patch2[1][0] else 0 
                 pd4 = n2-1 if dirichlet_patch2[1][1] else n2
                 pd5 = 1    if dirichlet_patch2[2][0] else 0 
                 pd6 = n3-1 if dirichlet_patch2[2][1] else n3
-                x   = x[pd1:pd2,pd3:pd4,pd5:pd6,d1:d2,d3:d4,d5:d6].reshape(((pd2-pd1)*(pd4-pd3)*(pd6-pd5), (d2-d1)*(d4-d3)*(d6-d5)))
+                x   = x[elim_index:pd2,pd3:pd4,pd5:pd6,d1:d2,d3:d4,d5:d6].reshape(((pd2-elim_index)*(pd4-pd3)*(pd6-pd5), (d2-d1)*(d4-d3)*(d6-d5)))
             return  x        
         elif V.dim == 1:
             if dirichlet is True:
@@ -342,9 +674,9 @@ def apply_dirichlet_setdiag(V, x, dirichlet = True, dirichlet_patch2 = None, upd
                     x   = x[d1:d2,d1:d2].reshape(((d2-d1), (d2-d1)))
             else:
                 #indeces for elimination
-                pd1 = 1    if dirichlet_patch2[0] else 0 
+                elim_index = 1    if dirichlet_patch2[0] else 0 
                 pd2 = n1-1 if dirichlet_patch2[1] else n1
-                x   = x[pd1:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-pd1), (d2-d1)))
+                x   = x[elim_index:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-elim_index), (d2-d1)))
             return  x
         else:
             raise NotImplementedError('Only 1d, 2d and 3d are available')

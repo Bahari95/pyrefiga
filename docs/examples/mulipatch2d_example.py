@@ -20,15 +20,17 @@ from   pyrefiga                         import build_dirichlet
 from   pyrefiga                         import pyrefInterface
 from   pyrefiga                         import load_xml
 # Import Poisson assembly tools for uniform mesh
+from gallery.gallery_section_10 import assemble_matrix_un_ex00
 from gallery.gallery_section_10 import assemble_vector_un_ex01
 from gallery.gallery_section_10 import assemble_norm_un_ex01
 
+assemble_stiffness   = compile_kernel(assemble_matrix_un_ex00, arity=2)
 assemble_rhs_un      = compile_kernel(assemble_vector_un_ex01, arity=1)
 assemble_norm_un     = compile_kernel(assemble_norm_un_ex01, arity=1)
 
 # ... nitsche assembly tools
-from gallery.gallery_nitsche_00 import assemble_matrix_nitsche_ex00
-assemble_stiffness_nitsche  = compile_kernel(assemble_matrix_nitsche_ex00, arity=2)
+# from gallery.gallery_nitsche_00 import assemble_matrix_nitsche_ex00
+# assemble_stiffness_nitsche  = compile_kernel(assemble_matrix_nitsche_ex00, arity=2)
 from gallery.gallery_nitsche_00 import assemble_matrix_nitsche_ex02
 assemble_stiffness2_nitsche = compile_kernel(assemble_matrix_nitsche_ex02, arity=1)
 
@@ -65,9 +67,9 @@ os.makedirs("figs", exist_ok=True)
 #------------------------------------------------------------------------------
 def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, dirichlet_1, dirichlet_2):
 
-    from pyrefiga import apply_dirichlet, StencilNitscheMatrix
+    from pyrefiga import apply_dirichlet, StencilNitsche
 
-    Ni            = StencilNitscheMatrix(V, V, [dirichlet_1,dirichlet_2], interfaces=[interface])# coo_matrix(([], ([], [])), shape=(n_basis[0]+n_basis[1],n_basis[0]+n_basis[1]), dtype=np.float64)
+    Ni            = StencilNitsche(V, V, [dirichlet_1,dirichlet_2], interfaces = interface)# coo_matrix(([], ([], [])), shape=(n_basis[0]+n_basis[1],n_basis[0]+n_basis[1]), dtype=np.float64)
     #...
     M             = zeros(Ni._Nitshedim)
     #... computes coeffs for Nitsche's method
@@ -79,18 +81,19 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     Vh            = TensorSpace(V.spaces[0], V.spaces[1], V.spaces[0],V.spaces[1])
 
     # Assemble stiffness matrix 11
-    stiffness11   = assemble_stiffness_nitsche(V, fields=[u11_mph, u12_mph], knots=True, value=[V.omega[0],V.omega[1], interface[0], Kappa, normS])
-
+    stiffness11   = assemble_stiffness(V, fields=[u11_mph, u12_mph])
+    Ni.applyNitsche(stiffness11, u11_mph, u12_mph, 1)
     stiffness00   = apply_dirichlet(V, stiffness11, dirichlet = dirichlet_1)
-    Ni.appendBlock(stiffness00, [0,0])
+    Ni.appendBlock(stiffness00, 1)
     stiffness11   = apply_dirichlet_setdiag(V, stiffness11, dirichlet_1)    
     print()
     M[:Ni._nbasis[0],:Ni._nbasis[0]]       = stiffness11[:,:]
 
     # Assemble stiffness matrix 22
-    stiffness22   = assemble_stiffness_nitsche(V, fields=[u21_mph, u22_mph], knots=True, value=[V.omega[0],V.omega[1], interface[1], Kappa, normS])
+    stiffness22   = assemble_stiffness(V, fields=[u21_mph, u22_mph])
+    Ni.applyNitsche(stiffness22, u21_mph, u22_mph, 2)
     stiffness00   = apply_dirichlet(V, stiffness22, dirichlet_2)
-    Ni.appendBlock(stiffness00, [1,1])
+    Ni.appendBlock(stiffness00, 2)
     # print(stiffness00.row.copy()+n_basis[0])
     # Ni           += coo_matrix((stiffness00.data.copy(), (n_basis[0]+stiffness00.row.copy(), n_basis[0]+stiffness00.col.copy())),Ni.shape)
     stiffness22   = apply_dirichlet_setdiag(V, stiffness22, dirichlet_2)
@@ -99,17 +102,22 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     #=======================================
     # # # Assemble Nitsche's method matrices
     #=======================================
+    import matplotlib.pyplot as plt
+    import scipy.sparse as sp
+
     rhs = StencilVector(Vh.vector_space)  
     stiffness21   = assemble_stiffness2_nitsche(V, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[V.omega[0],V.omega[1], interface[0], Kappa, normS], out = rhs)
+    plt.spy(stiffness21.toarray().reshape((V.nbasis[0]*V.nbasis[1],V.nbasis[0]*V.nbasis[1])), markersize=2, color ='r')
+    plt.show()
     stiffness21   = apply_dirichlet_setdiag(V, stiffness21, dirichlet_1, dirichlet_2)
+    plt.spy(stiffness21, markersize=2, color ='r')
+    plt.show()
     # Assemble Nitsche's method matrices
     M[Ni._nbasis[0]:,:Ni._nbasis[0]]       = stiffness21[:,:]
     M[:Ni._nbasis[0],Ni._nbasis[0]:]       = stiffness21.T[:,:]
+    
+    Ni.addNitscheoffDiag( u11_mph, u12_mph, u21_mph, u22_mph)
 
-    import matplotlib.pyplot as plt
-    import scipy.sparse as sp
-    plt.spy(Ni.tosparse(), markersize=2)
-    plt.show()
     # Assemble right-hand side vector
     rhs                          = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d1])
     rhs1   = apply_dirichlet_setdiag(V, rhs, dirichlet_1)    
@@ -151,7 +159,7 @@ args = parser.parse_args()
 #------------------------------------------------------------------------------
 nbpts       = 100 # Number of points for plotting
 RefinNumber = 0   # Number of global mesh refinements
-nelements   = 16  # Initial mesh size
+nelements   = 1  # Initial mesh size
 table       = zeros((RefinNumber+1,5))
 i           = 1
 times       = []
