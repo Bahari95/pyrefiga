@@ -107,17 +107,15 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
 
     rhs = StencilVector(Vh.vector_space)  
     stiffness21   = assemble_stiffness2_nitsche(V, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[V.omega[0],V.omega[1], interface[0], Kappa, normS], out = rhs)
-    plt.spy(stiffness21.toarray().reshape((V.nbasis[0]*V.nbasis[1],V.nbasis[0]*V.nbasis[1])), markersize=2, color ='r')
-    plt.show()
     stiffness21   = apply_dirichlet_setdiag(V, stiffness21, dirichlet_1, dirichlet_2)
-    plt.spy(stiffness21, markersize=2, color ='r')
-    plt.show()
     # Assemble Nitsche's method matrices
     M[Ni._nbasis[0]:,:Ni._nbasis[0]]       = stiffness21[:,:]
     M[:Ni._nbasis[0],Ni._nbasis[0]:]       = stiffness21.T[:,:]
     
     Ni.addNitscheoffDiag( u11_mph, u12_mph, u21_mph, u22_mph)
-
+    plt.spy(M, markersize=4, color ='r')
+    plt.spy(Ni.tosparse(), markersize=3, color ='b')
+    plt.show()
     # Assemble right-hand side vector
     rhs                          = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d1])
     rhs1   = apply_dirichlet_setdiag(V, rhs, dirichlet_1)    
@@ -159,7 +157,7 @@ args = parser.parse_args()
 #------------------------------------------------------------------------------
 nbpts       = 100 # Number of points for plotting
 RefinNumber = 0   # Number of global mesh refinements
-nelements   = 1  # Initial mesh size
+nelements   = 16  # Initial mesh size
 table       = zeros((RefinNumber+1,5))
 i           = 1
 times       = []
@@ -179,14 +177,14 @@ g         = ['x**2+y**2']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-geometry = load_xml('unitSquare.xml')
-idmp = (0,1)
+# geometry = load_xml('unitSquare.xml')
+# idmp = (0,1)
 # geometry = load_xml('circle.xml')
 # idmp = (0,1)
-# geometry = load_xml('quart_annulus.xml')
-# idmp = (0,1)
+geometry = load_xml('quart_annulus.xml')
+idmp = (1,0)
 # geometry = load_xml('annulus.xml')
-# iidmp = (0,1)
+# idmp = (0,1)
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 

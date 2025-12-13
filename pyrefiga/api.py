@@ -202,46 +202,6 @@ def compile_kernel(core, arity, pyccel=True):
 from scipy.sparse import coo_matrix
 from .            import nitsche_core as  core
 
-
-def eliminated_rows_cols(n1, n2, 
-                         pd1, pd2, pd3, pd4,    # row slice: i1 in [pd1:pd2], i2 in [pd3:pd4]
-                         d1, d2, d3, d4):       # col slice: j1 in [d1:d2],  j2 in [d3:d4]
-    """
-    Given a 4D slice M[pd1:pd2, pd3:pd4, d1:d2, d3:d4], return the eliminated
-    global rows and columns relative to (n1*n2 × n1*n2) global matrix.
-    """
-
-    # --- all possible row indices (i1,i2) ---
-    all_i1 = np.arange(n1)
-    all_i2 = np.arange(n2)
-
-    # kept rows
-    keep_i1 = np.arange(pd1, pd2)
-    keep_i2 = np.arange(pd3, pd4)
-
-    # eliminated rows = complement
-    elim_rows = []
-    for i2 in all_i2:
-        for i1 in all_i1:
-            if not (pd1 <= i1 < pd2 and pd3 <= i2 < pd4):
-                elim_rows.append(i1 + n1 * i2)
-    elim_rows = np.array(elim_rows, dtype=int)
-
-    # --- all possible col indices (j1,j2) ---
-    all_j1 = np.arange(n1)
-    all_j2 = np.arange(n2)
-
-    # kept columns: j1 in [d1:d2], j2 in [d3:d4]
-    elim_cols = []
-    for j2 in all_j2:
-        for j1 in all_j1:
-            if not (d1 <= j1 < d2 and d3 <= j2 < d4):
-                elim_cols.append(j1 + n1 * j2)
-    elim_cols = np.array(elim_cols, dtype=int)
-
-    return elim_rows, elim_cols
-
-
 class StencilNitsche(object):
     """
     Nitsche's Stencil Matrices in n-dimensional stencil format for multipatch IGA.
@@ -315,79 +275,10 @@ class StencilNitsche(object):
     @property
     def codomain( self ):
         return self._codomain
-
     #...
-    def apply_NitscheDirichlet(self, x, nb_r, nb_c):
-        #----------------------------------------------------------------------------------
-        # .. apply dirichlet with respect to v2(id_r)*u1(id_c)
-        #----------------------------------------------------------------------------------
-        n1,n2  = self._domain.nbasis
-        id_r   = nb_r-1
-        id_c   = nb_c-1
-        vecx   = np.arange(n1)
-        vecy   = np.arange(n2)
-        rows_D = [] 
-        # boundary x = 0
-        if self.dirichlet[id_r][0][0]:
-            rows_D +=  list(0+n1*vecy)
-            print(".x0")
-        # boundary x = 1
-        if self.dirichlet[id_r][0][1]:
-            rows_D +=  list(n1-1+n1*vecy)
-            print(".x1")
-        # boundary y = 0
-        if self.dirichlet[id_r][1][0]:
-            rows_D +=  list(vecx)
-            print(".y0")
-        # boundary y = 1
-        if self.dirichlet[id_r][1][1]:
-            rows_D +=  list(vecx+n1*(n2-1))
-            print(".y1")
-        cols_D = [] 
-        # boundary x = 0
-        if self.dirichlet[id_c][0][0]:
-            cols_D +=  list(0+n1*vecy)
-            print("..x0")
-        # boundary x = 1
-        if self.dirichlet[id_c][0][1]:
-            cols_D +=  list(n1-1+n1*vecy)
-            print("..x1")
-        # boundary y = 0
-        if self.dirichlet[id_c][1][0]:
-            cols_D +=  list(vecx)
-            print("..y0")
-        # boundary y = 1
-        if self.dirichlet[id_c][1][1]:
-            cols_D +=  list(vecx+n1*(n2-1))
-            print("..y1")
-
-        #indeces for elimination
-        d1 = 1    if self.dirichlet[id_c][0][0] else 0 
-        d2 = n1-1 if self.dirichlet[id_c][0][1] else n1
-        d3 = 1    if self.dirichlet[id_c][1][0] else 0 
-        d4 = n2-1 if self.dirichlet[id_c][1][1] else n2
-        #indeces for elimination
-        elim_index = 1    if self.dirichlet[id_r][0][0] else 0 
-        pd2 = n1-1 if self.dirichlet[id_r][0][1] else n1
-        pd3 = 1    if self.dirichlet[id_r][1][0] else 0 
-        pd4 = n2-1 if self.dirichlet[id_r][1][1] else n2
-        print("before doing anything---",x.toarray().reshape((n1*n2,n1*n2)) )
-        M   = x.toarray().reshape((n1,n2,n1,n2))[elim_index:pd2,pd3:pd4,d1:d2,d3:d4].reshape(((pd2-elim_index)*(pd4-pd3), (d2-d1)*(d4-d3)))
-        print("----before doing anything: matrix shape ",x.shape, "rows to eliminate", rows_D,"cols to eliminate", cols_D)
-        Mr = eliminate_rows_cols(x, rows_D, cols_D)
-        print("exact",M)
-        print("shape after appling rows cols elimination",Mr.shape)
-        print("after appling rows cols elimination",Mr)
-
-        import matplotlib.pyplot as plt
-        import scipy.sparse as sp
-        plt.spy(M, markersize=2, color= 'g')
-        plt.show()
-        return eliminate_rows_cols(x, rows_D, cols_D)
-    #...
-    def correct_indexation(self, stiffnessoffdiag, nb_patch):
+    def collect_offdiagStencilMatrix(self, stiffnessoffdiag, nb_patch, nb_patch_n):
         '''
-        Docstring pour correct_indexation 
+        Docstring pour collect_offdiagStencilMatrix 
         [i,j, i-p:i+p, j-p,j+p] to [i,j, n-i-p:n-i+p, j-p,j+p]
         
         :param stiffnessoffdiag: matrix off diagonal
@@ -406,7 +297,16 @@ class StencilNitsche(object):
         rows = []
         cols = []
         data = []
-
+        #...rows
+        pd1 = self.elim_index[nb_patch_n-1,0,0]#for x
+        pd2 = self.elim_index[nb_patch_n-1,0,1]
+        pd3 = self.elim_index[nb_patch_n-1,1,0]# for y
+        pd4 = self.elim_index[nb_patch_n-1,1,1]
+        #... cols
+        d1 = self.elim_index[nb_patch-1,0,0]
+        d2 = self.elim_index[nb_patch-1,0,1]
+        d3 = self.elim_index[nb_patch-1,1,0]
+        d4 = self.elim_index[nb_patch-1,1,1]
         # Range of data owned by local process (no ghost regions)
         local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
         if self.interfaces[nb_patch] == 1 or self.interfaces[nb_patch] == 2:
@@ -421,13 +321,19 @@ class StencilNitsche(object):
                 jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,self._pads)]
                 #...correct index ix -> nx-1-ix
                 jj[0] = nc[0]-1-jj[0]
+                if ( pd1 <= ii[0] < pd2) and (pd3 <= ii[1] < pd4) and ( d1 <= jj[0] < d2) and (d3 <= jj[1] < d4):
+                    # correct index
+                    ii[0] = ii[0]-pd1
+                    ii[1] = ii[1]-pd3
+                    jj[0] = jj[0]-d1
+                    jj[1] = jj[1]-d3
+                    #...
+                    I = ravel_multi_index( ii, dims=(pd2-pd1, pd4-pd3), order='C' )
+                    J = ravel_multi_index( jj, dims=(d2-d1, d4-d3), order='C' )
 
-                I = ravel_multi_index( ii, dims=nr, order='C' )
-                J = ravel_multi_index( jj, dims=nc, order='C' )
-
-                rows.append( I )
-                cols.append( J )
-                data.append( value )
+                    rows.append( I )
+                    cols.append( J )
+                    data.append( value )
         else:
             for (index,value) in np.ndenumerate( stiffnessoffdiag._data[local] ):
 
@@ -440,17 +346,23 @@ class StencilNitsche(object):
                 jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,self._pads)]
                 #...correct index iy -> ny-1-iy
                 jj[-1] = nc[-1]-1-jj[-1]
+                if ( pd1 <= ii[0] < pd2) and (pd3 <= ii[1] < pd4) and ( d1 <= jj[0] < d2) and (d3 <= jj[1] < d4):
+                    # correct index
+                    ii[0] = ii[0]-pd1
+                    ii[1] = ii[1]-pd3
+                    jj[0] = jj[0]-d1
+                    jj[1] = jj[1]-d3
+                    #...
+                    I = ravel_multi_index( ii, dims=(pd2-pd1, pd4-pd3), order='C' )
+                    J = ravel_multi_index( jj, dims=(d2-d1, d4-d3), order='C' )
 
-                I = ravel_multi_index( ii, dims=nr, order='C' )
-                J = ravel_multi_index( jj, dims=nc, order='C' )
-
-                rows.append( I )
-                cols.append( J )
-                data.append( value )
+                    rows.append( I )
+                    cols.append( J )
+                    data.append( value )
 
         M = coo_matrix(
                 (data,(rows,cols)),
-                shape = [np.prod(nr),np.prod(nc)],
+                shape = [self._nbasis[nb_patch_n-1],self._nbasis[nb_patch-1]],
                 dtype = self._type
         )
         M.eliminate_zeros()
@@ -471,21 +383,9 @@ class StencilNitsche(object):
         stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
         self.assemble_nitsche2doffDiag(self._domain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], self.interfaces[nb_patch-1], self.Kappa, self.normS], out = stiffnessoffdiag)
         #... correct coo matrix        
-        stiffnessoffdiag = self.correct_indexation(stiffnessoffdiag, nb_patch)
-
-        import matplotlib.pyplot as plt
-        import scipy.sparse as sp
-        plt.spy(stiffnessoffdiag, markersize=2)
-        plt.show()
-
-        #... apply dirichlet
-        stiffnessoffdiag = self.apply_NitscheDirichlet(stiffnessoffdiag, nb_patch_n, nb_patch) # v2*u1
-        import matplotlib.pyplot as plt
-        import scipy.sparse as sp
-        plt.spy(stiffnessoffdiag, markersize=2)
-        plt.show()
-        return stiffnessoffdiag
-        # self.appendBlock(stiffnessoffdiag, nb_patch_n, nb_patch)
+        stiffnessoffdiag = self.collect_offdiagStencilMatrix(stiffnessoffdiag, nb_patch, nb_patch_n)
+        self.appendBlock(stiffnessoffdiag, nb_patch_n, nb_patch)
+        self.appendBlock(stiffnessoffdiag.T, nb_patch, nb_patch_n)
         #..
     # ...
     def tosparse( self ):
@@ -732,67 +632,6 @@ def apply_dirichlet_setdiag(V, x, dirichlet = True, dirichlet_patch2 = None, upd
         else:
             raise NotImplementedError('Only 1d, 2d and 3d are available')
 #==============================================================================
-from scipy.sparse import coo_matrix
-import numpy as np
-import numpy as np
-from scipy.sparse import coo_matrix
-
-def eliminate_rows_cols(A: coo_matrix, rows_D, cols_D):
-    """
-    Remove specified rows and columns from a COO matrix
-    and shift indices accordingly.
-
-    Parameters
-    ----------
-    A : coo_matrix
-        Input sparse matrix.
-    rows_D : list[int]
-        List of row indices to eliminate.
-    cols_D : list[int]
-        List of column indices to eliminate.
-
-    Returns
-    -------
-    A_new : coo_matrix
-        New compacted COO matrix with eliminated rows/cols removed
-        and indices shifted.
-    """
-
-    A = A.tocoo()
-
-    # Convert to numpy arrays
-    rows_D = np.array(rows_D, dtype=int)
-    cols_D = np.array(cols_D, dtype=int)
-
-    # --- Build KEEP sets ---
-    all_rows = np.arange(A.shape[0])
-    all_cols = np.arange(A.shape[1])
-
-    keep_rows = np.setdiff1d(all_rows, rows_D)
-    keep_cols = np.setdiff1d(all_cols, cols_D)
-
-    # --- Build mapping from old → new ---
-    row_map = -np.ones(A.shape[0], dtype=int)
-    col_map = -np.ones(A.shape[1], dtype=int)
-
-    row_map[keep_rows] = np.arange(len(keep_rows))
-    col_map[keep_cols] = np.arange(len(keep_cols))
-
-    # --- Filter out eliminated rows/cols ---
-    mask = (row_map[A.row] != -1) & (col_map[A.col] != -1)
-
-    new_rows = row_map[A.row[mask]]
-    new_cols = col_map[A.col[mask]]
-    new_data = A.data[mask]
-
-    # --- Build new matrix ---
-    A_new = coo_matrix(
-        (new_data, (new_rows, new_cols)),
-        shape=(len(keep_rows), len(keep_cols))
-    )
-
-    return A_new
-
 def apply_dirichlet(V, x, dirichlet = True, update = None):
     """
     Applies dirichlet boundary conditions to a matrix or vector by elimination.
@@ -839,54 +678,162 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
         if isinstance(x, StencilMatrix):
             if V.dim == 1:
                 n1 = V.nbasis
-                rows_D = [0, n1-1] 
+                #indeces for elimination
+                d1 = 1    if dirichlet[0] else 0 
+                d2 = n1-1 if dirichlet[1] else n1
+                # Shortcuts
+                nd = x._ndim
+                nc = x._domain.npts
+                ss = x._codomain.starts
+                pp = x._codomain.pads
 
-                return eliminate_rows_cols(x.tosparse(), rows_D, rows_D)
+                ravel_multi_index = np.ravel_multi_index
+
+                # COO storage
+                rows = []
+                cols = []
+                data = []
+                # Range of data owned by local process (no ghost regions)
+                local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
+                for (index,value) in np.ndenumerate( x._data[local] ):
+
+                    # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
+
+                    xx = index[:nd]  # x=i-s
+                    ll = index[nd:]  # l=p+k
+
+                    ii = [s+x for s,x in zip(ss,xx)]
+                    jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,pp)]
+
+                    if ( d1 <= ii[0] < d2) and ( d1 <= jj[0] < d2):
+                        # correct index
+                        ii[0] = ii[0]-d1
+                        jj[0] = jj[0]-d1
+                        #...
+                        I = ravel_multi_index( ii, dims=(d2-d1), order='C' )
+                        J = ravel_multi_index( jj, dims=(d2-d1), order='C' )
+
+                        rows.append( I )
+                        cols.append( J )
+                        data.append( value )
+
+                x = coo_matrix(
+                        (data,(rows,cols)),
+                        shape = [(d2-d1),(d2-d1)],
+                        dtype = x._domain.dtype
+                )
+                x.eliminate_zeros()
+                return x
 
             elif V.dim == 2:
                 n1,n2  = V.nbasis
-                vecx   = np.arange(n1)
-                vecy   = np.arange(n2)
-                rows_D = [] 
-                # boundary x = 0
-                if dirichlet[0][0]:
-                    rows_D +=  list(0+n1*vecy)
-                # boundary x = 1
-                if dirichlet[0][1]:
-                    rows_D +=  list(n1-1+n1*vecy)
-                # boundary y = 0
-                if dirichlet[1][0]:
-                    rows_D +=  list(vecx)
-                # boundary y = 1
-                if dirichlet[1][1]:
-                    rows_D +=  list(vecx+n1*(n2-1))
-                return eliminate_rows_cols(x.tosparse(), rows_D, rows_D)
+                #indeces for elimination
+                d1 = 1    if dirichlet[0][0] else 0 
+                d2 = n1-1 if dirichlet[0][1] else n1
+                d3 = 1    if dirichlet[1][0] else 0 
+                d4 = n2-1 if dirichlet[1][1] else n2
+                # Shortcuts
+                nd = x._ndim
+                nc = x._domain.npts
+                ss = x._codomain.starts
+                pp = x._codomain.pads
+
+                ravel_multi_index = np.ravel_multi_index
+
+                # COO storage
+                rows = []
+                cols = []
+                data = []
+                # Range of data owned by local process (no ghost regions)
+                local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
+                for (index,value) in np.ndenumerate( x._data[local] ):
+
+                    # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
+
+                    xx = index[:nd]  # x=i-s
+                    ll = index[nd:]  # l=p+k
+
+                    ii = [s+x for s,x in zip(ss,xx)]
+                    jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,pp)]
+
+                    if ( d1 <= ii[0] < d2) and (d3 <= ii[1] < d4) and ( d1 <= jj[0] < d2) and (d3 <= jj[1] < d4):
+                        # correct index
+                        ii[0] = ii[0]-d1
+                        ii[1] = ii[1]-d3
+                        jj[0] = jj[0]-d1
+                        jj[1] = jj[1]-d3
+                        #...
+                        I = ravel_multi_index( ii, dims=(d2-d1, d4-d3), order='C' )
+                        J = ravel_multi_index( jj, dims=(d2-d1, d4-d3), order='C' )
+
+                        rows.append( I )
+                        cols.append( J )
+                        data.append( value )
+
+                x = coo_matrix(
+                        (data,(rows,cols)),
+                        shape = [(d2-d1)*(d4-d3),(d2-d1)*(d4-d3)],
+                        dtype = x._domain.dtype
+                )
+                x.eliminate_zeros()
+                return x
 
             elif V.dim == 3:
                 n1,n2,n3 = V.nbasis
-                vecx = np.arange(n1)
-                vecy = np.arange(n2)
-                vecz = np.arange(n3)
-                rows_D = [] 
-                # ... resetting bnd dof to 0, x = 0
-                if dirichlet[0][0]:
-                    rows_D +=  list(n1*vecy+n1*n2*vecz)
-                # ... resetting bnd dof to 0, x = 1
-                if dirichlet[0][1]:
-                    rows_D +=  list(n1-1+n1*vecy+n1*n2*vecz)
-                # ... resetting bnd dof to 0, y = 0
-                if dirichlet[1][0]:
-                    rows_D +=  list(vecx+n1*n2*vecz)
-                # ... resetting bnd dof to 0, y = 1
-                if dirichlet[1][1]:
-                    rows_D +=  list(vecx+n1*(n2-1)+n1*n2*vecz)
-                # ... resetting bnd dof to 0, z = 0
-                if dirichlet[2][0]:
-                    rows_D +=  list(vecx+n1*vecy)
-                # ... resetting bnd dof to 0, z = 1
-                if dirichlet[2][1]:
-                    rows_D +=  list(vecx+n1*vecy+n1*n2*(n3-1))
-                return eliminate_rows_cols(x.tosparse(), rows_D, rows_D)
+                #indeces for elimination
+                d1 = 1    if dirichlet[0][0] else 0 
+                d2 = n1-1 if dirichlet[0][1] else n1
+                d3 = 1    if dirichlet[1][0] else 0 
+                d4 = n2-1 if dirichlet[1][1] else n2
+                d5 = 1    if dirichlet[2][0] else 0 
+                d6 = n3-1 if dirichlet[2][1] else n3
+                # Shortcuts
+                nd = x._ndim
+                nc = x._domain.npts
+                ss = x._codomain.starts
+                pp = x._codomain.pads
+
+                ravel_multi_index = np.ravel_multi_index
+
+                # COO storage
+                rows = []
+                cols = []
+                data = []
+                # Range of data owned by local process (no ghost regions)
+                local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
+                for (index,value) in np.ndenumerate( x._data[local] ):
+
+                    # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
+
+                    xx = index[:nd]  # x=i-s
+                    ll = index[nd:]  # l=p+k
+
+                    ii = [s+x for s,x in zip(ss,xx)]
+                    jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,pp)]
+
+                    if ( d1 <= ii[0] < d2) and (d3 <= ii[1] < d4) and (d5 <= ii[2] < d6) and ( d1 <= jj[0] < d2) and (d3 <= jj[1] < d4) and (d5 <= jj[2] < d6):
+                        # correct index
+                        ii[0] = ii[0]-d1
+                        ii[1] = ii[1]-d3
+                        ii[2] = ii[2]-d5
+                        jj[0] = jj[0]-d1
+                        jj[1] = jj[1]-d3
+                        jj[2] = jj[2]-d5
+                        #...
+                        I = ravel_multi_index( ii, dims=(d2-d1, d4-d3, d6-d5), order='C' )
+                        J = ravel_multi_index( jj, dims=(d2-d1, d4-d3, d6-d5), order='C' )
+
+                        rows.append( I )
+                        cols.append( J )
+                        data.append( value )
+
+                x = coo_matrix(
+                        (data,(rows,cols)),
+                        shape = [(d2-d1)*(d4-d3)*(d6-d5),(d2-d1)*(d4-d3)*(d6-d5)],
+                        dtype = x._domain.dtype
+                )
+                x.eliminate_zeros()
+                return x
             else :
                 raise NotImplementedError('Only 1d, 2d and 3d are available')
 
