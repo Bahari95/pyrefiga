@@ -262,8 +262,8 @@ class StencilNitsche(object):
         #-------------------------------
         # .. assemble Nitsche's matrices
         #-------------------------------
-        self.assemble_nitsche2dDiag    = partial(assemble_matrix, core.assemble_matrix_diagnitsche)
-        self.assemble_nitsche2doffDiag = partial(assemble_matrix, core.assemble_matrix_offdiagnitsche)        
+        self.assemble_nitsche2dDiag      = partial(assemble_matrix, core.assemble_matrix_diagnitsche)
+        self.assemble_nitsche2dUnderDiag = partial(assemble_matrix, core.assemble_matrix_offdiagnitsche)        
     #--------------------------------------
     # Abstract interface
     #--------------------------------------
@@ -298,7 +298,7 @@ class StencilNitsche(object):
         cols = []
         data = []
         #...rows
-        pd1 = self.elim_index[nb_patch_n-1,0,0]#for x
+        pd1 = self.elim_index[nb_patch_n-1,0,0]# for x
         pd2 = self.elim_index[nb_patch_n-1,0,1]
         pd3 = self.elim_index[nb_patch_n-1,1,0]# for y
         pd4 = self.elim_index[nb_patch_n-1,1,1]
@@ -381,7 +381,7 @@ class StencilNitsche(object):
         nb_patch_n = 2
 
         stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
-        self.assemble_nitsche2doffDiag(self._domain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], self.interfaces[nb_patch-1], self.Kappa, self.normS], out = stiffnessoffdiag)
+        self.assemble_nitsche2dUnderDiag(self._domain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], self.interfaces[nb_patch-1], self.Kappa, self.normS], out = stiffnessoffdiag)
         #... correct coo matrix        
         stiffnessoffdiag = self.collect_offdiagStencilMatrix(stiffnessoffdiag, nb_patch, nb_patch_n)
         self.appendBlock(stiffnessoffdiag, nb_patch_n, nb_patch)

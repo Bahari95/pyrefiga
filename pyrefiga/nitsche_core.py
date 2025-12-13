@@ -3,8 +3,9 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #------------------------------------------------------------------------------
-# ... Nitsche's method for assembling the diagonal matrices : from paper https://hal.science/hal-01338133/document
+# ... Nitsche's method for assembling the matrices : from paper https://hal.science/hal-01338133/document
 # ... case where mapping is in the same spline space as for FE
+# diidonal matrix
 #------------------------------------------------------------------------------
 def assemble_matrix_diagnitsche(
     ne1: 'int', ne2: 'int',
@@ -351,7 +352,7 @@ def assemble_matrix_diagnitsche(
                     matrix[p1+i1, i_span_2+p2, p1+j1-i1, p2-1]   += vjp
     # ...
 #------------------------------------------------------------------------------
-#... Nitsche's method for assembling the matrix : normal derivative
+#... Nitsche's method for assembling the under diagoanl matrix
 #------------------------------------------------------------------------------
 def assemble_matrix_offdiagnitsche(
     ne1: 'int', ne2: 'int',
@@ -397,8 +398,8 @@ def assemble_matrix_offdiagnitsche(
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
-            lcoeffs_m1[ : , : ] = vector_m3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_m2[ : , : ] = vector_m4[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m1[ : , : ] = vector_m1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m2[ : , : ] = vector_m2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
             for g2 in range(0, k2):
 
                 F1x = 0.0
@@ -460,8 +461,8 @@ def assemble_matrix_offdiagnitsche(
         for ie2 in range(0, ne2):         
             i_span_2 = spans_2[ie2]
             
-            lcoeffs_m1[ : , : ] = vector_m1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_m2[ : , : ] = vector_m2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m1[ : , : ] = vector_m3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m2[ : , : ] = vector_m4[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
             for g2 in range(0, k2):
                 F1x = 0.0
                 F2x = 0.0
@@ -657,8 +658,8 @@ def assemble_matrix_offdiagnitsche(
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
-            lcoeffs_m1[ : , : ] = vector_m3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_m2[ : , : ] = vector_m4[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m1[ : , : ] = vector_m1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m2[ : , : ] = vector_m2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
             for g1 in range(0, k1):
 
                 F1x = 0.0
@@ -720,8 +721,8 @@ def assemble_matrix_offdiagnitsche(
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
-            lcoeffs_m1[ : , : ] = vector_m1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_m2[ : , : ] = vector_m2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m1[ : , : ] = vector_m3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m2[ : , : ] = vector_m4[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
             for g1 in range(0, k1):
 
                 F1x = 0.0
