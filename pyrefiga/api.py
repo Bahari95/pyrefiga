@@ -368,7 +368,7 @@ class StencilNitsche(object):
         M.eliminate_zeros()
         return M
     #...
-    def addNitscheoffDiag(self, u11_mph, u12_mph, u21_mph, u22_mph):
+    def addNitscheoffDiag(self, u11_mph, u12_mph, u21_mph, u22_mph, nb_patch = 1, nb_patch_n = 2):
         '''
         Docstring pour addNitscheoffDiag
         
@@ -377,8 +377,6 @@ class StencilNitsche(object):
         :param u21_mph: Description
         :param u22_mph: Description
         '''
-        nb_patch   = 1
-        nb_patch_n = 2
 
         stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
         self.assemble_nitsche2dUnderDiag(self._domain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], self.interfaces[nb_patch-1], self.Kappa, self.normS], out = stiffnessoffdiag)
@@ -392,20 +390,20 @@ class StencilNitsche(object):
         return self.stencilNitsche
 
     # #...
-    def applyNitsche(self, stiffness, u11_mph, u12_mph, id_patch):
+    def applyNitsche(self, stiffness, u11_mph, u12_mph, nb_patch):
         '''
         Docstring pour applyNitsche for diagonal matrices
         
         :param self: Description
         :param stiffness: stifness matrix 
-        :param u11_mph: mapping correspond to id_patch comp 1
-        :param u12_mph: mapping correspond to id_patch comp 2
-        :param id_patch: patch number start from 1
+        :param u11_mph: mapping correspond to nb_patch comp 1
+        :param u12_mph: mapping correspond to nb_patch comp 2
+        :param nb_patch: patch number start from 1
         '''
-        if not (1 <= id_patch <= self._nmp):
-            raise ValueError(f"id_patch={id_patch} out of range 1..{self._nmp}")
+        if not (1 <= nb_patch <= self._nmp):
+            raise ValueError(f"nb_patch={nb_patch} out of range 1..{self._nmp}")
 
-        self.assemble_nitsche2dDiag(self._domain, fields=[u11_mph, u12_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], self.interfaces[id_patch-1], self.Kappa, self.normS], out = stiffness)
+        self.assemble_nitsche2dDiag(self._domain, fields=[u11_mph, u12_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], self.interfaces[nb_patch-1], self.Kappa, self.normS], out = stiffness)
         #..
 
     #--------------------------------------
@@ -420,7 +418,7 @@ class StencilNitsche(object):
         :param nb_patch_n: patch number of neighbor patch
         '''
         if not (1 <= nb_patch <= self._nmp):
-            raise ValueError(f"id_patch={nb_patch} out of range 1..{self._nmp}")
+            raise ValueError(f"nb_patch={nb_patch} out of range 1..{self._nmp}")
 
         if isinstance(B, StencilMatrix):
             B = B.tosparse()

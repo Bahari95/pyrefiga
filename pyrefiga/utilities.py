@@ -576,7 +576,7 @@ class pyrefInterface(object):
         return self.dirichlet_2
     
     def printInterface(self):
-        print(f"Interface between patches ({self.interface[0]}, {self.interface[1]})")
+        print(f"Interfaces ({self.interface[0]}, {self.interface[1]})")
         print(f"Dirichlet BCs for patch {1} : {self.dirichlet_1}")
         print(f"Dirichlet BCs for patch {2} : {self.dirichlet_2}")
 
