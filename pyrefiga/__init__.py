@@ -103,8 +103,7 @@ from pyrefiga.api import (assemble_matrix,
                           compile_kernel,
                           StencilNitsche, 
                           apply_dirichlet, 
-                          apply_periodic, 
-                          apply_dirichlet_setdiag)
+                          apply_periodic)
 
 from pyrefiga.nurbs_utilities import(sol_field_NURBS_2d, sol_field_NURBS_3d, 
                                       prolongate_NURBS_mapping, least_square_NURBspline,
