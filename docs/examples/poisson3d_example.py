@@ -47,8 +47,8 @@ parser = argparse.ArgumentParser(description="Control plot behavior and save con
 parser.add_argument("--plot", action="store_true", help="Enable plotting and saving control points")
 parser.add_argument("--nbpts", type=int, default=100, help="Number of elements used for plot(default: 50)")
 parser.add_argument("--last", action="store_true", help="Enable iterations")
-parser.add_argument("--h", type=int, default=2, help="Number of elements to elevalte the grid (default: 2)")
-parser.add_argument("--i", type=int, default=1, help="Number of elements to elevalte the grid befor resolution (default: 1)")
+parser.add_argument("--h", type=int, default=1, help="Number of elements to elevalte the grid (default: 1)")
+parser.add_argument("--i", type=int, default=0, help="Number of elements to elevalte the grid befor resolution (default: 0)")
 parser.add_argument("--e", type=int, default=0, help="Number of elements to elevalte the degree (default: 0)")
 args = parser.parse_args()
 
@@ -133,7 +133,7 @@ mp               = getGeometryMap(geometry,id_mp)
 degree[0]        += mp.degree[0]
 degree[1]        += mp.degree[1]
 mp.nurbs_check   = True # Activate NURBS if geometry uses NURBS
-nb_ne            = mp.nelements[0]*2**refGrid #16  # number of elements after refinement
+nb_ne            = 2**refGrid #16  # number of elements after refinement
 quad_degree      = max(degree[0],degree[1]) # Quadrature degree
 # ... Assembling mapping
 xmp, ymp         = mp.coefs()

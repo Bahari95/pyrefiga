@@ -165,7 +165,7 @@ degree[0]        += mp.degree[0] # we suppose that we have same degree
 degree[1]        += mp.degree[1]
 mp.nurbs_check    = True # Activate NURBS if geometry uses NURBS
 mp1.nurbs_check   = True # Activate NURBS if geometry uses NURBS
-nb_ne             = mp.nelements[0]*2**refGrid #16  # number of elements after refinement
+nb_ne             = 2**refGrid #16  # number of elements after refinement
 quad_degree       = max(degree[0],degree[1]) # Quadrature degree
 
 #------------------------------------------------------------------------------

@@ -5,7 +5,7 @@ Example: Solving Poisson's Equation on a 2D complex geometry using B-spline or N
 
 Author: M. Bahari
 """
-from   pyrefiga                    import compile_kernel, apply_dirichlet_setdiag
+from   pyrefiga                    import compile_kernel
 from   pyrefiga                    import apply_dirichlet
 
 from   pyrefiga                    import SplineSpace
@@ -61,7 +61,7 @@ def poisson_solve(V, VT, u11_mph, u12_mph, u_d):
     # Assemble stiffness matrix
     stiffness  = StencilMatrix(V.vector_space, V.vector_space)
     stiffness  = assemble_matrix_un(VT, fields=[u11_mph, u12_mph], out=stiffness)
-    stiffness1 = apply_dirichlet_setdiag(V, stiffness)
+    stiffness1 = apply_dirichlet(V, stiffness)
 
     # Assemble right-hand side vector
     rhs        = StencilVector(V.vector_space)
@@ -106,8 +106,9 @@ print("(#=spaces, #=assembled Dirichlet, #=solve poisson)\n")
 # Load CAD geometry
 #------------------------------------------------------------------
 #geometry = load_xml('unitSquare.xml')
-# geometry = load_xml('circle.xml')
-geometry = load_xml('quart_annulus.xml')
+# geometry = load_xml('rotor_2d.xml')
+geometry = load_xml('circle.xml')
+# geometry = load_xml('quart_annulus.xml')
 # geometry = load_xml('annulus.xml')
 id_mp    = 0
 print('#---Poisson equation', geometry)
@@ -130,7 +131,7 @@ mp               = getGeometryMap(geometry,id_mp)
 degree[0]        += mp.degree[0]
 degree[1]        += mp.degree[1]
 mp.nurbs_check   = True # Activate NURBS if geometry uses NURBS
-nb_ne            = mp.nelements[0]*2**refGrid #16  # number of elements after refinement
+nb_ne            = 2**refGrid # number of elements after refinement
 quad_degree      = max(degree[0],degree[1]) # Quadrature degree
 # ... Assembling mapping
 xmp, ymp         = mp.coefs()
@@ -157,8 +158,8 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     #-----------------------------------------------------------
     # Create spline spaces for refined mesh
     #-----------------------------------------------------------
-    V1              = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,None, numElevate=nb_ne), quad_degree = quad_degree)
-    V2              = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,None, numElevate=nb_ne), quad_degree = quad_degree)
+    V1              = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
+    V2              = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
     Vh              = TensorSpace(V1, V2)
 
     #-----------------------------------------------------------
@@ -167,7 +168,7 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     V1mp            = SplineSpace(degree=mp.degree[0], grid = mp.grids[0], omega = wm1, mesh =  V1.mesh, quad_degree = quad_degree)
     V2mp            = SplineSpace(degree=mp.degree[1], grid = mp.grids[1], omega = wm2, mesh =  V2.mesh, quad_degree = quad_degree)
     VT              = TensorSpace(V1, V2, V1mp, V2mp)
-    print('#spces')
+    print('#spces; VT.nelements:',VT.nelements)
     #-----------------------------------------------------------
     # Assemble Dirichlet boundary conditions
     #-----------------------------------------------------------
