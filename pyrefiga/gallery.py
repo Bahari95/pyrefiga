@@ -214,6 +214,86 @@ def assemble_matrix_nitsche_ex00(
     # ...
     lcoeffs_m1 = zeros((p1+1,p2+1))
     lcoeffs_m2 = zeros((p1+1,p2+1))
+
+    # ...
+    arr_J_mat11 = zeros((k1,k2))
+    arr_J_mat22 = zeros((k1,k2))
+    arr_J_mat12 = zeros((k1,k2))
+    arr_J_mat21 = zeros((k1,k2))
+    Jac_mat     = zeros((k1,k2))
+
+    # ... build matrices
+    for ie1 in range(0, ne1):
+        i_span_1 = spans_1[ie1]
+        for ie2 in range(0, ne2):
+            i_span_2 = spans_2[ie2]
+            
+            lcoeffs_m1[ : , : ] = vector_m1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m2[ : , : ] = vector_m2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            for g1 in range(0, k1):
+                for g2 in range(0, k2):
+
+                    F1x = 0.0
+                    F1y = 0.0
+                    F2x = 0.0
+                    F2y = 0.0
+                    for il_1 in range(0, p1+1):
+                          for il_2 in range(0, p2+1):
+
+                              bj_x     = basis_1[ie1,il_1,1,g1]*basis_2[ie2,il_2,0,g2]
+                              bj_y     = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,1,g2]
+
+                              coeff_m1 = lcoeffs_m1[il_1,il_2]
+                              F1x     +=  coeff_m1 * bj_x
+                              F1y     +=  coeff_m1 * bj_y
+
+                              coeff_m2 = lcoeffs_m2[il_1,il_2]
+                              F2x     +=  coeff_m2 * bj_x
+                              F2y     +=  coeff_m2 * bj_y
+
+                    # ...
+                    arr_J_mat11[g1,g2] = F2y
+                    arr_J_mat22[g1,g2] = F1x
+                    arr_J_mat12[g1,g2] = F1y
+                    arr_J_mat21[g1,g2] = F2x
+
+                    Jac_mat[g1,g2] = abs(F1x*F2y-F1y*F2x)
+
+            for il_1 in range(0, p1+1):
+                for il_2 in range(0, p2+1):
+                    for jl_1 in range(0, p1+1):
+                        for jl_2 in range(0, p2+1):
+
+                            i1 = i_span_1 - p1 + il_1
+                            j1 = i_span_1 - p1 + jl_1
+
+                            i2 = i_span_2 - p2 + il_2
+                            j2 = i_span_2 - p2 + jl_2
+
+                            v = 0.0
+                            for g1 in range(0, k1):
+                                for g2 in range(0, k2):
+                                    bi_0  = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 0, g2]
+                                    bj_0  = basis_1[ie1, jl_1, 0, g1] * basis_2[ie2, jl_2, 0, g2]
+
+                                    bi_x1 = basis_1[ie1, il_1, 1, g1] * basis_2[ie2, il_2, 0, g2]
+                                    bi_x2 = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 1, g2]
+
+                                    bj_x1 = basis_1[ie1, jl_1, 1, g1] * basis_2[ie2, jl_2, 0, g2]
+                                    bj_x2 = basis_1[ie1, jl_1, 0, g1] * basis_2[ie2, jl_2, 1, g2]
+
+                                    bi_x  = arr_J_mat11[g1,g2] * bi_x1 - arr_J_mat21[g1,g2] * bi_x2
+                                    bi_y  = arr_J_mat22[g1,g2] * bi_x2 - arr_J_mat12[g1,g2] * bi_x1
+
+                                    bj_x  = arr_J_mat11[g1,g2] * bj_x1 - arr_J_mat21[g1,g2] * bj_x2 
+                                    bj_y  = arr_J_mat22[g1,g2] * bj_x2 - arr_J_mat12[g1,g2] * bj_x1 
+
+
+                                    wvol  = weights_1[ie1, g1] * weights_2[ie2, g2]
+
+                                    v    += (bi_x * bj_x + bi_y * bj_y ) * wvol / Jac_mat[g1,g2]
+
+                            matrix[p1+i1, p2+i2, p1+j1-i1, p2+j2-i2]  += v
     #......................................
     # .. Nitsches method
     #......................................
@@ -582,8 +662,8 @@ def assemble_matrix_nitsche_ex02(
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
-            lcoeffs_m1[ : , : ] = vector_m3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_m2[ : , : ] = vector_m4[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m1[ : , : ] = vector_m1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m2[ : , : ] = vector_m2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
             for g2 in range(0, k2):
 
                 F1x = 0.0
@@ -644,8 +724,8 @@ def assemble_matrix_nitsche_ex02(
         for ie2 in range(0, ne2):         
             i_span_2 = spans_2[ie2]
             
-            lcoeffs_m1[ : , : ] = vector_m1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
-            lcoeffs_m2[ : , : ] = vector_m2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m1[ : , : ] = vector_m3[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+            lcoeffs_m2[ : , : ] = vector_m4[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
             for g2 in range(0, k2):
                 F1x = 0.0
                 F2x = 0.0
