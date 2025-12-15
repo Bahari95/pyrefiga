@@ -106,8 +106,8 @@ print("(#=spaces, #=assembled Dirichlet, #=solve poisson)\n")
 # Load CAD geometry
 #------------------------------------------------------------------
 #geometry = load_xml('unitSquare.xml')
-# geometry = load_xml('rotor_2d.xml')
-geometry = load_xml('circle.xml')
+geometry = load_xml('rotor_2d.xml')
+# geometry = load_xml('circle.xml')
 # geometry = load_xml('quart_annulus.xml')
 # geometry = load_xml('annulus.xml')
 id_mp    = 0

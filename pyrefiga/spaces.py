@@ -77,7 +77,7 @@ from .quadratures import gauss_legendre
 from .linalg      import StencilVectorSpace
 from .            import nurbs_core as  core
 
-from numpy import linspace, zeros, ones
+from numpy import linspace, zeros, unique
 
 __all__ = ['SplineSpace', 'TensorSpace']
 
@@ -130,34 +130,35 @@ class SplineSpace(object):
 
         if omega is None:
             if mesh is None :
-                spans        = elements_spans(knots, degree)
-                nelements    = len(grid)-1
 
+                mesh            = unique(grid)
+                nelements       = len(mesh)-1
                 # for each element on the grid, we create a local quadrature grid
-                points, weights = quadrature_grid( grid, u, w )
+                points, weights = quadrature_grid( mesh, u, w )
 
                 # for each element and a quadrature points,
                 # we compute the non-vanishing B-Splines
-                basis = basis_ders_on_quad_grid( knots, degree, points, nderiv,
-                                            normalization=normalization )
-                mesh = grid
+                basis, spans = basis_ders_on_quad_grid( knots, degree, points, nderiv,
+                                            normalization=normalization, mesh = True)
+                assert all(spans[:, 0] == spans[:, -1]), "Span indices mismatch"
+                spans        = spans[:,0]
             else :
+                nelements    = len(mesh)-1 # corresponds to integration discretization, which may differ from the knot grid
                 # for each element on the grid, we create a local quadrature grid
                 points, weights = quadrature_grid( mesh, u, w )
                 basis, spans = basis_ders_on_quad_grid( knots, degree, points, nderiv,
                                             normalization=normalization, mesh = True)
-                nelements    = len(mesh)-1 # corresponds to integration discretization, which may differ from the knot grid
         else:
             if mesh is None :
-                nelements    = len(grid)-1
+                mesh            = unique(grid)
+                nelements       = len(mesh)-1
                 # for each element on the grid, we create a local quadrature grid
-                points, weights = quadrature_grid( grid, u, w )
+                points, weights = quadrature_grid( mesh, u, w )
                 # for each element and a quadrature points,
                 # we compute the non-vanishing B-Splines
                 basis = zeros((nelements, degree+1, nderiv+1, points.shape[1]))
                 spans = zeros(nelements, dtype=int )
                 core.nurbs_ders_on_quad_grid(nelements, degree, spans, basis, weights, points, knots, omega, nderiv)
-                mesh = grid
             else :
                 nelements    = len(mesh)-1 # corresponds to integration discretization, which may differ from the knot grid
                 # for each element on the grid, we create a local quadrature grid
