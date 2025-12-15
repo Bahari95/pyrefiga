@@ -202,4 +202,3 @@ from   .api      import assemble_matrix, assemble_vector
 assemble_stiffness1D = partial(assemble_matrix, core.assemble_stiffnessmatrix1D)
 assemble_mass1D      = partial(assemble_matrix, core.assemble_massmatrix1D)
 assemble_matrix_ex01 = partial(assemble_vector, core.assemble_matrix_ex01)
-assemble_matrix_ex02 = partial(assemble_vector, core.assemble_matrix_ex02)

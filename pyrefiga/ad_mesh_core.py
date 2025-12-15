@@ -2083,31 +2083,3 @@ def assemble_matrix_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[
 
                             matrix[i1+p1,i2+p2]  += v
     # ...
-
-def assemble_matrix_ex02(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', matrix:'float64[:,:]'):
-
-    # ... sizes
-    k1 = weights_1.shape[1]
-
-    # ... build matrices
-    for ie1 in range(0, ne1):
-            i_span_1 = spans_1[ie1]
-            i_span_2 = spans_2[ie1]        
-            # evaluation dependant uniquement de l'element
-
-            for il_1 in range(0, p1+1):
-                i1 = i_span_1 - p1 + il_1
-                for il_2 in range(0, p2+1):
-                            i2 = i_span_2 - p2 + il_2
-                            v  = 0.0
-                            for g1 in range(0, k1):
-                                
-                                    bi_0 = basis_1[ie1, il_1, 0, g1]
-                                    bj_x = basis_2[ie1, il_2, 1, g1]
-                                    
-                                    wvol = weights_1[ie1, g1]
-                                    
-                                    v   += bi_0 * bj_x * wvol
-
-                            matrix[i1+p1,i2+p2]  += v
-    # ...

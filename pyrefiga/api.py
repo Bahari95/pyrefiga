@@ -490,7 +490,9 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
                 n1 = V.nbasis
                 #indeces for elimination
                 d1 = 1    if dirichlet[0] else 0 
-                d2 = n1-1 if dirichlet[1] else n1
+                d3 = 1    if dirichlet[1] else 0 
+                d2 = n1-d1
+                d4 = n1-d3
                 # Shortcuts
                 nd = x._ndim
                 nc = x._domain.npts
@@ -515,25 +517,25 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
                     ii = [s+x for s,x in zip(ss,xx)]
                     jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,pp)]
 
-                    if ( d1 <= ii[0] < d2) and ( d1 <= jj[0] < d2):
+                    if ( d1 <= ii[0] < d2) and ( d3 <= jj[0] < d4):
                         # correct index
                         ii[0] = ii[0]-d1
-                        jj[0] = jj[0]-d1
+                        jj[0] = jj[0]-d3
                         #...
                         I = ravel_multi_index( ii, dims=(d2-d1), order='C' )
-                        J = ravel_multi_index( jj, dims=(d2-d1), order='C' )
+                        J = ravel_multi_index( jj, dims=(d4-d3), order='C' )
 
                         rows.append( I )
                         cols.append( J )
                         data.append( value )
 
-                x = coo_matrix(
+                M = coo_matrix(
                         (data,(rows,cols)),
-                        shape = [(d2-d1),(d2-d1)],
+                        shape = [(d2-d1),(d4-d3)],
                         dtype = x._domain.dtype
                 )
-                x.eliminate_zeros()
-                return x
+                M.eliminate_zeros()
+                return M
 
             elif V.dim == 2:
                 n1,n2  = V.nbasis
@@ -580,13 +582,13 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
                         cols.append( J )
                         data.append( value )
 
-                x = coo_matrix(
+                M = coo_matrix(
                         (data,(rows,cols)),
                         shape = [(d2-d1)*(d4-d3),(d2-d1)*(d4-d3)],
                         dtype = x._domain.dtype
                 )
-                x.eliminate_zeros()
-                return x
+                M.eliminate_zeros()
+                return M
 
             elif V.dim == 3:
                 n1,n2,n3 = V.nbasis
@@ -637,13 +639,13 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
                         cols.append( J )
                         data.append( value )
 
-                x = coo_matrix(
+                M = coo_matrix(
                         (data,(rows,cols)),
                         shape = [(d2-d1)*(d4-d3)*(d6-d5),(d2-d1)*(d4-d3)*(d6-d5)],
                         dtype = x._domain.dtype
                 )
-                x.eliminate_zeros()
-                return x
+                M.eliminate_zeros()
+                return M
             else :
                 raise NotImplementedError('Only 1d, 2d and 3d are available')
 

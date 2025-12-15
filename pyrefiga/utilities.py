@@ -93,6 +93,10 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
     map = (x,y, V) : control points and associated space
     admap = (x, V1, y, V2) control points and associated space
     '''
+    print(V.nelements)
+    assert all(V.nelements[i] > 1 for i in range(V.dim)), \
+       "Please refine space at least one time, works for nelements > 1"
+
     if map is None:
         pass
     elif len(map) == V.dim:
@@ -117,7 +121,7 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
         fy1      = lambda x,y :  eval(f[0]) 
     u_d          = StencilVector(V.vector_space)
     x_d          = np.zeros(V.nbasis)
-    n_dir        = V.nbasis[0]*refinN+refinN
+    n_dir        = sum(V.nbasis)*refinN+refinN
     if V.omega[0] is None :
         #... B-spline space
         if V.dim == 2:
