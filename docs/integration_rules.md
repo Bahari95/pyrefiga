@@ -24,6 +24,9 @@ Objects evaluated on the grid include:
 
 Importance
 ----------
+In the spline space, \texttt{nelements} refers to \(\texttt{len(mesh)}\), where the mesh is used for numerical integration rather than for defining the knot grid. 
+
+If the user provides mesh, spans are automatically extended from a shape of \((n_e)\) to \((n_e, n_q)\), where \(n_q\) denotes the number of quadrature points per element. see poisson2d_example.py
 
 Using a consistent quadrature grid ensures:
 

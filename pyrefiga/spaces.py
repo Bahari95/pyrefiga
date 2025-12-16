@@ -102,7 +102,7 @@ class SplineSpace(object):
         - periodic (bool, optional): If True, creates a periodic B-spline space. Default is False.
         - normalization (bool, optional): If True, normalizes the B-spline basis functions. Default is False.
         - omega (array-like, optional): Weights for NURBS basis functions. If None, standard B-splines are used.
-        - mesh (array-like, optional): Custom mesh for quadrature points. If None, the grid is used.
+        - mesh (array-like, optional): Custom mesh for quadrature points. If None, the grid is used then span has same ne as shape otherewise (ne,quad).
         - quad_degree (int, optional): Degree of the quadrature rule. If None, defaults to 'degree'.
         ------------------------------------------
         Returns:
