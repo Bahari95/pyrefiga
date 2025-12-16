@@ -93,7 +93,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
     map = (x,y, V) : control points and associated space
     admap = (x, V1, y, V2) control points and associated space
     '''
-    print(V.nelements)
     assert all(V.nelements[i] > 1 for i in range(V.dim)), \
        "Please refine space at least one time, works for nelements > 1"
 

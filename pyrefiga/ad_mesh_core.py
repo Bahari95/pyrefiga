@@ -74,7 +74,7 @@ def assemble_basis_spans_in_adquadrature_Hdivmap(ne1:'int', ne2:'int', p1:'int',
              for g2 in range(0, k2):
                  xq = points1[ie1, ie2, g1, g2]
 
-                 degree         = p5
+                 degree  = p5
                  #~~~~~~~~~~~~~~~
                  # Knot index at left/right boundary
                  low  = degree
@@ -608,7 +608,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_HdivmapGmesh(ne1:'int', ne2:'int',
                  xq      = points2[ie1, ie2, g1, g2]
 
                  #span = find_span( knots, degree, xq )
-                 degree         = p6
+                 degree  = p6
                  #~~~~~~~~~~~~~~~
                  # Knot index at left2/right2 boundary
                  low  = degree
@@ -1391,7 +1391,7 @@ def assemble_basis_spans_in_adquadrature_gradmap(ne1:'int', ne2:'int', p1:'int',
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_basis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', knots_1:'float64[:]', vector_u:'float64[:]',  spans_ad:'int[:,:]', basis_ad:'float64[:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', p2:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', knots_1:'float64[:]', vector_u:'float64[:]',  spans_ad:'int[:,:]', basis_ad:'float64[:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -1420,7 +1420,7 @@ def assemble_basis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'i
             points1[ie1, g1] = sx
 
     #   ---Computes All basis in a new points
-    degree         = p1
+    degree         = p2
     # ...
     left           = empty( degree )
     right          = empty( degree )
@@ -1506,7 +1506,7 @@ def assemble_basis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'i
 # ... L2-B-spline space for L^2 mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', p4:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -1521,7 +1521,7 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
     lcoeffs_u2   = zeros((p1+1,p2+1))
 
     #   ---Computes All basis in a new points
-    degree         = p1
+    degree         = p3
     # ...
     left           = empty( degree )
     right          = empty( degree )
@@ -1529,7 +1529,7 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
     ndu            = empty( (degree+1, degree+1) )
     ders           = zeros( (     nders+1, degree+1) ) # output array
     # ...
-    degree         = p2
+    degree         = p4
     left2          = empty( degree )
     right2         = empty( degree )
     a2             = empty( (       2, degree+1) )
@@ -1558,8 +1558,8 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
 
                             s_dirx     += coeff_u1 * bj_0
                             s_diry     += coeff_u2 * bj_0
-                 xq = s_dirx
-
+                 xq     = s_dirx
+                 degree = 3
                  #span = find_span( knots, degree, xq )
                  #~~~~~~~~~~~~~~~
                  # Knot index at left/right boundary
@@ -1635,7 +1635,7 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
                  #==============================================================================
                  xq = s_diry
                  #span = find_span( knots, degree, xq )
-                 degree = p2
+                 degree = p4
                  #~~~~~~~~~~~~~~~
                  # Knot index at left2/right2 boundary
                  low  = degree
@@ -1710,7 +1710,7 @@ def assemble_basis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping. in 3D
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', vector_u1:'float64[:,:,:]', vector_u2:'float64[:,:,:]', vector_u3:'float64[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:,:,:]', basis_ad3:'float64[:,:,:,:,:,:,:,:]', nders:'int'):
+def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', p4:'int', p5:'int', p6:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', vector_u1:'float64[:,:,:]', vector_u2:'float64[:,:,:]', vector_u3:'float64[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:,:,:]', basis_ad3:'float64[:,:,:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -1726,7 +1726,7 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
     lcoeffs_u3   = zeros((p1+1,p2+1,p3+1))
 
     #   ---Computes All basis in a new points
-    degree         = p1
+    degree         = p4
     # ...
     left           = empty( degree )
     right          = empty( degree )
@@ -1734,14 +1734,14 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
     ndu            = empty( (degree+1, degree+1) )
     ders           = zeros( (     nders+1, degree+1) ) # output array
     #...
-    degree         = p2
+    degree         = p5
     left2          = empty( degree )
     right2         = empty( degree )
     a2             = empty( (       2, degree+1) )
     ndu2           = empty( (degree+1, degree+1) )
     ders2          = zeros( (     nders+1, degree+1) ) # output array
     #...
-    degree         = p3
+    degree         = p6
     left3          = empty( degree )
     right3         = empty( degree )
     a3             = empty( (       2, degree+1) )
@@ -1781,7 +1781,7 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
                             xq = s_dirx
 
                             #span = find_span( knots, degree, xq )
-                            degree         = p1
+                            degree         = p4
                             #~~~~~~~~~~~~~~~
                             # Knot index at left/right boundary
                             low  = degree
@@ -1856,7 +1856,7 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
                             # ==============================================================================
                             xq = s_diry
                             #span = find_span( knots, degree, xq )
-                            degree         = p2
+                            degree         = p5
                             #~~~~~~~~~~~~~~~
                             # Knot index at left2/right2 boundary
                             low  = degree
@@ -1931,7 +1931,7 @@ def assemble_basis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int',
                             # ==============================================================================
                             xq = s_dirz
                             #span = find_span( knots, degree, xq )
-                            degree = p3
+                            degree = p6
                             #~~~~~~~~~~~~~~~
                             # Knot index at left3/right3 boundary
                             low  = degree

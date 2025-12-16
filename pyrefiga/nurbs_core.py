@@ -263,7 +263,7 @@ def nurbs_ders_on_shared_quad_grid(ne1:'int', p1:'int', spans_1:'int[:,:]', basi
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', knots_1:'float64[:]', omega:'float64[:]', vector_u:'float64[:]',  spans_ad:'int[:,:]', basis_ad:'float64[:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', p2:'int', spans_1:'int[:]', basis_1:'float64[:,:,:,:]', weights_1:'float64[:,:]', knots_1:'float64[:]', omega:'float64[:]', vector_u:'float64[:]',  spans_ad:'int[:,:]', basis_ad:'float64[:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -292,7 +292,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans
             points1[ie1, g1] = sx
 
     #   ---Computes All basis in a new points
-    degree         = p1
+    degree         = p2
     # ...
     left           = empty( degree )
     right          = empty( degree )
@@ -392,7 +392,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_1DL2map(ne1:'int', p1:'int', spans
 # ... L2-B-spline space for L^2 mapping is the same as for initial mapping.
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', p4:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -407,7 +407,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
     lcoeffs_u2   = zeros((p1+1,p2+1))
 
     #   ---Computes All basis in a new points
-    degree         = p1
+    degree         = p3
     # ...
     left           = empty( degree )
     right          = empty( degree )
@@ -415,7 +415,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
     ndu            = empty( (degree+1, degree+1) )
     ders           = zeros( (     nders+1, degree+1) ) # output array
     # ...
-    degree         = p2
+    degree         = p4
     left2          = empty( degree )
     right2         = empty( degree )
     a2             = empty( (       2, degree+1) )
@@ -438,7 +438,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
                         bj_0    = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
                         coeff_u1 = lcoeffs_u1[il_1,il_2]
                         xq     += coeff_u1 * bj_0
-                 degree        = p1
+                 degree        = p3
                  #span = find_span( knots, degree, xq )
                  #~~~~~~~~~~~~~~~
                  # Knot index at left/right boundary
@@ -501,21 +501,6 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
                          j  = s1
                          s1 = s2
                          s2 = j
-                 #  r          = degree
-                 #  ders[1,:] = ders[1,:] * r
-                 #  basis_ad1[ie1, ie2, :, 0, g1, g2] = ders[0,:]
-                 #  basis_ad1[ie1, ie2, :, 1, g1, g2] = ders[1,:]
-                 #  #...
-                 #  basis_ad1[ie1, ie2, :, 0, g1, g2]  = basis_ad1[ie1, ie2, :, 0, g1, g2] * omega_1[span-degree:span+1]
-                 #  sum_basisx    = sum(basis_ad1[ie1, ie2, :, 0, g1, g2])
-                 #  basis_ad1[ie1, ie2, :, 0, g1, g2]  = basis_ad1[ie1, ie2, :, 0, g1, g2]/sum_basisx
-                 #  #..
-                 #  if nders >= 1:
-                 #     basis_ad1[ie1, ie2, :, 1, g1, g2] = basis_ad1[ie1, ie2, :, 1, g1, g2] * omega_1[span-degree:span+1]
-                 #     sum_dbasisx   = sum(basis_ad1[ie1, ie2, :, 1, g1, g2])
-                 #     #...                        
-                 #     basis_ad1[ie1, ie2, :, 1, g1, g2]  = (basis_ad1[ie1, ie2, :, 1, g1, g2] - basis_ad1[ie1, ie2, :, 0, g1, g2]*sum_dbasisx)
-                 #     basis_ad1[ie1, ie2, :, 1, g1, g2] /= sum_basisx
                  # ...first compute R1
                  for il_1 in range(0, degree+1):
                     ders[0,il_1]     = ders[0,il_1] * omega_1[span-degree+il_1]
@@ -551,7 +536,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
                         xq      += coeff_u2 * bj_0
 
                  #span = find_span( knots, degree, xq )
-                 degree         = p2
+                 degree         = p4
                  #~~~~~~~~~~~~~~~
                  # Knot index at left2/right2 boundary
                  low  = degree
@@ -640,7 +625,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping. in 3D
 #==============================================================================
 #---2 : B-splines and thier corresponding spanes in adapted mesh
-def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', omega_3:'float64[:]', vector_u1:'float64[:,:,:]', vector_u2:'float64[:,:,:]', vector_u3:'float64[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:,:,:]', basis_ad3:'float64[:,:,:,:,:,:,:,:]', nders:'int'):
+def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'int', p1:'int', p2:'int', p3:'int', p4:'int', p5:'int', p6:'int', spans_1:'int[:]', spans_2:'int[:]', spans_3:'int[:]',  basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', basis_3:'float64[:,:,:,:]',  weights_1:'float64[:,:]', weights_2:'float64[:,:]', weights_3:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', knots_3:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', omega_3:'float64[:]', vector_u1:'float64[:,:,:]', vector_u2:'float64[:,:,:]', vector_u3:'float64[:,:,:]', spans_ad1:'int[:,:,:,:,:,:]', spans_ad2:'int[:,:,:,:,:,:]', spans_ad3:'int[:,:,:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:,:,:]', basis_ad3:'float64[:,:,:,:,:,:,:,:]', nders:'int'):
 
     # ... sizes
     from numpy import zeros
@@ -655,7 +640,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'
     lcoeffs_u2   = zeros((p1+1,p2+1,p3+1))
     lcoeffs_u3   = zeros((p1+1,p2+1,p3+1))
     #   ---Computes All basis in a new points
-    degree         = p1
+    degree         = p4
     # ...
     left           = empty( degree )
     right          = empty( degree )
@@ -663,14 +648,14 @@ def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'
     ndu            = empty( (degree+1, degree+1) )
     ders           = zeros( (     nders+1, degree+1) ) # output array
     #...
-    degree         = p2
+    degree         = p5
     left2          = empty( degree )
     right2         = empty( degree )
     a2             = empty( (       2, degree+1) )
     ndu2           = empty( (degree+1, degree+1) )
     ders2          = zeros( (     nders+1, degree+1) ) # output array
     #...
-    degree         = p3
+    degree         = p6
     left3          = empty( degree )
     right3         = empty( degree )
     a3             = empty( (       2, degree+1) )
@@ -708,7 +693,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'
                             xq = s_dirx
 
                             #span = find_span( knots, degree, xq )
-                            degree        = p1
+                            degree        = p4
                             #~~~~~~~~~~~~~~~
                             # Knot index at left/right boundary
                             low  = degree
@@ -798,7 +783,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'
                             xq = s_diry
 
                             #span = find_span( knots, degree, xq )
-                            degree = p2
+                            degree = p5
                             #~~~~~~~~~~~~~~~
                             # Knot index at left2/right2 boundary
                             low  = degree
@@ -888,7 +873,7 @@ def assemble_nurbsbasis_spans_in_adquadrature_3L2map(ne1:'int', ne2:'int', ne3:'
                             xq = s_dirz
 
                             #span = find_span( knots, degree, xq )
-                            degree         = p3
+                            degree         = p6
                             #~~~~~~~~~~~~~~~
                             # Knot index at left3/right3 boundary
                             low  = degree

@@ -70,18 +70,21 @@ args = parser.parse_args()
 
 #==============================================================================
 #.......Poisson ALGORITHM
-def picard_solve(V1, V2, V3, V4, V, u11_mpH = None, u12_mpH = None, times = None, x_2 = None, tol = None):
+def picard_solve(V1, V2, V3, V4, V1mp, V2mp, u11_mpH = None, u12_mpH = None, times = None, x_2 = None, tol = None):
        niter      = 30   #
        if tol is None :
           tol     = 1e-8  # 
 
        # create the tensor space
+       W   = TensorSpace(V1mp, V2mp)
        V11 = TensorSpace(V4, V3)
        V01 = TensorSpace(V1, V3)
        V10 = TensorSpace(V4, V2)
+       Vmae= TensorSpace(V1, V2, V3, V4)
+       V   = TensorSpace(V1, V2, V3, V4, V1mp, V2mp)
 
        # .. computes basis and sopans in adapted quadrature
-       Quad_adm   = quadratures_in_admesh(V, nders = 0)
+       Quad_adm   = quadratures_in_admesh(Vmae, W, nders = 0)
 
        #----------------------------------------------------------------------------------------------
        # ... Strong form of Neumann boundary condition which is Dirichlet because of Mixed formulation
@@ -213,7 +216,6 @@ def picard_solve(V1, V2, V3, V4, V, u11_mpH = None, u12_mpH = None, times = None
            rhs          = StencilVector(V11.vector_space)
            rhs          = assemble_rhs(V, fields = [u11, u12, u11_mpH, u12_mpH], value = [spans_ad1, spans_ad2, basis_ad1, basis_ad2], out= rhs)
            b            = rhs.toarray()
-           b            = b.reshape(V4.nbasis*V3.nbasis)
            #___
            r            =  r_0 - b
            
@@ -270,9 +272,17 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    # ... Assembling mapping
    ne               = mp.nelements[0]*4
    # Create spline spaces for each direction
-   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
-   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
+   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], omega = wm1, mesh = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], omega = wm2, mesh = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
    Vmp             = TensorSpace(V1mp, V2mp)
+
+   #... Initial mapping to StencilVector
+   u11_mp         = StencilVector(Vmp.vector_space)
+   u12_mp         = StencilVector(Vmp.vector_space)
+   u11_mp.from_array(Vmp, xmp)
+   u12_mp.from_array(Vmp, ymp)
+
+   #----------------------
    # ... Initial guess
    #----------------------
    # create the spline space for each direction
@@ -280,24 +290,13 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    V2H             = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
    V3H             = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
    V4H             = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
-
-   # create the tensor space
+   # create the tensor space for potential function
    VH11           = TensorSpace(V4H, V3H)
-   VH01           = TensorSpace(V1H, V3H)
-   VH10           = TensorSpace(V4H, V2H)
-
-   u11_mp         = StencilVector(Vmp.vector_space)
-   u12_mp         = StencilVector(Vmp.vector_space)
-   u11_mp.from_array(Vmp, xmp)
-   u12_mp.from_array(Vmp, ymp)
-
-   # ... G-space
-   VH             = TensorSpace(V1H, V2H, V3H, V4H, V1mp, V2mp)
 
    #... in coarse grid
    tol            = 1e-5
    start          = time.time()
-   x2H            = picard_solve(V1H, V2H, V3H, V4H, VH, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, tol = tol)[-1]
+   x2H            = picard_solve(V1H, V2H, V3H, V4H, V1mp, V2mp, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, tol = tol)[-1]
    MG_time        = time.time()- start
    # ... For multigrid method
    for n in range(4,nb_ne):
@@ -306,19 +305,12 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
       V2mg        = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
       V3mg        = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
       V4mg        = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
-
-      # create the tensor space
-      Vh11mg      = TensorSpace(V4mg, V3mg)
-      Vh01mg      = TensorSpace(V1mg, V3mg)
-      Vh10mg      = TensorSpace(V4mg, V2mg)
-
       # Create spline spaces for each direction
       V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
       V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
-      Vmp             = TensorSpace(V1mp, V2mp)
+      # create the tensor space
+      Vh11mg      = TensorSpace(V4mg, V3mg)
          
-      Vhmg        = TensorSpace(V1mg, V2mg, V3mg, V4mg, V1mp, V2mp)
-      
       #.. Prologation by knots insertion matrix
       M           = prolongation_matrix(VH11, Vh11mg)
       x2H         = M.dot(x2H)
@@ -327,7 +319,7 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
       # ... in new grid
       #tol       *= 1e-1
       start       = time.time()
-      x2H         = picard_solve(V1mg, V2mg, V3mg, V4mg, Vhmg, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, x_2 = x2H, tol= tol)[-1]
+      x2H         = picard_solve(V1mg, V2mg, V3mg, V4mg,  V1mp, V2mp, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, x_2 = x2H, tol= tol)[-1]
       MG_time    += time.time()- start
       # .. update grids
       V1H         = V1mg
@@ -337,13 +329,10 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
 
       # create the tensor space
       VH11        = TensorSpace(V4H, V3H)
-      VH01        = TensorSpace(V1H, V3H)
-      VH10        = TensorSpace(V4H, V2H)
-      VH          = TensorSpace(V1H, V2H, V3H, V4H, V1mp, V2mp )
 
    # ...
    if check is not None :
-      if  VH.nelements[0] == mp.nelements[0]*2 and VH.nelements[1] == mp.nelements[1]*2 :
+      if  VH11.nelements[0] == mp.nelements[0]*2 and VH11.nelements[1] == mp.nelements[1]*2 :
          print(".../!\.. : two-level is activated")
       else : 
          print(".../!\.. : multi-level is activated")
@@ -356,31 +345,30 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    V3              = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
    V4              = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
 
+   # Create spline spaces for each direction
+   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
+   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
    # create the tensor space
    Vh11            = TensorSpace(V4, V3)
    Vh01            = TensorSpace(V1, V3)
    Vh10            = TensorSpace(V4, V2)
-
-   # Create spline spaces for each direction
-   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
-   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
-   Vmp             = TensorSpace(V1mp, V2mp)
-         
-   Vh              = TensorSpace(V1, V2, V3, V4, V1mp, V2mp)
-
+   # ...
+   Vh              = TensorSpace(V1, V2, V3, V4)
    #.. Prologation by knots insertion matrix
    M                = prolongation_matrix(VH11, Vh11)
    x2H              = M.dot(x2H)	
 
    # ... in fine grid
    start            = time.time()
-   u11_pH, u12_pH, x11uh, x12uh, iter_N, l2_residualh = picard_solve(V1, V2, V3, V4, Vh, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, x_2 = x2H)[:-1]
+   u11_pH, u12_pH, x11uh, x12uh, iter_N, l2_residualh = picard_solve(V1, V2, V3, V4, V1mp, V2mp, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, x_2 = x2H)[:-1]
    MG_time         += time.time()- start
    # ...
    # .. computes basis and sopans in adapted quadrature
-   Quad_adm         = quadratures_in_admesh(Vh)
+   Quad_adm         = quadratures_in_admesh(Vh, Vmp)
    spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11_pH, u12_pH)
    Quality          = StencilVector(Vh11.vector_space)
+   # ...          
+   Vh              = TensorSpace(V1, V2, V3, V4, V1mp, V2mp)
    Quality          = assemble_Quality(Vh, fields=[u11_pH, u12_pH, u11_mp, u12_mp], value = [times, spans_ad1, spans_ad2, basis_ad1, basis_ad2],  out = Quality)
    norm             = Quality.toarray()
    l2_Quality       = norm[0]
