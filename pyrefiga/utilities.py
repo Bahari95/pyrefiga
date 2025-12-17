@@ -120,7 +120,7 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
         fy1      = lambda x,y :  eval(f[0]) 
     u_d          = StencilVector(V.vector_space)
     x_d          = np.zeros(V.nbasis)
-    n_dir        = sum(V.nbasis)*refinN+refinN
+    n_dir        = (V.nbasis[0]*refinN+refinN, V.nbasis[1]*refinN+refinN)
     if V.omega[0] is None :
         #... B-spline space
         if V.dim == 2:
@@ -135,11 +135,11 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
                 #-------------------------------------------------
                 #.. In the phyisacl domain without adaptive mapping
                 if map[2].omega[0] is None :
-                    sX           = pyccel_sol_field_2d((n_dir,n_dir),  map[0] , map[2].knots, map[2].degree)[0]
-                    sY           = pyccel_sol_field_2d((n_dir,n_dir),  map[1] , map[2].knots, map[2].degree)[0]
+                    sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
+                    sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
                 else:
-                    sX           = sol_field_NURBS_2d((n_dir,n_dir),  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
-                    sY           = sol_field_NURBS_2d((n_dir,n_dir),  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
+                    sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
+                    sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
                 x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:]))
                 x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:]))
                 x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0]))
@@ -149,14 +149,14 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
                 #-----------------------------------------------
                 #.. In the phyisacl domain with adaptive mapping               
                 if admap[2].omega[0] is None:
-                    Xmae         = pyccel_sol_field_2d((n_dir,n_dir),  admap[0] , admap[2].knots, admap[2].degree)[0]
-                    Ymae         = pyccel_sol_field_2d((n_dir,n_dir),  admap[1] , admap[3].knots, admap[3].degree)[0]
+                    Xmae         = pyccel_sol_field_2d(n_dir,  admap[0] , admap[2].knots, admap[2].degree)[0]
+                    Ymae         = pyccel_sol_field_2d(n_dir,  admap[1] , admap[3].knots, admap[3].degree)[0]
                 else:
-                    Xmae         = sol_field_NURBS_2d((n_dir,n_dir),  admap[0] , admap[2].omega, admap[2].knots, admap[2].degree)[0]
-                    Ymae         = sol_field_NURBS_2d((n_dir,n_dir),  admap[1] , admap[3].omega, admap[3].knots, admap[3].degree)[0]
+                    Xmae         = sol_field_NURBS_2d(n_dir,  admap[0] , admap[2].omega, admap[2].knots, admap[2].degree)[0]
+                    Ymae         = sol_field_NURBS_2d(n_dir,  admap[1] , admap[3].omega, admap[3].knots, admap[3].degree)[0]
                 if map[2].omega[0] is None :
-                    sX           = pyccel_sol_field_2d((n_dir,n_dir),  map[0] , map[2].knots, map[2].degree)[0]
-                    sY           = pyccel_sol_field_2d((n_dir,n_dir),  map[1] , map[2].knots, map[2].degree)[0]
+                    sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
+                    sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
                 else :
                     sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
                     sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
@@ -181,11 +181,11 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
                 #-------------------------------------------------
                 #.. In the phyisacl domain without adaptive mapping
                 if map[2].omega[0] is None :
-                    sX           = pyccel_sol_field_2d((n_dir,n_dir),  map[0] , map[2].knots, map[2].degree)[0]
-                    sY           = pyccel_sol_field_2d((n_dir,n_dir),  map[1] , map[2].knots, map[2].degree)[0]
+                    sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
+                    sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
                 else:
-                    sX           = sol_field_NURBS_2d((n_dir,n_dir),  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
-                    sY           = sol_field_NURBS_2d((n_dir,n_dir),  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
+                    sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
+                    sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
 
                 x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx0(sX[0, :], sY[ 0,:]))
                 x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx1(sX[-1,:], sY[-1,:]))
@@ -196,14 +196,14 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
                 #-----------------------------------------------
                 #.. In the phyisacl domain with adaptive mapping               
                 if admap[2].omega[0] is None:
-                    Xmae         = pyccel_sol_field_2d((n_dir,n_dir),  admap[0] , admap[2].knots, admap[2].degree)[0]
-                    Ymae         = pyccel_sol_field_2d((n_dir,n_dir),  admap[1] , admap[3].knots, admap[3].degree)[0]
+                    Xmae         = pyccel_sol_field_2d(n_dir,  admap[0] , admap[2].knots, admap[2].degree)[0]
+                    Ymae         = pyccel_sol_field_2d(n_dir,  admap[1] , admap[3].knots, admap[3].degree)[0]
                 else:
-                    Xmae         = sol_field_NURBS_2d((n_dir,n_dir),  admap[0] , admap[2].omega, admap[2].knots, admap[2].degree)[0]
-                    Ymae         = sol_field_NURBS_2d((n_dir,n_dir),  admap[1] , admap[3].omega, admap[3].knots, admap[3].degree)[0]
+                    Xmae         = sol_field_NURBS_2d(n_dir,  admap[0] , admap[2].omega, admap[2].knots, admap[2].degree)[0]
+                    Ymae         = sol_field_NURBS_2d(n_dir,  admap[1] , admap[3].omega, admap[3].knots, admap[3].degree)[0]
                 if map[2].omega[0] is None :
-                    sX           = pyccel_sol_field_2d((n_dir,n_dir),  map[0] , map[2].knots, map[2].degree)[0]
-                    sY           = pyccel_sol_field_2d((n_dir,n_dir),  map[1] , map[2].knots, map[2].degree)[0]
+                    sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
+                    sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
                 else :
                     sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
                     sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]

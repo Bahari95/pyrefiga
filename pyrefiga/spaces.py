@@ -116,7 +116,7 @@ class SplineSpace(object):
             grid  = linspace(0., 1., nelements+1)
 
         if mesh is not None:
-            assert len(mesh) >= len(grid), "mesh must have at least as many points as grid"
+            assert len(mesh) >= len(unique(grid)), "mesh must have at least as many points as grid"
 
         knots     = make_knots(grid, degree, periodic=periodic)
 
