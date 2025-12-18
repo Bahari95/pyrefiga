@@ -411,41 +411,55 @@ class getGeometryMap:
             return self._coefs[0].reshape(self._nbasis), self._coefs[1].reshape(self._nbasis), self._coefs[2].reshape(self._nbasis)
         else:
             return self._coefs
+        
+    def Refinegrid(self, j_direct, numElevate = 1):
+        """
+        Refine a grid multiple times by inserting midpoints between unique knots.
+        
+        Parameters
+        ----------
+        numElevate : int
+            Number of refinement iterations.
+        Returns
+        -------
+        Grid_refined : ndarray
+            Refined grid with original multiplicities preserved.
+        """
+        if numElevate ==0:
+            return self._grids[j_direct]
 
-    def Refinegrid(self, j_direct, Nelements = None, numElevate = 1):
-        assert(numElevate >= 1)
         #... refine the grid numElevate times
-        if Nelements is None:
-            Nelements = [self.nelements[n]*numElevate for n in range(self.dim)]
-        else :
-            assert(len(Nelements) == self.dim and Nelements[0]%self.nelements[0]==0 and Nelements[1]%self.nelements[1]==0)
-        grids      = []
-        numElevate = Nelements[j_direct]//self.nelements[j_direct]
-        for i in range(0, self.nelements[j_direct]):
-            a = (self._grids[j_direct][i+1] - self._grids[j_direct][i])/numElevate
-            grids.append(self._grids[j_direct][i])
-            if a != 0. :
-                for j in range(1,numElevate):
-                    grids.append(grids[-1] + a)
-        grids.append(self._grids[j_direct][-1])
-        return grids
+        Grid_refined = np.array(self._grids[j_direct])        
+        for _ in range(numElevate):
+            # extract unique values
+            unique_knots = np.unique(Grid_refined)
+            # compute midpoints between consecutive unique knots
+            midpoints = 0.5 * (unique_knots[:-1] + unique_knots[1:])
+            # merge original grid and midpoints
+            Grid_refined = np.sort(np.concatenate([Grid_refined, midpoints]))
+        
+        return Grid_refined
+        # grids      = []
+        # numElevate = Nelements[j_direct]//self.nelements[j_direct]
+        # for i in range(0, self.nelements[j_direct]):
+        #     a = (self._grids[j_direct][i+1] - self._grids[j_direct][i])/numElevate
+        #     grids.append(self._grids[j_direct][i])
+        #     if a != 0. :
+        #         for j in range(1,numElevate):
+        #             grids.append(grids[-1] + a)
+        # grids.append(self._grids[j_direct][-1])
+        # return grids
     
-    def RefineGeometryMap(self, numElevate=1, Nelements=None):
+    def RefineGeometryMap(self, numElevate=1):
         """
         getGeometryMap :  Refine the geometry by elevating the DoFs numElevate times.
         """
         assert(numElevate >= 1)
         #... refine the grid numElevate times
-        if Nelements is None:
-            Nelements = [self.nelements[n]*numElevate for n in range(self.dim)]
-        else :
-            assert(len(Nelements) == self.dim and Nelements[0]%self.nelements[0]==0 and Nelements[1]%self.nelements[1]==0)
         #... refine the space
         if self.dim == 2:
-            grids     = self.Refinegrid(0, Nelements)
-            Vh1       = SplineSpace(degree=self.degree[0], grid= grids)
-            grids     = self.Refinegrid(1, Nelements)
-            Vh2       = SplineSpace(degree=self.degree[1], grid= grids)
+            Vh1       = SplineSpace(degree=self.degree[0], grid= self.Refinegrid(0, numElevate))
+            Vh2       = SplineSpace(degree=self.degree[1], grid= self.Refinegrid(1, numElevate))
             Vh        = TensorSpace(Vh1, Vh2)# after refinement
             # Extract knots data and degree
             VH1       = SplineSpace(degree=self.degree[0], grid= self._grids[0])
@@ -454,12 +468,9 @@ class getGeometryMap:
             nbasis_tot = self._nbasis[0]*self._nbasis[1]
             VH         = TensorSpace(VH1, VH2)# after refinement
         else:
-            grids      = self.Refinegrid(0, Nelements)
-            Vh1        = SplineSpace(degree=self.degree[0], grid= grids)
-            grids      = self.Refinegrid(1, Nelements)
-            Vh2        = SplineSpace(degree=self.degree[1], grid= grids)
-            grids      = self.Refinegrid(2, Nelements)
-            Vh3        = SplineSpace(degree=self.degree[2], grid= grids)            
+            Vh1        = SplineSpace(degree=self.degree[0], grid= self.Refinegrid(0, numElevate))
+            Vh2        = SplineSpace(degree=self.degree[1], grid= self.Refinegrid(1, numElevate))
+            Vh3        = SplineSpace(degree=self.degree[2], grid= self.Refinegrid(2, numElevate))            
             Vh         = TensorSpace(Vh1, Vh2, Vh3)# after refinement
             # Extract knots data and degree
             #print(f"Refined space : {self.nelements[0]} x {self.nelements[1]} Nelements")
@@ -488,33 +499,12 @@ class getGeometryMap:
         the user should provide the weights if the geometry is NURBS already in uniform mesh.
         Refine the solution by elevating the DoFs numElevate times.
         """
-        #... refine the space
-        if self.dim == 2:
-            nbasis_tot      = VH.nbasis[0]*VH.nbasis[1]
-            # Extract knots data and degree
-            V1       = SplineSpace(degree=self.degree[0], grid= self._grids[0])
-            V2       = SplineSpace(degree=self.degree[1], grid= self._grids[1])
-            V        = TensorSpace(V1, V2)# after refinement            
-        else:
-            nbasis_tot = VH.nbasis[0]*VH.nbasis[1]*VH.nbasis[2]
-            # Extract knots data and degree
-            V1        = SplineSpace(degree=self.degree[0], grid= self._grids[0])
-            V2        = SplineSpace(degree=self.degree[1], grid= self._grids[1])
-            V3        = SplineSpace(degree=self.degree[2], grid= self._grids[2])
-            V         = TensorSpace(V1, V2, V3)# after refinement
-
-        if self.nurbs_check:
-            #.. TODO: normally spaces containes weights, but here we assume that the weights are not provided.
-            M_mp      = prolongation_matrix(V, VH)
-            weights_H = (M_mp.dot(self._weights))
+        if isinstance(solution, StencilVector):
             # Refine the coefs
             M_mp      = prolongation_matrix(VH, Vh)
-            weights_h = (M_mp.dot(weights_H)).reshape(Vh.nbasis)
-            return (M_mp.dot(weights_H*solution.reshape(nbasis_tot))).reshape(Vh.nbasis) / weights_h
+            return (M_mp.dot(solution.toarray())).reshape(Vh.nbasis)
         else:
-            # Refine the coefs
-            M_mp      = prolongation_matrix(VH, Vh)
-            return (M_mp.dot(solution.reshape(nbasis_tot))).reshape(Vh.nbasis)
+            raise AssertionError("Solution must be a StencilVector")
         
 #========================================================================
 #... construct connectivity between patches: 

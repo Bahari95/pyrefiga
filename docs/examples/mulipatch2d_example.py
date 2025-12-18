@@ -197,8 +197,8 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     wm1, wm2 = weight[:,0], weight[0,:]
     xmp1, ymp1  = mp1.RefineGeometryMap(numElevate=nb_ne)[1:]
     # Create spline spaces for refined mesh
-    V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0,None, numElevate=nb_ne), nderiv = 1, omega = wm1, quad_degree = quad_degree)
-    V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1,None, numElevate=nb_ne), nderiv = 1, omega = wm2, quad_degree = quad_degree)
+    V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0, numElevate=nb_ne), nderiv = 1, omega = wm1, quad_degree = quad_degree)
+    V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1, numElevate=nb_ne), nderiv = 1, omega = wm2, quad_degree = quad_degree)
     Vh = TensorSpace(V1, V2)
     print('#spaces')
     # Update mapping vectors

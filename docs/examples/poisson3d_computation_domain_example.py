@@ -116,7 +116,7 @@ parser.add_argument("--plot", action="store_true", help="Enable plotting and sav
 args = parser.parse_args()
 
 nbpts       = 100 #for plot
-nelements   = 32
+nelements   = 8
 # Test 1
 from pyrefiga import load_xml
 geometry = load_xml('cube.xml')
@@ -127,7 +127,12 @@ print("Dirichlet boundary conditions", g)
 # Extract geometry mapping
 mp             = getGeometryMap(geometry,0)
 degree         = mp.degree[0] # Use same degree as geometry
-xmp, ymp, zmp  = mp.RefineGeometryMap(Nelements=(nelements,nelements,nelements))
+xmp, ymp, zmp  = mp.coefs()
+
+V1   = SplineSpace(degree=mp.degree[0], grid=mp.grids[0])
+V2   = SplineSpace(degree=mp.degree[1], grid=mp.grids[1])
+V3   = SplineSpace(degree=mp.degree[2], grid=mp.grids[2])
+Vg   = TensorSpace(V1, V2, V3)
 
 #----------------------
 #..... Initialisation and computing optimal mapping for 16*16
@@ -152,7 +157,7 @@ solutions = [
 functions = [
     {"name": "Exact solution", "expression": g[0]},
 ]
-paraview_nurbsSolutionMultipatch(nbpts, [V], [xmp], [ymp], zmp=[zmp], solution = solutions, functions = functions)
+paraview_nurbsSolutionMultipatch(nbpts, [V], [xmp], [ymp], zmp=[zmp], Vg = [Vg], solution = solutions, functions = functions)
 #------------------------------------------------------------------------------
 # Show or close plots depending on argument
 if args.plot :
