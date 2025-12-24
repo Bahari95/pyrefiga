@@ -113,11 +113,18 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
         fx1      = lambda   y :  sol(xi[-1],y) 
         fy0      = lambda x   :  sol(x,yi[0])
         fy1      = lambda x   :  sol(x,yi[-1])
-    else :
+    elif len(map)==3 :
+        #surface 2D
         fx0      = lambda x,y :  eval(f[0])
         fx1      = lambda x,y :  eval(f[0])
         fy0      = lambda x,y :  eval(f[0])
         fy1      = lambda x,y :  eval(f[0]) 
+    else :
+        #surface 3D
+        fx0      = lambda x,y,z :  eval(f[0])
+        fx1      = lambda x,y,z :  eval(f[0])
+        fy0      = lambda x,y,z :  eval(f[0])
+        fy1      = lambda x,y,z :  eval(f[0])     
     u_d          = StencilVector(V.vector_space)
     x_d          = np.zeros(V.nbasis)
     n_dir        = (V.nbasis[0]*refinN+refinN, V.nbasis[1]*refinN+refinN)
@@ -134,16 +141,33 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
             elif admap is None :
                 #-------------------------------------------------
                 #.. In the phyisacl domain without adaptive mapping
-                if map[2].omega[0] is None :
-                    sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
-                    sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
+                if len(map) == 3:
+                    #planar mapping
+                    if map[2].omega[0] is None :
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
+                    else:
+                        sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
+                        sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
+                    x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:]))
+                    x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:]))
+                    x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0]))
+                    x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1(sX[:,-1], sY[:,-1]))
                 else:
-                    sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
-                    sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
-                x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:]))
-                x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:]))
-                x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0]))
-                x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1(sX[:,-1], sY[:,-1]))
+                    #3D mapping
+                    if map[3].omega[0] is None :
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[3].knots, map[3].degree)[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[3].knots, map[3].degree)[0]
+                        sZ           = pyccel_sol_field_2d(n_dir,  map[2] , map[3].knots, map[3].degree)[0]
+                    else:
+                        sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[3].omega, map[3].knots, map[3].degree)[0]
+                        sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[3].omega, map[3].knots, map[3].degree)[0]
+                        sZ           = sol_field_NURBS_2d(n_dir,  map[2] , map[3].omega, map[3].knots, map[3].degree)[0]
+
+                    x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:], sZ[ 0,:]))
+                    x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:], sZ[-1,:]))
+                    x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0], sZ[:, 0]))
+                    x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1(sX[:,-1], sY[:,-1], sZ[:,-1]))
 
             else :
                 #-----------------------------------------------
@@ -154,17 +178,34 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
                 else:
                     Xmae         = sol_field_NURBS_2d(n_dir,  admap[0] , admap[2].omega, admap[2].knots, admap[2].degree)[0]
                     Ymae         = sol_field_NURBS_2d(n_dir,  admap[1] , admap[3].omega, admap[3].knots, admap[3].degree)[0]
-                if map[2].omega[0] is None :
-                    sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
-                    sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
-                else :
-                    sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
-                    sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                if len(map) == 3:
+                    #planar mapping
+                    if map[2].omega[0] is None :
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                    else :
+                        sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                        sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
 
-                x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:]))
-                x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:]))
-                x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0]))
-                x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1(sX[:,-1], sY[:,-1]))
+                    x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:]))
+                    x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:]))
+                    x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0]))
+                    x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1(sX[:,-1], sY[:,-1]))
+                else:
+                    #3D mapping
+                    if map[3].omega[0] is None :
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sZ           = pyccel_sol_field_2d(n_dir,  map[2] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                    else :
+                        sX           = sol_field_NURBS_2d( None, map[0], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sY           = sol_field_NURBS_2d( None, map[1], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sZ           = sol_field_NURBS_2d( None, map[2], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+
+                    x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], fx0(sX[0, :], sY[ 0,:], sZ[ 0,:]))
+                    x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], fx1(sX[-1,:], sY[-1,:], sZ[-1,:]))
+                    x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], fy0(sX[:, 0], sY[:, 0], sZ[:, 0]))
+                    x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], fy1(sX[:,-1], sY[:,-1], sZ[:,-1]))
         if V.dim == 3 :
             raise NotImplementedError("3D Dirichlet boundary conditions are not yet implemented. nd: Use L2 projection using fast diagonalization.")
     else :
@@ -180,17 +221,34 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
             elif admap is None :
                 #-------------------------------------------------
                 #.. In the phyisacl domain without adaptive mapping
-                if map[2].omega[0] is None :
-                    sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
-                    sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
-                else:
-                    sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
-                    sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
+                if len(map) == 3:
+                    #planar mapping
+                    if map[2].omega[0] is None :
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
+                    else:
+                        sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
+                        sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
 
-                x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx0(sX[0, :], sY[ 0,:]))
-                x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx1(sX[-1,:], sY[-1,:]))
-                x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy0(sX[:, 0], sY[:, 0]))
-                x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy1(sX[:,-1], sY[:,-1]))
+                    x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx0(sX[0, :], sY[ 0,:]))
+                    x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx1(sX[-1,:], sY[-1,:]))
+                    x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy0(sX[:, 0], sY[:, 0]))
+                    x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy1(sX[:,-1], sY[:,-1]))
+                else:
+                    #3D mapping
+                    if map[3].omega[0] is None :
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[3].knots, map[3].degree)[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[3].knots, map[3].degree)[0]
+                        sZ           = pyccel_sol_field_2d(n_dir,  map[2] , map[3].knots, map[3].degree)[0]
+                    else:
+                        sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[3].omega, map[3].knots, map[3].degree)[0]
+                        sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[3].omega, map[3].knots, map[3].degree)[0]
+                        sZ           = sol_field_NURBS_2d(n_dir,  map[2] , map[3].omega, map[3].knots, map[3].degree)[0]
+
+                    x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx0(sX[0, :], sY[ 0,:], sZ[ 0,:]))
+                    x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx1(sX[-1,:], sY[-1,:], sZ[-1,:]))
+                    x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy0(sX[:, 0], sY[:, 0], sZ[:, 0]))
+                    x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy1(sX[:,-1], sY[:,-1], sZ[:,-1]))
 
             else :
                 #-----------------------------------------------
@@ -201,17 +259,33 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10):
                 else:
                     Xmae         = sol_field_NURBS_2d(n_dir,  admap[0] , admap[2].omega, admap[2].knots, admap[2].degree)[0]
                     Ymae         = sol_field_NURBS_2d(n_dir,  admap[1] , admap[3].omega, admap[3].knots, admap[3].degree)[0]
-                if map[2].omega[0] is None :
-                    sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree)[0]
-                    sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree)[0]
-                else :
-                    sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
-                    sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                if len(map) == 3:
+                    if map[2].omega[0] is None :
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree, meshes=(Xmae, Ymae))[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree, meshes=(Xmae, Ymae))[0]
+                    else :
+                        sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                        sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
 
-                x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx0(sX[0, :], sY[ 0,:]))
-                x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx1(sX[-1,:], sY[-1,:]))
-                x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy0(sX[:, 0], sY[:, 0]))
-                x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy1(sX[:,-1], sY[:,-1]))
+                    x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx0(sX[0, :], sY[ 0,:]))
+                    x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx1(sX[-1,:], sY[-1,:]))
+                    x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy0(sX[:, 0], sY[:, 0]))
+                    x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy1(sX[:,-1], sY[:,-1]))
+                else:
+                    #3D mapping
+                    if map[3].omega[0] is None :
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sZ           = pyccel_sol_field_2d(n_dir,  map[2] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                    else :
+                        sX           = sol_field_NURBS_2d( None, map[0], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sY           = sol_field_NURBS_2d( None, map[1], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sZ           = sol_field_NURBS_2d( None, map[2], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+
+                    x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx0(sX[0, :], sY[ 0,:], sZ[ 0,:]))
+                    x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], fx1(sX[-1,:], sY[-1,:], sZ[-1,:]))
+                    x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy0(sX[:, 0], sY[:, 0], sZ[:, 0]))
+                    x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], fy1(sX[:,-1], sY[:,-1], sZ[:,-1]))
         if V.dim == 3 :
             raise NotImplementedError("3D Dirichlet boundary conditions are not yet implemented. nd: Use L2 projection using fast diagonalization.")
     u_d.from_array(V, x_d)
@@ -412,6 +486,26 @@ class getGeometryMap:
         else:
             return self._coefs
         
+    def rotated_2d(self, theta):
+        '''
+        Docstring pour rotated_2d
+        
+        :param self: Description
+        :param theta: angle of rotation in radians
+        :return: rotated coordinates (xmp, ymp)
+        '''
+        assert self.dim == 2, "Rotation is only implemented for 2D geometries."
+
+        xmp, ymp = self._coefs[0].reshape(self._nbasis), self._coefs[1].reshape(self._nbasis)
+        #... rotation loop
+        for x ,y in zip(xmp.flatten(), ymp.flatten()):
+            R = np.array([[np.cos(theta), -np.sin(theta)],
+                        [np.sin(theta),  np.cos(theta)]])
+            xy_rot = R @ np.array([x, y])
+            xmp[np.where(xmp == x)] = xy_rot[0]
+            ymp[np.where(ymp == y)] = xy_rot[1]
+        return xmp, ymp    
+    
     def Refinegrid(self, j_direct, numElevate = 1):
         """
         Refine a grid multiple times by inserting midpoints between unique knots.
