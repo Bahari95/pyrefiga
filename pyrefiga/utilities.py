@@ -604,9 +604,62 @@ class getGeometryMap:
 #... construct connectivity between patches: 
 # TODO doesn't support different oriontation
 #========================================================================
+class pyrefMultpatch(object):
+    """
+    Detect connectivity between patches.
+    Returns the list of interfaces and Dirichlet BCs to be applied on each patch.
+    The convention for the patches is as follows:
+                                                 ___4___
+                                                |       |
+                                              1 |       | 2
+                                                |_______|
+                                                    3
+    The interface is defined as the common edge between two patches.
+    The Dirichlet BCs are defined as follows:
+        [True, False] : Dirichlet BC on the left edge
+        [False, True] : Dirichlet BC on the right edge
+    The input are the control points of all patches.
+    """
+    def __init__(self, geometryname, id_list):
+        #.. TODO FIND ID automatically from the XML file
+        mp        = []
+        for i in id_list :
+            mp.append( getGeometryMap(geometryname, id_list[i]) )
+
+        self.num_patches = len(mp)
+        self.interfaces  = []
+        self.dirichlet   = []
+        for i in range(self.num_patches):
+            for j in range(i+1, self.num_patches):
+                xmp, ymp     = mp[i].coefs()
+                xmp1, ymp1   = mp[j].coefs()
+                #... test if they share an interface
+                interface_obj = pyrefInterface(xmp, ymp, xmp1, ymp1)
+                if interface_obj.interface is False :
+                    continue
+                #...
+                self.interfaces.append( (i, j, interface_obj.interface) )
+                self.dirichlet.append( (i, interface_obj.dirichlet_1) )
+
+        self.geometryname = geometryname
+        self.id_list      = id_list
+    def interfaces(self):
+        return self.interfaces
+    def dirichlet(self):
+        return self.dirichlet
+    def patch(self, num_patch):
+        dirichlet_patch = []
+        for (i, dirichlet) in self.dirichlet:
+            if i == num_patch:
+                dirichlet_patch.append(dirichlet)
+        return dirichlet_patch
+#========================================================================
+#... construct connectivity between two patches: 
+# TODO doesn't support different oriontation
+#========================================================================
 class pyrefInterface(object):
     """
-    Detect interface between patches.
+    Detect interface between two patches.
     Returns the list of interfaces and Dirichlet BCs to be applied on each patch.
     The convention for the patches is as follows:
                                                  ___4___
@@ -622,21 +675,10 @@ class pyrefInterface(object):
     """
     def __init__(self, xmp, ymp, xmp1, ymp1):
         
-        # mp        = [] TODO
-        # dirichlet = []
-        # j         = 0
-        # for i in idx : 
-        #     mp.append(getGeometryMap(geometry,i)) 
-        #     mp[j].nurbs_check  = True # Activate NURBS if geometry uses NURBS
-        #     dirichlet.append([[True, True], [True, True]])
-        #     j +=1
-        # degree          = mp[0].degree # Use same degree as geometry
-        # #....        
-        # xmp, ymp     = mp.coefs()
         #...
-        self.interface   = [2,1]
-        self.dirichlet_1 = [[True, True], [True, True]]
-        self.dirichlet_2 = [[True, True], [True, True]]
+        self.interface   = False
+        self.dirichlet_1 = False
+        self.dirichlet_2 = False
         if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-12 :
             self.interface   = [2,1]
             self.dirichlet_1 = [[True, False],[True, True]]
@@ -653,8 +695,8 @@ class pyrefInterface(object):
             self.interface   = [4,3]
             self.dirichlet_1 = [[True, True], [True, False]]
             self.dirichlet_2 = [[True, True], [False, True]]
-        else:
-            raise ValueError("Invalid interface configuration")
+        # else:
+        #     raise ValueError("Invalid interface configuration")
     def interface(self):
         return self.interface
     def dirichlet_1(self):
@@ -663,7 +705,7 @@ class pyrefInterface(object):
         return self.dirichlet_2
     
     def printInterface(self):
-        print(f"Interfaces ({self.interface[0]}, {self.interface[1]})")
+        print(f"Interfaces ({self.interface})")
         print(f"Dirichlet BCs for patch {1} : {self.dirichlet_1}")
         print(f"Dirichlet BCs for patch {2} : {self.dirichlet_2}")
 

@@ -131,7 +131,7 @@ mp               = getGeometryMap(geometry,id_mp)
 degree[0]        += mp.degree[0]
 degree[1]        += mp.degree[1]
 mp.nurbs_check   = True # Activate NURBS if geometry uses NURBS
-nb_ne            = 2**refGrid # number of elements after refinement
+nb_ne            = refGrid # number of elements after refinement
 quad_degree      = max(degree[0],degree[1]) # Quadrature degree
 # ... Assembling mapping
 xmp, ymp         = mp.coefs()
@@ -152,7 +152,7 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     #-----------------------------------------------------------
     # Refine mesh
     #-----------------------------------------------------------
-    nb_ne           = 2**ne
+    nb_ne           = ne
     print('#---IN-UNIFORM--MESH', nb_ne)
 
     #-----------------------------------------------------------
