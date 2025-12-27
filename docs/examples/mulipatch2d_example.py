@@ -12,12 +12,8 @@ from   pyrefiga                         import TensorSpace
 from   pyrefiga                         import StencilMatrix
 from   pyrefiga                         import StencilVector
 from   pyrefiga                         import StencilNitsche
-from   pyrefiga                         import pyccel_sol_field_2d
-from   pyrefiga                         import prolongation_matrix
-from   pyrefiga                         import least_square_Bspline
-from   pyrefiga                         import getGeometryMap
+from   pyrefiga                         import pyrefMultpatch
 from   pyrefiga                         import build_dirichlet
-from   pyrefiga                         import pyrefInterface
 from   pyrefiga                         import load_xml
 # Import Poisson assembly tools for uniform mesh
 from gallery.gallery_section_10 import assemble_matrix_un_ex00
@@ -62,21 +58,21 @@ args = parser.parse_args()
 #                                                |_______|
 #                                                    3
 #------------------------------------------------------------------------------
-def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, dirichlet_1, dirichlet_2):
+def poisson_solve(V, VT, pyrefMP, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2):
 
-    Ni            = StencilNitsche(V, V, [dirichlet_1,dirichlet_2], interfaces= interface)
+    Ni            = StencilNitsche(V, V, pyrefMP)
     #...
 
     # Assemble stiffness matrix 11
     stiffness11   = assemble_stiffness(V, fields=[u11_mph, u12_mph])
     Ni.applyNitsche(stiffness11,u11_mph, u12_mph, 1)
-    stiffness11   = apply_dirichlet(V, stiffness11, dirichlet = dirichlet_1)
+    stiffness11   = apply_dirichlet(V, stiffness11, dirichlet = pyrefMP.getDirPatch(1))
     Ni.appendBlock(stiffness11, 1)
 
     # Assemble stiffness matrix 22
     stiffness22   = assemble_stiffness(V, fields=[u21_mph, u22_mph])
     Ni.applyNitsche(stiffness22, u21_mph, u22_mph, 2)
-    stiffness22   = apply_dirichlet(V, stiffness22, dirichlet = dirichlet_2)
+    stiffness22   = apply_dirichlet(V, stiffness22, dirichlet = pyrefMP.getDirPatch(2))
     Ni.appendBlock(stiffness22, 2)
 
     #=======================================
@@ -86,10 +82,10 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
 
     # Assemble right-hand side vector
     rhs                          = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d1])
-    rhs1   = apply_dirichlet(V, rhs, dirichlet_1)    
+    rhs1   = apply_dirichlet(V, rhs, pyrefMP.getDirPatch(1))    
     # Assemble right-hand side vector
     rhs                       = assemble_rhs_un( V, fields=[u21_mph, u22_mph, u_d2])
-    rhs2   = apply_dirichlet(V, rhs, dirichlet_2)    
+    rhs2   = apply_dirichlet(V, rhs, pyrefMP.getDirPatch(2))    
     # Assemble right-hand side vector
     b                          = zeros(Ni._nbasis[0]+Ni._nbasis[1])
     b[:Ni._nbasis[0]]                = rhs1[:]
@@ -99,8 +95,8 @@ def poisson_solve(V, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, interface, 
     x, inf          = sla.cg(Ni.tosparse(), b)
 
     # ... Extract solution
-    u1              = apply_dirichlet(V, x[:Ni._nbasis[0]], dirichlet = dirichlet_1, update= u_d1)#StencilVector(V.vector_space)
-    u2              = apply_dirichlet(V, x[Ni._nbasis[0]:], dirichlet = dirichlet_2, update= u_d2)#StencilVector(V.vector_space)
+    u1              = apply_dirichlet(V, x[:Ni._nbasis[0]], dirichlet = pyrefMP.getDirPatch(1), update= u_d1)#StencilVector(V.vector_space)
+    u2              = apply_dirichlet(V, x[Ni._nbasis[0]:], dirichlet = pyrefMP.getDirPatch(2), update= u_d2)#StencilVector(V.vector_space)
     # ... to array
     x1              = u1.toarray().reshape(V.nbasis)
     x2              = u2.toarray().reshape(V.nbasis)
@@ -159,27 +155,13 @@ print("Dirichlet boundary conditions", g)
 #------------------------------------------------------------------------------
 # Extract geometry mapping
 #------------------------------------------------------------------------------
-mp              = getGeometryMap(geometry,idmp[0])# .. First patch 
-mp1             = getGeometryMap(geometry,idmp[1])# .. Second patch
-degree[0]        += mp.degree[0] # we suppose that we have same degree
-degree[1]        += mp.degree[1]
-mp.nurbs_check    = True # Activate NURBS if geometry uses NURBS
-mp1.nurbs_check   = True # Activate NURBS if geometry uses NURBS
+pyrefMP           = pyrefMultpatch(geometry,idmp)# .. First patch 
+degree[0]        += pyrefMP.degree()[0]
+degree[1]        += pyrefMP.degree()[1]
 nb_ne             = refGrid #16  # number of elements after refinement
 quad_degree       = max(degree[0],degree[1]) # Quadrature degree
-
-#------------------------------------------------------------------------------
-# Initialize mapping
-#------------------------------------------------------------------------------
-xmp, ymp         = mp.coefs()
-wm1, wm2         = mp.weights()
-xmp1, ymp1       = mp1.coefs()
-
-#------------------------------------------------------------------------------
-# Detect interface between patches
-#------------------------------------------------------------------------------
-rInt             = pyrefInterface(xmp, ymp, xmp1, ymp1)
-rInt.printInterface() # Print detected interface
+#... Print multipatch info
+pyrefMP.detail()
 
 #------------------------------------------------------------------------------
 # Mesh refinement loop 
@@ -193,34 +175,26 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     print('#---IN-UNIFORM--MESH', nb_ne)
 
     # Refine geometry mapping
-    weight, xmp, ymp  = mp.RefineGeometryMap(numElevate=nb_ne)
-    wm1, wm2 = weight[:,0], weight[0,:]
-    xmp1, ymp1  = mp1.RefineGeometryMap(numElevate=nb_ne)[1:]
     # Create spline spaces for refined mesh
-    V1 = SplineSpace(degree=degree[0], grid = mp.Refinegrid(0, numElevate=nb_ne), nderiv = 1, omega = wm1, quad_degree = quad_degree)
-    V2 = SplineSpace(degree=degree[1], grid = mp.Refinegrid(1, numElevate=nb_ne), nderiv = 1, omega = wm2, quad_degree = quad_degree)
-    Vh = TensorSpace(V1, V2)
+    V1 = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
+    V2 = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
+    # ... mapping spaces
+    V1mp, V2mp = pyrefMP.UnifSplineSpace(mesh=(V1.mesh, V2.mesh), quad_degree= quad_degree, nders=1)
+    Vh = TensorSpace(V1, V2, V1mp, V2mp)
     print('#spaces')
     # Update mapping vectors
-    u11_mph         = StencilVector(Vh.vector_space)
-    u12_mph         = StencilVector(Vh.vector_space)
-    u11_mph.from_array(Vh, xmp)
-    u12_mph.from_array(Vh, ymp)
+    xmp, ymp                 = pyrefMP.getStencilMapping(1)
+    u11_mph, u12_mph         = pyrefMP.getcoefs(1)
     # Update mapping vectors
-    u21_mph         = StencilVector(Vh.vector_space)
-    u22_mph         = StencilVector(Vh.vector_space)
-    u21_mph.from_array(Vh, xmp1)
-    u22_mph.from_array(Vh, ymp1)
+    u21_mph, u22_mph         = pyrefMP.getStencilMapping(2)
+    xmp1, ymp1               = pyrefMP.getcoefs(2)
     # Assemble Dirichlet boundary conditions
-    xd1, u_d1 = build_dirichlet(Vh, g, map = (xmp, ymp,Vh))
-    xd2, u_d2 = build_dirichlet(Vh, g, map = (xmp1, ymp1,Vh))
-    xd1, xd2  = rInt.setInterface(xd1, xd2)
-    u_d1.from_array(Vh, xd1)
-    u_d2.from_array(Vh, xd2)
+    u_d1 = build_dirichlet(Vh, g, map = (xmp, ymp, pyrefMP.getTensorSpace()), Interfaces  = pyrefMP.getDirichletBoundaries(1))[1]
+    u_d2 = build_dirichlet(Vh, g, map = (xmp1, ymp1, pyrefMP.getTensorSpace()), Interfaces = pyrefMP.getDirichletBoundaries(2))[1]
     print('#')
     # Solve Poisson equation on refined mesh
     start = time.time()
-    xuh1, xuh2, l2_error,  H1_error = poisson_solve(Vh, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2, rInt.interface, rInt.dirichlet_1, rInt.dirichlet_2)
+    xuh1, xuh2, l2_error,  H1_error = poisson_solve(Vh, pyrefMP, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2)
     times.append(time.time()- start)
     print('#')
     # Store results
