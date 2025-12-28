@@ -16,13 +16,13 @@ from   pyrefiga                         import pyrefMultpatch
 from   pyrefiga                         import build_dirichlet
 from   pyrefiga                         import load_xml
 # Import Poisson assembly tools for uniform mesh
-from gallery.gallery_section_10 import assemble_matrix_un_ex00
-from gallery.gallery_section_10 import assemble_vector_un_ex01
-from gallery.gallery_section_10 import assemble_norm_un_ex01
+from gallery.gallery_section_06         import assemble_matrix_un_ex01
+from gallery.gallery_section_10         import assemble_vector_un_ex02
+from gallery.gallery_section_10         import assemble_norm_un_ex02
 
-assemble_stiffness   = compile_kernel(assemble_matrix_un_ex00, arity=2)
-assemble_rhs_un      = compile_kernel(assemble_vector_un_ex01, arity=1)
-assemble_norm_un     = compile_kernel(assemble_norm_un_ex01, arity=1)
+assemble_matrix_un   = compile_kernel(assemble_matrix_un_ex01, arity=2)
+assemble_rhs_un      = compile_kernel(assemble_vector_un_ex02, arity=1)
+assemble_norm_un     = compile_kernel(assemble_norm_un_ex02, arity=1)
 
 from   scipy.sparse                      import linalg as sla
 from   numpy                             import zeros
@@ -58,57 +58,69 @@ args = parser.parse_args()
 #                                                |_______|
 #                                                    3
 #------------------------------------------------------------------------------
-def poisson_solve(V, VT, pyrefMP, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2):
+def poisson_solve(V, VT, pyrefMP, g):
 
-    Ni            = StencilNitsche(V, V, pyrefMP)
+    assert isinstance( pyrefMP, pyrefMultpatch)
+    assert isinstance( V,  TensorSpace)
+    assert isinstance( VT, TensorSpace)
+
+    #... Nitsche's class
+    Ni            = StencilNitsche(V, V, pyrefMP, Isoparametric= False)
+    # Assemble right-hand side vector
+    b             = zeros(Ni._Nitshedim[0])
     #...
-
-    # Assemble stiffness matrix 11
-    stiffness11   = assemble_stiffness(V, fields=[u11_mph, u12_mph])
-    Ni.applyNitsche(stiffness11,u11_mph, u12_mph, 1)
-    stiffness11   = apply_dirichlet(V, stiffness11, dirichlet = pyrefMP.getDirPatch(1))
-    Ni.appendBlock(stiffness11, 1)
-
-    # Assemble stiffness matrix 22
-    stiffness22   = assemble_stiffness(V, fields=[u21_mph, u22_mph])
-    Ni.applyNitsche(stiffness22, u21_mph, u22_mph, 2)
-    stiffness22   = apply_dirichlet(V, stiffness22, dirichlet = pyrefMP.getDirPatch(2))
-    Ni.appendBlock(stiffness22, 2)
-
-    #=======================================
-    # # # Assemble Nitsche's method matrices
-    #=======================================
-    Ni.addNitscheoffDiag(u11_mph, u12_mph, u21_mph, u22_mph)
-
-    # Assemble right-hand side vector
-    rhs                          = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d1])
-    rhs1   = apply_dirichlet(V, rhs, pyrefMP.getDirPatch(1))    
-    # Assemble right-hand side vector
-    rhs                       = assemble_rhs_un( V, fields=[u21_mph, u22_mph, u_d2])
-    rhs2   = apply_dirichlet(V, rhs, pyrefMP.getDirPatch(2))    
-    # Assemble right-hand side vector
-    b                          = zeros(Ni._nbasis[0]+Ni._nbasis[1])
-    b[:Ni._nbasis[0]]                = rhs1[:]
-    b[Ni._nbasis[0]:]                = rhs2[:]
-
+    u_d           = []
+    # Assemble stiffness matrix
+    for patch_nb in range(1, pyrefMP.getNumPatches()+1):
+        #... mapping in Stencil format
+        u11_mph, u12_mph = pyrefMP.getStencilMapping(patch_nb)
+        #... mapping as arrays
+        xmp, ymp         = pyrefMP.getcoefs(patch_nb)
+        # Assemble Dirichlet boundary conditions
+        u_d1 = build_dirichlet(V, g, map = (xmp, ymp, pyrefMP.getTensorSpace()), Boundaries  = pyrefMP.getDirichletBoundaries(patch_nb))[1]
+        u_d.append(u_d1)
+        #...
+        stiffness  = StencilMatrix(V.vector_space, V.vector_space)
+        stiffness  = assemble_matrix_un(VT, fields=[u11_mph, u12_mph], out=stiffness)
+        #...
+        Ni.applyNitsche(stiffness, patch_nb)
+        stiffness  = apply_dirichlet(V, stiffness, dirichlet = pyrefMP.getDirPatch(patch_nb))
+        Ni.appendBlock(stiffness, patch_nb)
+        # Assemble right-hand side vector
+        rhs        = StencilVector(V.vector_space)
+        rhs        = assemble_rhs_un( VT, fields=[u11_mph, u12_mph, u_d1], out= rhs)
+        rhs        = apply_dirichlet(V, rhs, pyrefMP.getDirPatch(patch_nb))
+        #...
+        b[Ni._rhnb[patch_nb-1]:Ni._rhnb[patch_nb]] = rhs[:]
+    #=============================================
+    # # # Assemble Nitsche's off diagonal matrices
+    #=============================================
+    Ni.addNitscheoffDiag()
     # Solve the linear system using CGS
     x, inf          = sla.cg(Ni.tosparse(), b)
-
+    l2_norm = 0.
+    H1_norm = 0.
+    x_sol   = []
+    u_sol   = []
     # ... Extract solution
-    u1              = apply_dirichlet(V, x[:Ni._nbasis[0]], dirichlet = pyrefMP.getDirPatch(1), update= u_d1)#StencilVector(V.vector_space)
-    u2              = apply_dirichlet(V, x[Ni._nbasis[0]:], dirichlet = pyrefMP.getDirPatch(2), update= u_d2)#StencilVector(V.vector_space)
-    # ... to array
-    x1              = u1.toarray().reshape(V.nbasis)
-    x2              = u2.toarray().reshape(V.nbasis)
+    for patch_nb in range(1,pyrefMP.getNumPatches()+1):
+        u1              = apply_dirichlet(V, x[Ni._rhnb[patch_nb-1]:Ni._rhnb[patch_nb]], dirichlet = pyrefMP.getDirPatch(patch_nb), update= u_d[patch_nb-1])#StencilVector(V.vector_space)
+        # ... to array
+        x1              = u1.toarray().reshape(V.nbasis)
+        x_sol.append(x1)
+        u_sol.append(u1)
+        #... mapping in Stencil format
+        u11_mph, u12_mph = pyrefMP.getStencilMapping(patch_nb)
+        # Compute L2 and H1 errors
+        Norm      = StencilVector(V.vector_space)
+        Norm      = assemble_norm_un(VT, fields=[u11_mph, u12_mph, u1], out= Norm).toarray()
+        l2_norm += Norm[0]**2
+        H1_norm += Norm[1]**2
+    l2_norm = np.sqrt(l2_norm)
+    H1_norm = np.sqrt(H1_norm)    
+    print("L2 norm:", l2_norm, "H1 norm:", H1_norm)
 
-    # Compute L2 and H1 errors
-    norm0   = assemble_norm_un(V, fields=[u11_mph, u12_mph, u1]).toarray()
-    norm1   = assemble_norm_un(V, fields=[u21_mph, u22_mph, u2]).toarray()
-    l2_norm = np.sqrt(norm0[0]**2+norm1[0]**2)
-    H1_norm = np.sqrt(norm0[1]**2+norm1[1]**2)
-    print("L2 norm:", l2_norm, "H1 norm:", H1_norm, "area: ", norm0[2], "+", norm1[2])
-
-    return x1, x2, l2_norm, H1_norm
+    return x_sol, l2_norm, H1_norm
 
 #------------------------------------------------------------------------------
 # Parameters and initialization
@@ -141,14 +153,14 @@ g         = ['x**2+y**2']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-# geometry = load_xml('unitSquare.xml')
-# idmp = (1,0)
-geometry = load_xml('lshape.xml')
-idmp = (0,1)
+geometry = load_xml('unitSquare.xml')
+idmp = (0,1,2)
+# geometry = load_xml('lshape.xml')
+# idmp = (0,1)
 # geometry = load_xml('quart_annulus.xml')
 # idmp     = (0,1)
 # geometry = load_xml('annulus.xml')
-# idmp     = (0,1)
+# idmp     = (0,1,2,3)
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 
@@ -179,22 +191,13 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     V1 = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
     V2 = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
     # ... mapping spaces
-    V1mp, V2mp = pyrefMP.UnifSplineSpace(mesh=(V1.mesh, V2.mesh), quad_degree= quad_degree, nders=1)
-    Vh = TensorSpace(V1, V2, V1mp, V2mp)
+    V1mp, V2mp = pyrefMP.UnifSplineSpace(mesh=(V1.mesh, V2.mesh), quad_degree= (quad_degree,quad_degree), nders=1)
+    Vh = TensorSpace(V1, V2)
+    VT = TensorSpace(V1, V2, V1mp, V2mp)
     print('#spaces')
-    # Update mapping vectors
-    xmp, ymp                 = pyrefMP.getStencilMapping(1)
-    u11_mph, u12_mph         = pyrefMP.getcoefs(1)
-    # Update mapping vectors
-    u21_mph, u22_mph         = pyrefMP.getStencilMapping(2)
-    xmp1, ymp1               = pyrefMP.getcoefs(2)
-    # Assemble Dirichlet boundary conditions
-    u_d1 = build_dirichlet(Vh, g, map = (xmp, ymp, pyrefMP.getTensorSpace()), Interfaces  = pyrefMP.getDirichletBoundaries(1))[1]
-    u_d2 = build_dirichlet(Vh, g, map = (xmp1, ymp1, pyrefMP.getTensorSpace()), Interfaces = pyrefMP.getDirichletBoundaries(2))[1]
-    print('#')
     # Solve Poisson equation on refined mesh
     start = time.time()
-    xuh1, xuh2, l2_error,  H1_error = poisson_solve(Vh, pyrefMP, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2)
+    xuh, l2_error,  H1_error = poisson_solve(Vh, VT, pyrefMP, g)
     times.append(time.time()- start)
     print('#')
     # Store results
@@ -219,12 +222,12 @@ if args.plot :
 
     from pyrefiga    import paraview_nurbsSolutionMultipatch
     solutions = [
-        {"name": "Solution", "data": [xuh1, xuh2]}
+        {"name": "Solution", "data": xuh}
     ]
     functions = [
         {"name": "Exact solution", "expression": g[0]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, [Vh, Vh], [xmp, xmp1], [ymp, ymp1],  solution = solutions, functions = functions)
+    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP.getAllcoefs('x'), pyrefMP.getAllcoefs('y'), Vg = pyrefMP.getTensorSpace(),  solution = solutions, functions = functions)
     import subprocess
 
     # Load the multipatch VTM

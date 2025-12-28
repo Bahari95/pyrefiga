@@ -83,7 +83,7 @@ def prolongation_matrix(VH, Vh):
 #========================================================================
 # ... build Dirichlet in two dimensions from analytic form
 #========================================================================
-def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = None):
+def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = None):
     '''
     V    : FE space
     f[0] : on the left
@@ -93,7 +93,7 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
     map = (x,y, V) : control points and associated space
     admap = (x, V1, y, V2) control points and associated space
     refinN : number of refinement for least square projection
-    Interfaces : list of interfaces to apply Dirichlet BCs on them
+    Boundaries : list of Boundaries to apply Dirichlet BCs on them
                                                  ___4___
                                                 |       |
                                               1 |       | 2
@@ -112,8 +112,8 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
     elif len(map) == V.dim:
         map = [*map, V]
 
-    if Interfaces is None:
-        Interfaces = [1,2,3,4]
+    if Boundaries is None:
+        Boundaries = [1,2,3,4]
     #... 
     boundary_map = {
         1: (0, slice(None)),
@@ -163,8 +163,8 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
             if map is None:
                 #------------------------------
                 #.. In the parametric domain
-                for i in range(len(Interfaces)):
-                    x_d[boundary_map[Interfaces[i]]] = least_square_Bspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], f_dir[Interfaces[i]-1])
+                for i in range(len(Boundaries)):
+                    x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], f_dir[Boundaries[i]-1])
 
                 # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0])
                 # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1])
@@ -181,9 +181,9 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
                     else:
                         sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
                         sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
-                    for i in range(len(Interfaces)):
-                        x_d[boundary_map[Interfaces[i]]] = least_square_Bspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                                f_dir[Interfaces[i]-1](sX[boundary_map[Interfaces[i]]], sY[boundary_map[Interfaces[i]]]))
+                    for i in range(len(Boundaries)):
+                        x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                                f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
                     # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0](sX[0, :], sY[ 0,:]))
                     # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1](sX[-1,:], sY[-1,:]))
                     # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2](sX[:, 0], sY[:, 0]))
@@ -198,9 +198,9 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
                         sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[3].omega, map[3].knots, map[3].degree)[0]
                         sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[3].omega, map[3].knots, map[3].degree)[0]
                         sZ           = sol_field_NURBS_2d(n_dir,  map[2] , map[3].omega, map[3].knots, map[3].degree)[0]
-                    for i in range(len(Interfaces)):
-                        x_d[boundary_map[Interfaces[i]]] = least_square_Bspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                                f_dir[Interfaces[i]-1](sX[boundary_map[Interfaces[i]]], sY[boundary_map[Interfaces[i]]], sZ[boundary_map[Interfaces[i]]]  ))
+                    for i in range(len(Boundaries)):
+                        x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                                f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]  ))
                     # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0](sX[0, :], sY[ 0,:], sZ[ 0,:]))
                     # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1](sX[-1,:], sY[-1,:], sZ[-1,:]))
                     # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2](sX[:, 0], sY[:, 0], sZ[:, 0]))
@@ -223,9 +223,9 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
                     else :
                         sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
                         sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
-                    for i in range(len(Interfaces)):
-                        x_d[boundary_map[Interfaces[i]]] = least_square_Bspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                                f_dir[Interfaces[i]-1](sX[boundary_map[Interfaces[i]]], sY[boundary_map[Interfaces[i]]]))
+                    for i in range(len(Boundaries)):
+                        x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                                f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
                     # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0](sX[0, :], sY[ 0,:]))
                     # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1](sX[-1,:], sY[-1,:]))
                     # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2](sX[:, 0], sY[:, 0]))
@@ -240,9 +240,9 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
                         sX           = sol_field_NURBS_2d( None, map[0], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
                         sY           = sol_field_NURBS_2d( None, map[1], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
                         sZ           = sol_field_NURBS_2d( None, map[2], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                    for i in range(len(Interfaces)):
-                        x_d[boundary_map[Interfaces[i]]] = least_square_Bspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                                f_dir[Interfaces[i]-1](sX[boundary_map[Interfaces[i]]], sY[boundary_map[Interfaces[i]]], sZ[boundary_map[Interfaces[i]]]))
+                    for i in range(len(Boundaries)):
+                        x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                                f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]))
                     # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0](sX[0, :], sY[ 0,:], sZ[ 0,:]))
                     # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1](sX[-1,:], sY[-1,:], sZ[-1,:]))
                     # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2](sX[:, 0], sY[:, 0], sZ[:, 0]))
@@ -254,10 +254,10 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
             if map is None:
                 #------------------------------
                 #.. In the parametric domain
-                for i in range(len(Interfaces)):
-                    x_d[boundary_map[Interfaces[i]]] = least_square_NURBspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                            V.omega[Space_map[Interfaces[i]]],
-                                                                            f_dir[Interfaces[i]-1])
+                for i in range(len(Boundaries)):
+                    x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                            V.omega[Space_map[Boundaries[i]]],
+                                                                            f_dir[Boundaries[i]-1])
                 # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0])
                 # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1])
                 # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2])
@@ -274,10 +274,10 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
                     else:
                         sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[2].omega, map[2].knots, map[2].degree)[0]
                         sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[2].omega, map[2].knots, map[2].degree)[0]
-                    for i in range(len(Interfaces)):
-                        x_d[boundary_map[Interfaces[i]]] = least_square_NURBspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                                V.omega[Space_map[Interfaces[i]]],
-                                                                                f_dir[Interfaces[i]-1](sX[boundary_map[Interfaces[i]]], sY[boundary_map[Interfaces[i]]]))
+                    for i in range(len(Boundaries)):
+                        x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                                V.omega[Space_map[Boundaries[i]]],
+                                                                                f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
                     # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0](sX[0, :], sY[ 0,:]))
                     # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1](sX[-1,:], sY[-1,:]))
                     # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2](sX[:, 0], sY[:, 0]))
@@ -292,10 +292,10 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
                         sX           = sol_field_NURBS_2d(n_dir,  map[0] , map[3].omega, map[3].knots, map[3].degree)[0]
                         sY           = sol_field_NURBS_2d(n_dir,  map[1] , map[3].omega, map[3].knots, map[3].degree)[0]
                         sZ           = sol_field_NURBS_2d(n_dir,  map[2] , map[3].omega, map[3].knots, map[3].degree)[0]
-                    for i in range(len(Interfaces)):
-                        x_d[boundary_map[Interfaces[i]]] = least_square_NURBspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                                V.omega[Space_map[Interfaces[i]]],
-                                                                                f_dir[Interfaces[i]-1](sX[boundary_map[Interfaces[i]]], sY[boundary_map[Interfaces[i]]], sZ[boundary_map[Interfaces[i]]]))
+                    for i in range(len(Boundaries)):
+                        x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                                V.omega[Space_map[Boundaries[i]]],
+                                                                                f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]))
                     # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0](sX[0, :], sY[ 0,:], sZ[ 0,:]))
                     # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1](sX[-1,:], sY[-1,:], sZ[-1,:]))
                     # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2](sX[:, 0], sY[:, 0], sZ[:, 0]))
@@ -318,10 +318,10 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
                         sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
                         sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
 
-                    for i in range(len(Interfaces)):
-                        x_d[boundary_map[Interfaces[i]]] = least_square_NURBspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                                V.omega[Space_map[Interfaces[i]]],
-                                                                                f_dir[Interfaces[i]-1](sX[boundary_map[Interfaces[i]]], sY[boundary_map[Interfaces[i]]]))
+                    for i in range(len(Boundaries)):
+                        x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                                V.omega[Space_map[Boundaries[i]]],
+                                                                                f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
                     # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0](sX[0, :], sY[ 0,:]))
                     # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1](sX[-1,:], sY[-1,:]))
                     # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2](sX[:, 0], sY[:, 0]))
@@ -336,10 +336,10 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Interfaces = No
                         sX           = sol_field_NURBS_2d( None, map[0], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
                         sY           = sol_field_NURBS_2d( None, map[1], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
                         sZ           = sol_field_NURBS_2d( None, map[2], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                    for i in range(len(Interfaces)):
-                        x_d[boundary_map[Interfaces[i]]] = least_square_NURBspline(V.degree[Space_map[Interfaces[i]]], V.knots[Space_map[Interfaces[i]]], 
-                                                                                V.omega[Space_map[Interfaces[i]]],
-                                                                                f_dir[Interfaces[i]-1](sX[boundary_map[Interfaces[i]]], sY[boundary_map[Interfaces[i]]], sZ[boundary_map[Interfaces[i]]]))
+                    for i in range(len(Boundaries)):
+                        x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
+                                                                                V.omega[Space_map[Boundaries[i]]],
+                                                                                f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]))
 
                     # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0](sX[0, :], sY[ 0,:], sZ[ 0,:]))
                     # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1](sX[-1,:], sY[-1,:], sZ[-1,:]))
@@ -700,8 +700,8 @@ class pyrefMultpatch(object):
     def __init__(self, geometryname, id_list, Nurbs_check = True):
         #.. TODO FIND ID automatically from the XML file
         mp        = []
-        for i in id_list :
-            mp.append( getGeometryMap(geometryname, id_list[i], Nurbs_check = Nurbs_check) )
+        for i in id_list:
+            mp.append( getGeometryMap(geometryname, i, Nurbs_check = Nurbs_check) )
 
         #... edge id mapping
         idmapping = {
@@ -716,6 +716,8 @@ class pyrefMultpatch(object):
         interfaces  = []
         #... First we assume all boundaries are Dirichlet
         dirichlet   = np.zeros((num_patches, 2, 2), dtype = bool)+True
+        # ...
+        patch_has_interface = [False] * num_patches
         #... loop over all patches
         for i in range(num_patches):
             for j in range(i+1, num_patches):
@@ -730,7 +732,11 @@ class pyrefMultpatch(object):
                 #... set the Dirichlet BCs False for the interface edges
                 dirichlet[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
                 dirichlet[j,idmapping[interface_obj.interface[1]][0],idmapping[interface_obj.interface[1]][1]] = False
-
+                #...
+                patch_has_interface[i] = True
+                patch_has_interface[j] = True
+        assert all(patch_has_interface), "Invalid geometry: at least one patch has no interface"
+        # ...
         self.num_patches  = num_patches
         self.interfaces   = interfaces
         self.dirichlet    = dirichlet.tolist()
@@ -753,7 +759,13 @@ class pyrefMultpatch(object):
         return self._weights  
     def grids(self, num_patch=1):
         return self.patches[num_patch-1].grids
-
+    #.. get coefs
+    def getAllcoefs(self, direct='x'):
+        map_xy = {
+            'x':0,
+            'y':1 
+        }
+        return [self.patches[np].coefs()[map_xy[direct]] for np in range(self.num_patches)]
     #.. get tensor space
     def getTensorSpace(self):
         # ... space of a B-spline patches
@@ -763,9 +775,11 @@ class pyrefMultpatch(object):
             
     #.. get spline space on uniform mesh
     def UnifSplineSpace(self, mesh, quad_degree, nders = 1):
+        if isinstance(quad_degree, int):
+            quad_degree = (quad_degree,quad_degree)
         # ... space of a B-spline patches on uniform mesh
-        Vmp1 = SplineSpace(degree=self.degree()[0], grid = self.grids()[0], omega = self.weights()[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree)
-        Vmp2 = SplineSpace(degree=self.degree()[1], grid = self.grids()[1], omega = self.weights()[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree)
+        Vmp1 = SplineSpace(degree=self.degree()[0], grid = self.grids()[0], omega = self.weights()[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree[0])
+        Vmp2 = SplineSpace(degree=self.degree()[1], grid = self.grids()[1], omega = self.weights()[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree[1])
         return Vmp1, Vmp2
 
     #.. get mapping in stencil vector format
@@ -807,7 +821,7 @@ class pyrefMultpatch(object):
         for interface in self.interfaces:
             if interface[0] == num_patch:
                 interface_patch.append(interface[2][0])
-            if interface[0] == num_patch or interface[1] == num_patch:
+            if interface[1] == num_patch:
                 interface_patch.append(interface[2][1])
         return np.asarray(interface_patch)
 

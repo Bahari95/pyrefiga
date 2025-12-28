@@ -239,6 +239,9 @@ class StencilNitsche(object):
         self._ndim     = V.dim
         self._domain   = V
         self._codomain = W
+        Vmp1, Vmp2     = pyrefMP.UnifSplineSpace(mesh=V.mesh, quad_degree = (V.weights[0].shape[1]-1,V.weights[1].shape[1]-1))
+        self._mpdomain = TensorSpace(Vmp1, Vmp2)
+        self._Tdomain  = TensorSpace(V.spaces[0],V.spaces[1], Vmp1, Vmp2)
         self._nmp      = nmp  # number of patches
         self._type     = V.vector_space.dtype
         self._nbs      = V.vector_space.npts
@@ -250,13 +253,17 @@ class StencilNitsche(object):
                 elim_index[i,j,1] = V.nbasis[j]-1 if pyrefMP.getDirPatch(i+1)[j][1] else V.nbasis[0]
         # Build nbasis for each patch
         nbasis         = []
+        rhnb           = []
+        rhnb.append(0)
         for j in range(nmp):
             nb = (elim_index[j,0,1]-elim_index[j,0,0])
             for i in range(1, V.dim):
                 nb = nb * (elim_index[j,i,1]-elim_index[j,i,0]) 
             nbasis.append(nb)
+            rhnb.append(sum(nbasis))
         self._Nitshedim = (sum(nbasis), sum(nbasis))
         self._nbasis    = nbasis
+        self._rhnb      = rhnb # position of each loc vector in global = [0]+nbasis
         self.elim_index = elim_index # [nmpatch, dim, 2] local matrix start from
         self.mp         = pyrefMP
         #
@@ -283,8 +290,8 @@ class StencilNitsche(object):
         #-------------------------------
         if Isoparametric:
             #... using same spaces for FE analysis V and  Multipatch W
-            self.assemble_nitsche2dDiag         = partial(assemble_matrix, core.assemble_matrix_diagnitsche)
-            self.assemble_nitsche2dUnderDiag    = partial(assemble_matrix, core.assemble_matrix_offdiagnitsche)        
+            self.assemble_nitsche2dDiag        = partial(assemble_matrix, core.assemble_matrix_diagnitsche)
+            self.assemble_nitsche2dUnderDiag   = partial(assemble_matrix, core.assemble_matrix_offdiagnitsche)        
         else:
             #... using different spaces for FE analysis V and  Multipatch W
             self.assemble_nitsche2dDiag        = partial(assemble_matrix, core.assemble_matrix_DiffSpacediagnitsche)
@@ -295,11 +302,13 @@ class StencilNitsche(object):
     @property
     def domain( self ):
         return self._domain
-
     # ...
     @property
     def codomain( self ):
         return self._codomain
+    # ...
+    def tosparse( self ):
+        return self.stencilNitsche
     #...
     def collect_offdiagStencilMatrix(self, stiffnessoffdiag, interface):
         '''
@@ -398,15 +407,11 @@ class StencilNitsche(object):
         M.eliminate_zeros()
         return M
     #...
-    def addNitscheoffDiag(self, u11_mph, u12_mph, u21_mph, u22_mph):
+    def addNitscheoffDiag(self):
         '''
         Docstring pour addNitscheoffDiag
 
         # :param Vh: FE space & multipatch space
-        :param u11_mph: mapping component
-        :param u12_mph: Description
-        :param u21_mph: Description
-        :param u22_mph: Description
         '''
         # if not isinstance(Vh, TensorSpace):
         #     raise TypeError("Vh must be a TensorSpace")
@@ -417,24 +422,68 @@ class StencilNitsche(object):
             # ... get interface mappings
             interface_like = interface[2][0]
             # assemble mappings for patches
-            #u11_mph, u12_mph =  TODO self.mp.getMappingInterface(nb_patch)
-            #u21_mph, u22_mph =  TODO self.mp.getMappingInterface(nb_patch_n)
+            u11_mph, u12_mph = self.mp.getStencilMapping(nb_patch)
+            u21_mph, u22_mph = self.mp.getStencilMapping(nb_patch_n)
             #... assemble off diagonal matrix
             stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
-            self.assemble_nitsche2dUnderDiag(self._domain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, 
-                                             value=[self._domain.omega[0],self._domain.omega[1], interface_like, self.Kappa, self.normS], 
+            self.assemble_nitsche2dUnderDiag(self._Tdomain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, 
+                                             value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interface_like, self.Kappa, self.normS], 
                                              out = stiffnessoffdiag)
             #... correct coo matrix
             stiffnessoffdiag = self.collect_offdiagStencilMatrix(stiffnessoffdiag, interface)
             self.appendBlock(stiffnessoffdiag, nb_patch_n, nb_patch)
             self.appendBlock(stiffnessoffdiag.T, nb_patch, nb_patch_n)
         #...
-    # ...
-    def tosparse( self ):
-        return self.stencilNitsche
 
     # #...
-    def applyNitsche(self, stiffness, u11_mph, u12_mph, nb_patch):
+    def applyNitsche(self, stiffness, nb_patch):
+        '''
+        Docstring pour applyNitsche for diagonal matrices
+        
+        :param self: Description
+        :param stiffness: stifness matrix 
+        :param nb_patch: patch number start from 1
+        '''
+        if not (1 <= nb_patch <= self._nmp):
+            raise ValueError(f"nb_patch={nb_patch} out of range 1..{self._nmp}")
+        # assemble mappings for patches
+        u11_mph, u12_mph = self.mp.getStencilMapping(nb_patch)
+        #... get interfaces for a given patch
+        interfaces_like = self.mp.getInterfacePatch(nb_patch)
+        #.. assemble diagonal matrix
+        self.assemble_nitsche2dDiag(self._Tdomain, fields=[u11_mph, u12_mph], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)
+        #..
+
+    #...
+    def addNitscheoffDiag_SameSpace(self, u11_mph, u12_mph, u21_mph, u22_mph, interface):
+        '''
+        Docstring pour addNitscheoffDiag
+
+        # :param Vh: FE space & multipatch space
+        :param u11_mph: mapping component
+        :param u12_mph: Description
+        :param u21_mph: Description
+        :param u22_mph: Description
+        :param interface: (nb_patch, nb_patchnext, (patchBoundary,patchBoundary_next))
+        '''
+        # if not isinstance(Vh, TensorSpace):
+        #     raise TypeError("Vh must be a TensorSpace")
+        # ... get interface and patch numbers
+        nb_patch       = interface[0] 
+        nb_patch_n     = interface[1]
+        # ... get interface mappings
+        interface_like = interface[2][0]
+        #... assemble off diagonal matrix
+        stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
+        self.assemble_nitsche2dUnderDiag(self._domain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, 
+                                            value=[self._domain.omega[0],self._domain.omega[1], interface_like, self.Kappa, self.normS], 
+                                            out = stiffnessoffdiag)
+        #... correct coo matrix
+        stiffnessoffdiag = self.collect_offdiagStencilMatrix(stiffnessoffdiag, interface)
+        self.appendBlock(stiffnessoffdiag, nb_patch_n, nb_patch)
+        self.appendBlock(stiffnessoffdiag.T, nb_patch, nb_patch_n)
+    # #...
+    def applyNitsche_SameSpace(self, stiffness, u11_mph, u12_mph, nb_patch):
         '''
         Docstring pour applyNitsche for diagonal matrices
         
@@ -470,14 +519,10 @@ class StencilNitsche(object):
             B = B.tosparse()
 
         # compute position of block matrix in global Nitsche's matrix
-        row = 0
-        for i in range(nb_patch-1):
-            row += self._nbasis[i]
-        col = row
+        row = self._rhnb[nb_patch-1]
+        col = self._rhnb[nb_patch-1]
         if nb_patch_n is not None :
-            col = 0
-            for i in range(nb_patch_n-1):
-                col += self._nbasis[i]
+            col = self._rhnb[nb_patch_n-1]
         # ...
         self.stencilNitsche += coo_matrix(
             (B.data.copy(), (row+B.row.copy(), col+B.col.copy())),

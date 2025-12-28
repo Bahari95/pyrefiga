@@ -65,20 +65,20 @@ def poisson_solve(V, pyrefMP, u11_mph, u12_mph, u21_mph, u22_mph, u_d1, u_d2):
 
     # Assemble stiffness matrix 11
     stiffness11   = assemble_stiffness(V, fields=[u11_mph, u12_mph])
-    Ni.applyNitsche(stiffness11,u11_mph, u12_mph, 1)
+    Ni.applyNitsche_SameSpace(stiffness11,u11_mph, u12_mph, 1)
     stiffness11   = apply_dirichlet(V, stiffness11, dirichlet = pyrefMP.getDirPatch(1))
     Ni.appendBlock(stiffness11, 1)
 
     # Assemble stiffness matrix 22
     stiffness22   = assemble_stiffness(V, fields=[u21_mph, u22_mph])
-    Ni.applyNitsche(stiffness22, u21_mph, u22_mph, 2)
+    Ni.applyNitsche_SameSpace(stiffness22, u21_mph, u22_mph, 2)
     stiffness22   = apply_dirichlet(V, stiffness22, dirichlet = pyrefMP.getDirPatch(2))
     Ni.appendBlock(stiffness22, 2)
 
     #=======================================
     # # # Assemble Nitsche's method matrices
     #=======================================
-    Ni.addNitscheoffDiag(u11_mph, u12_mph, u21_mph, u22_mph)
+    Ni.addNitscheoffDiag_SameSpace(u11_mph, u12_mph, u21_mph, u22_mph, pyrefMP.getInterfaces()[0])
 
     # Assemble right-hand side vector
     rhs                          = assemble_rhs_un( V, fields=[u11_mph, u12_mph, u_d1])
@@ -200,8 +200,8 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     u21_mph.from_array(Vh, xmp1)
     u22_mph.from_array(Vh, ymp1)
     # Assemble Dirichlet boundary conditions
-    u_d1 = build_dirichlet(Vh, g, map = (xmp, ymp, Vh), Interfaces  = pyrefMP.getDirichletBoundaries(1))[1]
-    u_d2 = build_dirichlet(Vh, g, map = (xmp1, ymp1,Vh), Interfaces = pyrefMP.getDirichletBoundaries(2))[1]
+    u_d1 = build_dirichlet(Vh, g, map = (xmp, ymp, Vh), Boundaries  = pyrefMP.getDirichletBoundaries(1))[1]
+    u_d2 = build_dirichlet(Vh, g, map = (xmp1, ymp1,Vh), Boundaries = pyrefMP.getDirichletBoundaries(2))[1]
     print('#')
     # Solve Poisson equation on refined mesh
     start = time.time()

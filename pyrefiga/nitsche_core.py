@@ -1305,8 +1305,9 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
     k1          = weights_1.shape[1]
     k2          = weights_2.shape[1]
     # ..
-    lcoeffs_m1  = zeros((p1+1,p2+1))
-    lcoeffs_m2  = zeros((p1+1,p2+1))
+    lcoeffs_m1  = zeros((p3+1,p4+1))
+    lcoeffs_m2  = zeros((p3+1,p4+1))
+    #...
     F_1x        = zeros(k2)
     F_2x        = zeros(k2)
     F_1y        = zeros(k2)

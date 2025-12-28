@@ -426,16 +426,15 @@ def collocation_2dNURBspline(Vh, sol, xmp = None, adxmp = None):
 
     return sol.reshape((n_u, n_v))
 
-
-import numpy                        as     np
-import pyvista                      as     pv
-import os
-
 #----------------------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------------------
 # ... Post processing using Paraview 
 #----------------------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------------------
+import numpy                        as     np
+import pyvista                      as     pv
+from   .spaces                      import TensorSpace
+import os
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = None, Vg = None, adspace = None, solution = None, functions = None, precomputed = None, filename = "figs/admultipatch_multiblock", plot = True): 
@@ -456,7 +455,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
        List of control points for the adaptive mesh in z direction (for 3D).
    zmp : list, optional
        List of control points for the initial mapping in z direction (for 3D). 
-   Vg: TensorSpace 
+   Vg: list : TODO TensorSpace 
       for mapping is defined independently of the solution space V.
    adSpace: TensorSpace space 
       used for the adaptive mapping is defined independently of the solution space V.
@@ -510,7 +509,13 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
    if Vg is None:
       Vg = V
 
-   numPaches = len(V)
+   numPaches = len(xmp)
+   #...
+   if isinstance(Vg, TensorSpace):
+      Vg = [Vg for _ in range(numPaches)]
+   #...
+   if isinstance(V, TensorSpace):
+      V = [V for _ in range(numPaches)]
    # Handle the case where the user uses a B-spline space and wants to plot using this function
    if V[0].omega is None or all(x is None for x in V[0].omega):
       for j in range(numPaches):
@@ -535,7 +540,6 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                Vz[j].spaces[i]._omega = np.ones(Vz[j].nbasis[i])
    os.makedirs("figs", exist_ok=True)
    multiblock = pv.MultiBlock()
-   #...
    #F3 = [] 
    if zmp is None:
       if solution is None:
@@ -1033,10 +1037,16 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, Vg = None, 
        
    """
    #---Compute a solution
-   numPaches = len(V)
+   numPaches = len(xmp)
    # ...
    if Vg is None:
       Vg = V
+   #...
+   if isinstance(Vg, TensorSpace):
+      Vg = [Vg for _ in range(numPaches)]
+   #...
+   if isinstance(V, TensorSpace):
+      V = [V for _ in range(numPaches)]
    # Handle the case where the user uses a B-spline space and wants to plot using this function
    for j in range(numPaches):
       if V[j].omega is None or all(x is None for x in V[j].omega):
@@ -1046,6 +1056,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, Vg = None, 
       for j in range(numPaches):
             for i in range(Vg[j].dim):
                Vg[j].spaces[i]._omega = np.ones(Vg[j].nbasis[i])
+
    os.makedirs("figs", exist_ok=True)
    multiblock = pv.MultiBlock()
    if zmp is None:
