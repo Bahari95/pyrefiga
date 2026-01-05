@@ -131,7 +131,7 @@ def poisson_solve(V, VT, pyrefMP, g):
 nbpts       = args.nbpts # FOR PLOT
 RefinNumber = args.h    # Number of global mesh refinements
 refGrid     = args.i    # Initial mesh size
-degree      = [0, 0]#[args.e, args.e] Not yet TODO
+degree      = [args.e, args.e] #Not yet TODO
 if args.last:
     refGrid     = RefinNumber  # Initial mesh size
     RefinNumber = 0
@@ -154,7 +154,7 @@ g         = ['x**2+y**2']
 # Load CAD geometry
 #------------------------------------------------------------------------------
 geometry = load_xml('unitSquare.xml')
-idmp = (0,1,2)
+idmp = (0,1)
 # geometry = load_xml('lshape.xml')
 # idmp = (0,1)
 # geometry = load_xml('quart_annulus.xml')
@@ -211,7 +211,7 @@ print("Degree $p =",degree,"\n")
 print("cells & $L^2$-Err & $H^1$-Err & cpu-time")
 print("----------------------------------------")
 for i in range(0,RefinNumber+1):
-    print("",int(table[i,2]),"X", int(table[i,3]), "&", np.format_float_scientific(table[i,4], unique=False, precision=2), "&", np.format_float_scientific(table[i,5], unique=False, precision=6), "&", np.format_float_scientific(table[i,4], unique=False, precision=2))
+    print("",int(table[i,2]),"X", int(table[i,3]), "&", np.format_float_scientific(table[i,4], unique=False, precision=2), "&", np.format_float_scientific(table[i,5], unique=False, precision=6), "&", np.format_float_scientific(table[i,6], unique=False, precision=2))
 print('\n')
 
 #------------------------------------------------------------------------------

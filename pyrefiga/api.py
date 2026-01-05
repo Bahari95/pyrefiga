@@ -312,7 +312,7 @@ class StencilNitsche(object):
     #...
     def collect_offdiagStencilMatrix(self, stiffnessoffdiag, interface):
         '''
-        Docstring pour collect_offdiagStencilMatrix 
+        Docstring for collect_offdiagStencilMatrix 
         [i,j, i-p:i+p, j-p,j+p] to [i,j, n-i-p:n-i+p, j-p,j+p]
         
         :param stiffnessoffdiag: matrix off diagonal
