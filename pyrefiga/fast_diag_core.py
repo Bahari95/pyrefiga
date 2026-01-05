@@ -32,3 +32,41 @@ def solve_unit_sylvester_system_3d(d1: 'float64[:]',
         for i2 in range(n2):
             for i3 in range(n3):
                 x[i1, i2, i3] = b[i1, i2, i3] / (d1[i1] + d2[i2] + d3[i3] + tau)
+
+
+# =========================================================================
+def build_identity_mapping_2d(gx: 'float64[:]',
+                                   gy: 'float64[:]',
+                                   x: 'float64[:,:]',
+                                   y: 'float64[:,:]'):
+    """
+    assemble identity mapping from greville points
+    """
+    n1 = len(gx)
+    n2 = len(gy)
+
+    for i1 in range(n1):
+        for i2 in range(n2):
+            x[i1,i2] = gx[i1]
+            y[i1,i2] = gy[i2]
+
+# =========================================================================
+def build_identity_mapping_3d(gx: 'float64[:]',
+                                   gy: 'float64[:]',
+                                   gz: 'float64[:]',
+                                   x: 'float64[:,:,:]',
+                                   y: 'float64[:,:,:]',
+                                   z: 'float64[:,:,:]'):
+    """
+    assemble identity mapping from greville points
+    """
+    n1 = len(gx)
+    n2 = len(gy)
+    n3 = len(gz)
+
+    for i1 in range(n1):
+        for i2 in range(n2):
+            for i3 in range(n3):
+                x[i1, i2, i3] = gx[i1] 
+                y[i1, i2, i3] = gy[i2] 
+                z[i1, i2, i3] = gz[i3]

@@ -71,6 +71,7 @@ from pyrefiga.quadratures import gauss_legendre
 
 from pyrefiga.utilities import ( plot_field_1d,
                                   prolongation_matrix,
+                                  identity_bspline_mapping,
                                   build_dirichlet,
                                   getGeometryMap,
                                   save_geometry_to_xml,

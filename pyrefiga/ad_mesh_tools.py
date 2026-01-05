@@ -40,7 +40,12 @@ class quadratures_in_admesh(object):
 			elif sp_dim == 2:
 				if V.dim == 2:
 					# ... using B-spline mapping
-					self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2map
+					if len(V.spans[0].shape) == 1:
+						# S same grid for knots and integral
+						self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2map
+					else:
+						# Refined integration grid for Monge-Ampere mapping
+						self.basis_spans_in_adquadrature_2d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_L2mapGmesh						
 				elif V.dim == 4 :
 					if len(V.spans[0].shape) == 1:
 						# ... The Hdiv mapping space can be selected independently of the initial mapping space.
@@ -62,8 +67,13 @@ class quadratures_in_admesh(object):
 				self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_gradmap
 			elif sp_dim == 2 :
 				if V.dim == 2 :
-					# ... L2 mapping
-					self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_L2map
+					# ... using B-spline mapping
+					if len(V.spans[0].shape) == 1:
+						# S same grid for knots and integral
+						self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_L2map
+					else:
+						# Refined integration grid for Monge-Ampere mapping						
+						self.basis_spans_in_adquadrature_2d = core.assemble_basis_spans_in_adquadrature_L2mapGmesh
 				elif V.dim == 4 :
 					if len(V.spans[0].shape) == 1:
 						# ... The Hdiv mapping space can be selected independently of the initial mapping space.

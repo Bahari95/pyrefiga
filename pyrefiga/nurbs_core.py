@@ -621,6 +621,237 @@ def assemble_nurbsbasis_spans_in_adquadrature_L2map(ne1:'int', ne2:'int', p1:'in
                         for il_2 in range(0, degree+1):
                            basis_ad2[ie1, ie2,  il_2, i_ders, g1, g2] -= comb_ij*basis_ad2[ie1, ie2,  il_2, j_ders, g1, g2] * sum_basistmp
                     r = r * (degree-i_ders)
+
+#---2 : B-splines and thier corresponding spanes in adapted mesh in refined integral
+def assemble_nurbsbasis_spans_in_adquadrature_L2mapGmesh(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', p4:'int', spans_1:'int[:,:]', spans_2:'int[:,:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', knots_1:'float64[:]', knots_2:'float64[:]', omega_1:'float64[:]', omega_2:'float64[:]', vector_u1:'float64[:,:]', vector_u2:'float64[:,:]', spans_ad1:'int[:,:,:,:]', spans_ad2:'int[:,:,:,:]', basis_ad1:'float64[:,:,:,:,:,:]', basis_ad2:'float64[:,:,:,:,:,:]', nders:'int'):
+
+    # ... sizes
+    from numpy import zeros
+    from numpy import sqrt
+    from numpy import empty
+    # ...
+    k1 = weights_1.shape[1]
+    k2 = weights_2.shape[1]
+
+    # ___
+    lcoeffs_u1   = zeros((p1+1,p2+1))
+    lcoeffs_u2   = zeros((p1+1,p2+1))
+
+    #   ---Computes All basis in a new points
+    degree         = p3
+    # ...
+    left           = empty( degree )
+    right          = empty( degree )
+    a              = empty( (       2, degree+1) )
+    ndu            = empty( (degree+1, degree+1) )
+    ders           = zeros( (     nders+1, degree+1) ) # output array
+    # ...
+    degree         = p4
+    left2          = empty( degree )
+    right2         = empty( degree )
+    a2             = empty( (       2, degree+1) )
+    ndu2           = empty( (degree+1, degree+1) )
+    ders2          = zeros( (     nders+1, degree+1) ) # output array
+    for ie1 in range(0, ne1):
+       for ie2 in range(0, ne2):
+          for g1 in range(0, k1):
+             for g2 in range(0, k2):
+                 i_span_1 = spans_1[ie1, g1]
+                 i_span_2 = spans_2[ie2, g2]
+
+                 lcoeffs_u1[ : , : ] = vector_u1[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                 lcoeffs_u2[ : , : ] = vector_u2[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
+                 #xq = points1[ie1, ie2, g1, g2]
+                 xq = 0.0
+                 for il_1 in range(0, p1+1):
+                    for il_2 in range(0, p2+1):
+
+                        bj_0    = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
+                        coeff_u1 = lcoeffs_u1[il_1,il_2]
+                        xq     += coeff_u1 * bj_0
+                 degree        = p3
+                 #span = find_span( knots, degree, xq )
+                 #~~~~~~~~~~~~~~~
+                 # Knot index at left/right boundary
+                 low  = degree
+                 high = len(knots_1)-1-degree
+                 # Check if point is exactly on left/right boundary, or outside domain
+                 if xq <= knots_1[low ]: 
+                      span = low
+                 elif xq >= knots_1[high]: 
+                      span = high-1
+                 else : 
+                   # Perform binary search
+                   span = (low+high)//2
+                   while xq < knots_1[span] or xq >= knots_1[span+1]:
+                      if xq < knots_1[span]:
+                          high = span
+                      else:
+                          low  = span
+                      span = (low+high)//2
+                 # ... 
+                 spans_ad1[ie1, ie2, g1, g2] = span
+                 # ...
+                 ndu[0,0] = 1.0
+                 for j in range(0,degree):
+                     left [j] = xq - knots_1[span-j]
+                     right[j] = knots_1[span+1+j] - xq
+                     saved    = 0.0
+                     for r in range(0,j+1):
+                         # compute inverse of knot differences and save them into lower triangular part of ndu
+                         ndu[j+1,r] = 1.0 / (right[r] + left[j-r])
+                         # compute basis functions and save them into upper triangular part of ndu
+                         temp       = ndu[r,j] * ndu[j+1,r]
+                         ndu[r,j+1] = saved + right[r] * temp
+                         saved      = left[j-r] * temp
+                     ndu[j+1,j+1] = saved	
+               
+                 # Compute derivatives in 2D output array 'ders'
+                 ders[0,:] = ndu[:,degree]
+                 for r in range(0,degree+1):
+                     s1 = 0
+                     s2 = 1
+                     a[0,0] = 1.0
+                     for k in range(1,nders+1):
+                         d  = 0.0
+                         rk = r-k
+                         pk = degree-k
+                         if r >= k:
+                            a[s2,0] = a[s1,0] * ndu[pk+1,rk]
+                            d = a[s2,0] * ndu[rk,pk]
+                         j1 = 1   if (rk  > -1 ) else -rk
+                         j2 = k-1 if (r-1 <= pk) else degree-r
+                         for ij in range(j1,j2+1):
+                             a[s2,ij] = (a[s1,ij] - a[s1,ij-1]) * ndu[pk+1,rk+ij]
+                         for ij in range(j1,j2+1):
+                             d += a[s2,ij]* ndu[rk+ij,pk]
+                         if r <= pk:
+                            a[s2,k] = - a[s1,k-1] * ndu[pk+1,r]
+                            d += a[s2,k] * ndu[r,pk]
+                         ders[k,r] = d
+                         j  = s1
+                         s1 = s2
+                         s2 = j
+                 # ...first compute R1
+                 for il_1 in range(0, degree+1):
+                    ders[0,il_1]     = ders[0,il_1] * omega_1[span-degree+il_1]
+                 sum_basisx    = sum(ders[0,:])
+                 basis_ad1[ie1, ie2, :, 0, g1, g2] = ders[0,:]/sum_basisx
+                 r = degree
+                 for i_ders in range(1,nders+1):
+                    # Multiply derivatives by correct factors
+                    for il_1 in range(0, degree+1):
+                       ders[i_ders,il_1] = ders[i_ders,il_1] * r * omega_1[span-degree+il_1]
+                    basis_ad1[ie1, ie2,  :, i_ders, g1, g2] = ders[i_ders,:]/sum_basisx
+                    for j_ders in range(0,i_ders):
+                        sum_basistmp = sum(ders[i_ders-j_ders,:])/sum_basisx
+                        num = 1
+                        den = 1
+                        m_jders = j_ders + 1
+                        for t in range(m_jders):
+                            num *= (i_ders - t)
+                            den *= (t + 1)
+                        comb_ij = num // den
+                        for il_1 in range(0, degree+1):
+                          basis_ad1[ie1, ie2,  il_1, i_ders, g1, g2] -= comb_ij*basis_ad1[ie1, ie2,  il_1, j_ders, g1, g2] * sum_basistmp
+                    r = r * (degree-i_ders)
+                 #==============================
+                 # ---Now for second direction
+                 #xq = points1[ie1, ie2, g1, g2]
+                 xq = 0.0
+                 for il_1 in range(0, p1+1):
+                    for il_2 in range(0, p2+1):
+
+                        bj_0     = basis_1[ie1,il_1,0,g1]*basis_2[ie2,il_2,0,g2]
+                        coeff_u2 = lcoeffs_u2[il_1,il_2]
+                        xq      += coeff_u2 * bj_0
+
+                 #span = find_span( knots, degree, xq )
+                 degree         = p4
+                 #~~~~~~~~~~~~~~~
+                 # Knot index at left2/right2 boundary
+                 low  = degree
+                 high = len(knots_2)-1-degree
+                 # Check if point is exactly on left2/right2 boundary, or outside domain
+                 if xq <= knots_2[low ]: 
+                      span = low
+                 elif xq >= knots_2[high]: 
+                      span = high-1
+                 else : 
+                   # Perform binary search
+                   span = (low+high)//2
+                   while xq < knots_2[span] or xq >= knots_2[span+1]:
+                      if xq < knots_2[span]:
+                          high = span
+                      else:
+                          low  = span
+                      span = (low+high)//2
+                 # ... 
+                 spans_ad2[ie1, ie2, g1, g2] = span
+                 # ...
+                 ndu2[0,0] = 1.0
+                 for j in range(0,degree):
+                     left2 [j] = xq - knots_2[span-j]
+                     right2[j] = knots_2[span+1+j] - xq
+                     saved    = 0.0
+                     for r in range(0,j+1):
+                         # compute inverse of knot differences and save them into lower triangular part of ndu2
+                         ndu2[j+1,r] = 1.0 / (right2[r] + left2[j-r])
+                         # compute basis functions and save them into upper triangular part of ndu2
+                         temp       = ndu2[r,j] * ndu2[j+1,r]
+                         ndu2[r,j+1] = saved + right2[r] * temp
+                         saved      = left2[j-r] * temp
+                     ndu2[j+1,j+1] = saved	
+               
+                 # Compute derivatives in 2D output array 'ders2'
+                 ders2[0,:] = ndu2[:,degree]
+                 for r in range(0,degree+1):
+                     s1 = 0
+                     s2 = 1
+                     a2[0,0] = 1.0
+                     for k in range(1,nders+1):
+                         d  = 0.0
+                         rk = r-k
+                         pk = degree-k
+                         if r >= k:
+                            a2[s2,0] = a2[s1,0] * ndu2[pk+1,rk]
+                            d = a2[s2,0] * ndu2[rk,pk]
+                         j1 = 1   if (rk  > -1 ) else -rk
+                         j2 = k-1 if (r-1 <= pk) else degree-r
+                         for ij in range(j1,j2+1):
+                             a2[s2,ij] = (a2[s1,ij] - a2[s1,ij-1]) * ndu2[pk+1,rk+ij]
+                         for ij in range(j1,j2+1):
+                             d += a2[s2,ij]* ndu2[rk+ij,pk]
+                         if r <= pk:
+                            a2[s2,k] = - a2[s1,k-1] * ndu2[pk+1,r]
+                            d += a2[s2,k] * ndu2[r,pk]
+                         ders2[k,r] = d
+                         j  = s1
+                         s1 = s2
+                         s2 = j
+                 # ...first compute R1
+                 for il_2 in range(0, degree+1):
+                    ders2[0,il_2]     = ders2[0,il_2] * omega_2[span-degree+il_2]
+                 sum_basisx    = sum(ders2[0,:])
+                 basis_ad2[ie1, ie2, :, 0, g1, g2] = ders2[0,:]/sum_basisx
+                 r = degree
+                 for i_ders in range(1,nders+1):
+                    # Multiply derivatives by correct factors
+                    for il_2 in range(0, degree+1):
+                       ders2[i_ders,il_2] = ders2[i_ders,il_2] * r * omega_2[span-degree+il_2]
+                    basis_ad2[ie1, ie2,  :, i_ders, g1, g2] = ders2[i_ders,:]/sum_basisx
+                    for j_ders in range(0,i_ders):
+                        sum_basistmp = sum(ders2[i_ders-j_ders,:])/sum_basisx
+                        num = 1
+                        den = 1
+                        m_jders = j_ders + 1
+                        for t in range(m_jders):
+                            num *= (i_ders - t)
+                            den *= (t + 1)
+                        comb_ij = num // den
+                        for il_2 in range(0, degree+1):
+                           basis_ad2[ie1, ie2,  il_2, i_ders, g1, g2] -= comb_ij*basis_ad2[ie1, ie2,  il_2, j_ders, g1, g2] * sum_basistmp
+                    r = r * (degree-i_ders)
 #==============================================================================
 # ... L2-B-spline space for L^2mapping is the same as for initial mapping. in 3D
 #==============================================================================

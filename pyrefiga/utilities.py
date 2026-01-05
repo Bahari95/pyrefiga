@@ -16,6 +16,7 @@ from   scipy.sparse     import kron, csr_matrix
 from   .cad             import point_on_bspline_curve
 from   .cad             import point_on_bspline_surface
 from   .bsplines        import hrefinement_matrix
+from   .bsplines        import greville
 from   .linalg          import StencilVector
 from   .spaces          import SplineSpace
 from   .spaces          import TensorSpace
@@ -29,8 +30,7 @@ __all__ = ['plot_field_1d',
            'save_geometry_to_xml',
            'getGeometryMap',
            'pyrefInterface',
-           'load_xml',
-           'cond_sparse']
+           'load_xml']
 
 # ==========================================================
 def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None, label = None):
@@ -80,6 +80,51 @@ def prolongation_matrix(VH, Vh):
 
     return M
 
+#====================================
+# ...  Identity B-spline mapping
+#======================================
+def identity_bspline_mapping(V):
+    """
+    Construct control points for the identity B-spline mapping F(xi,eta)=(xi,eta).
+
+    Parameters
+    ----------
+    V   : TensorSpace or SplineSpace (1D)
+
+    Returns
+    -------
+    P : ndarray (n_xi, n_eta, 2)
+        Control points of the identity mapping
+    """
+    from .               import fast_diag_core as core
+    if isinstance(V, TensorSpace):
+        if V.dim == 2:
+            gx      = greville(V.knots[0], V.degree[0], V.spaces[0].periodic)
+            gy      = greville(V.knots[1], V.degree[1], V.spaces[1].periodic)
+
+            nx, ny  = len(gx), len(gy)
+            Px      = np.zeros((nx, ny))
+            Py      = np.zeros((nx, ny))
+            # ....
+            core.build_identity_mapping_2d(gx, gy, Px, Py)
+            return Px, Py
+        elif V.dim == 3:
+            gx         = greville(V.knots[0], V.degree[0], V.spaces[0].periodic)
+            gy         = greville(V.knots[1], V.degree[1], V.spaces[1].periodic)
+            gz         = greville(V.knots[2], V.degree[2], V.spaces[2].periodic)
+
+            nx, ny, nz = len(gx), len(gy), len(gz)
+            Px         = np.zeros((nx, ny, nz))
+            Py         = np.zeros((nx, ny, nz))
+            Pz         = np.zeros((nx, ny, nz))
+            # ....
+            core.build_identity_mapping_3d(gx, gy, gz, Px, Py, Pz)
+            return Px, Py, Pz
+    elif isinstance(V, SplineSpace):
+        gx      = greville(V.knots, V.degree, V.periodic)
+        return gx
+    else:
+        raise NotImplementedError('Please give V as TensorSpace or SplineSpace in 1D case!')  
 #========================================================================
 # ... build Dirichlet in two dimensions from analytic form
 #========================================================================
