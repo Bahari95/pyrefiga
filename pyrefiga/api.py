@@ -791,7 +791,7 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
             pass
         else:
             raise NotImplementedError('Not available only StencilVector')
-        u   = StencilVector(V.vector_space)
+        u   = update
         # ...
         if V.dim == 1:
             n1      = V.nbasis
@@ -799,8 +799,7 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
             d1 = 1    if dirichlet[0] else 0 
             d2 = n1-1 if dirichlet[1] else n1
             #... apply dirichlet
-            u[:]     =   update[:] 
-            u[d1:d2] = x.reshape(d2-d1)
+            u[d1:d2]+= x.reshape(d2-d1)
             return  u
         elif V.dim ==2:
             n1, n2  = V.nbasis
@@ -810,8 +809,7 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
             d3 = 1    if dirichlet[1][0] else 0 
             d4 = n2-1 if dirichlet[1][1] else n2
             #... apply dirichlet
-            u[:,:]         = update[:,:]
-            u[d1:d2,d3:d4] = x.reshape((d2-d1),(d4-d3))
+            u[d1:d2,d3:d4]+= x.reshape((d2-d1),(d4-d3))
             return  u
         elif V.dim == 3:
             n1, n2, n3  = V.nbasis
@@ -823,8 +821,7 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
             d5 = 1    if dirichlet[2][0] else 0 
             d6 = n3-1 if dirichlet[2][1] else n3
             #... apply dirichlet
-            u[:,:,:]             =   update[:,:,:] 
-            u[d1:d2,d3:d4,d5:d6] = x.reshape((d2-d1),(d4-d3),(d6-d5))
+            u[d1:d2,d3:d4,d5:d6]+= x.reshape((d2-d1),(d4-d3),(d6-d5))
             return  u
         else:
             raise NotImplementedError('Only 1d, 2d and 3d are available')
