@@ -66,6 +66,8 @@ def poisson_solve(V, VT, pyrefMP, g):
 
     #... Nitsche's class
     Ni            = StencilNitsche(V, V, pyrefMP, Isoparametric= False)
+    # ... Assemble Nitsche's global matrix
+    Ni.assembleNitsche()
     # Assemble right-hand side vector
     b             = zeros(Ni._Nitshedim[0])
     #...
@@ -82,22 +84,22 @@ def poisson_solve(V, VT, pyrefMP, g):
         #...
         stiffness  = StencilMatrix(V.vector_space, V.vector_space)
         stiffness  = assemble_matrix_un(VT, fields=[u11_mph, u12_mph], out=stiffness)
-        #...
-        Ni.applyNitsche(stiffness, patch_nb)
         stiffness  = apply_dirichlet(V, stiffness, dirichlet = pyrefMP.getDirPatch(patch_nb))
+        #...
         Ni.appendBlock(stiffness, patch_nb)
         # Assemble right-hand side vector
         rhs        = StencilVector(V.vector_space)
         rhs        = assemble_rhs_un( VT, fields=[u11_mph, u12_mph, u_d1], out= rhs)
         rhs        = apply_dirichlet(V, rhs, pyrefMP.getDirPatch(patch_nb))
+        # ...
+        Ni.assembleNitsche_Dirichlet(u_d1, patch_nb)
         #...
         b[Ni._rhnb[patch_nb-1]:Ni._rhnb[patch_nb]] = rhs[:]
     #=============================================
     # # # Assemble Nitsche's off diagonal matrices
     #=============================================
-    Ni.addNitscheoffDiag()
     # Solve the linear system using CGS
-    x, inf          = sla.cg(Ni.tosparse(), b)
+    x, inf          = sla.cg(Ni.tosparse(), b+Ni.rhs())
     l2_norm = 0.
     H1_norm = 0.
     x_sol   = []
@@ -122,9 +124,6 @@ def poisson_solve(V, VT, pyrefMP, g):
 
     return x_sol, l2_norm, H1_norm
 
-#------------------------------------------------------------------------------
-# Parameters and initialization
-#------------------------------------------------------------------------------
 #------------------------------------------------------------------
 # Parameters and initialization
 #------------------------------------------------------------------
