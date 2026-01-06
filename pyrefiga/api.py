@@ -270,7 +270,7 @@ class StencilNitsche(object):
         #... computes coeffs for Nitsche's method
         stab          = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
         m_h           = (V.nbasis[0]*V.nbasis[1])
-        self.Kappa    = 2.*stab*m_h
+        self.Kappa    = 1e3#2.*stab*m_h
         # ...
         self.normS    = 0.5
         #------------------------------------------------------
@@ -300,7 +300,7 @@ class StencilNitsche(object):
             #... using different spaces for FE analysis V and  Multipatch W
             self.assemble_nitsche2dDiag        = partial(assemble_matrix, core.assemble_matrix_DiffSpacediagnitsche)
             self.assemble_nitsche2dUnderDiag   = partial(assemble_matrix, core.assemble_matrix_DiffSpaceoffdiagnitsche)
-            self.assemble_nitsche2dDirichlet   = partial(assemble_matrix, core.assemble_matrix_DirichletSpacediagnitsche)
+            self.assemble_nitsche2dDirichlet   = partial(assemble_vector, core.assemble_vector_Dirichlet)
     #--------------------------------------
     # Abstract interface
     #--------------------------------------
@@ -316,7 +316,7 @@ class StencilNitsche(object):
         return self.stencilNitsche
     # ...
     def rhs(self):
-        # ... assemble global diag scaling vector
+        # ... assemble global scaling vector
         D = self.scalingNistcheVector()
         return D*self.b_dir
     #...
@@ -568,20 +568,26 @@ class StencilNitsche(object):
         u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
         #... get interfaces for a given patch
         interfaces_like = self.mp.getInterfacePatch(patch_nb)
-        print(interfaces_like)
+        print("interface  = \n", interfaces_like)
         # ... initial diag stiffness matrix
-        stiffness  = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
-        #.. assemble diagonal matrix
-        self.assemble_nitsche2dDirichlet(self._Tdomain, fields=[u11_mph, u12_mph], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, -1.*self.normS, 0], out = stiffness)
-        # ...
-        print((stiffness.tosparse().toarray().reshape((self._domain.nbasis[0]*self._domain.nbasis[1],self._domain.nbasis[0]*self._domain.nbasis[1]))))
-        print(u_d.toarray())
+        # stiffness  = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
+        # #.. assemble diagonal matrix
+        # self.assemble_nitsche2dDirichlet(self._Tdomain, fields=[u11_mph, u12_mph], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, -1.*self.normS, 0], out = stiffness)
+        # # ...
+        # print((stiffness.tosparse().toarray().reshape((self._domain.nbasis[0]*self._domain.nbasis[1],self._domain.nbasis[0]*self._domain.nbasis[1]))))
+        print("dirichlet vector = \n", u_d.toarray().reshape(self._domain.nbasis))
         u_tmp = StencilVector(self._domain.vector_space)
-        u_tmp.from_array(self._domain, (stiffness.tosparse().toarray().reshape((self._domain.nbasis[0]*self._domain.nbasis[1],self._domain.nbasis[0]*self._domain.nbasis[1])).dot(u_d.toarray())).reshape(self._domain.nbasis))
-        print(u_tmp.toarray())
+        # u_tmp.from_array(self._domain, (stiffness.tosparse().toarray().reshape((self._domain.nbasis[0]*self._domain.nbasis[1],self._domain.nbasis[0]*self._domain.nbasis[1])).dot(u_d.toarray())).reshape(self._domain.nbasis))
+        nS = -1.*self.normS
+        # if patch_nb == 1:
+        #     nS *=-1.
+        self.assemble_nitsche2dDirichlet(self._Tdomain, fields=[u11_mph, u12_mph, u_d], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, -1.*self.Kappa, nS], out = u_tmp)
+        print("rhs Nitsche =\n", u_tmp.toarray().reshape(self._domain.nbasis))
         # ... apply dirichlet
         u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
-        print(u_tmp)
+        nx = self.elim_index[patch_nb-1,0,1] - self.elim_index[patch_nb-1,0,0]
+        ny = self.elim_index[patch_nb-1,1,1] - self.elim_index[patch_nb-1,1,0]
+        print("after dirichlet elimination = \n",u_tmp.reshape((nx, ny) ))
         # ...
         self.b_dir[self._rhnb[patch_nb-1]:self._rhnb[patch_nb]] = u_tmp[:]
         #...

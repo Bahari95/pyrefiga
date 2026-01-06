@@ -99,7 +99,7 @@ def poisson_solve(V, VT, pyrefMP, g):
     # # # Assemble Nitsche's off diagonal matrices
     #=============================================
     # Solve the linear system using CGS
-    x, inf          = sla.cg(Ni.tosparse(), b+Ni.rhs())
+    x, inf          = sla.cg(Ni.tosparse(), b + Ni.rhs())
     l2_norm = 0.
     H1_norm = 0.
     x_sol   = []
