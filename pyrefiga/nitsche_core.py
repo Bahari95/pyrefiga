@@ -2034,7 +2034,7 @@ def assemble_vector_Dirichlet(
                         # ...
                         wvol    = weights_2[ie2, g2]
                         # ...
-                        v      +=  normalS * (comp_1 * ud  + bi_0*comp_2) * wvol + Kappa * bi_0 * ud * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
+                        v      +=  normalS * (comp_1 * ud  + 0.*bi_0*comp_2) * wvol + Kappa * bi_0 * ud * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
                         vip    +=  normalS * (comp_3 * ud) * wvol
 
                     rhs[p1, p2+i2]    += v
@@ -2123,7 +2123,7 @@ def assemble_vector_Dirichlet(
                         #...
                         wvol  = weights_2[ie2, g2]
                         # ... - 0.5*u1*v1_n - 0.5*u1_n*v1
-                        v    += normalS * (comp_1 * ud + bi_0*comp_2)  * wvol + Kappa * bi_0 * ud * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
+                        v    += normalS * (comp_1 * ud + 0.*bi_0*comp_2)  * wvol + Kappa * bi_0 * ud * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
                         vpi  += normalS * (comp_3 * ud)  * wvol 
 
                     rhs[i_span_1+p1, p2+i2]      += v

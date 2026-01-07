@@ -760,6 +760,7 @@ class pyrefMultpatch(object):
         #... list of interfaces (patch1, patch2, [edge_patch1, edge_patch2])
         interfaces  = []
         #... First we assume all boundaries are Dirichlet
+        dirichlet_I = np.zeros((num_patches, 2, 2), dtype = bool)+True
         dirichlet   = np.zeros((num_patches, 2, 2), dtype = bool)+True
         # ...
         patch_has_interface = [False] * num_patches
@@ -777,6 +778,8 @@ class pyrefMultpatch(object):
                 #... set the Dirichlet BCs False for the interface edges
                 dirichlet[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
                 dirichlet[j,idmapping[interface_obj.interface[1]][0],idmapping[interface_obj.interface[1]][1]] = False
+                # ... set Dirichlet BCs False for interface patch+
+                dirichlet_I[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
                 #...
                 patch_has_interface[i] = True
                 patch_has_interface[j] = True
@@ -785,11 +788,13 @@ class pyrefMultpatch(object):
         self.num_patches  = num_patches
         self.interfaces   = interfaces
         self.dirichlet    = dirichlet.tolist()
+        self.dirichlet_I  = dirichlet_I.tolist()
         self.geometryname = geometryname
         self.id_list      = id_list
         self.patches      = mp
         self.idmapping    = idmapping
         self._weights     = mp[0].weights()
+        self.Ninterfaces  = len(self.interfaces) 
     #.. get degree
     def degree(self, num_patch=1):
         return self.patches[num_patch-1].degree 
@@ -859,6 +864,9 @@ class pyrefMultpatch(object):
     #.. get dirichlet BCs for a given patch
     def getDirPatch(self, num_patch):
         return self.dirichlet[num_patch-1]
+    #.. get dirichlet BCs for a given patch counting interfaces
+    def getDirPatchInt(self, num_patch):
+        return self.dirichlet_I[num_patch-1]
 
     #.. get interfaces for a given patch
     def getInterfacePatch(self, num_patch):
@@ -878,13 +886,15 @@ class pyrefMultpatch(object):
                 boundary_dirichlet.append(edge)
         # print(f"Patch {num_patch} Dirichlet boundaries : {boundary_dirichlet}")
         return np.asarray(boundary_dirichlet)
-
     #.. get id list
     def getidlist(self):
         return self.id_list
     #.. get number of patches
     def getNumPatches(self):
         return self.num_patches
+    #... get number of Interfaces
+    def nb_interfaces(self):
+        return self.Ninterfaces
     #.. get geometry name    
     def getGeometryname(self):
         return self.geometryname
@@ -898,7 +908,9 @@ class pyrefMultpatch(object):
         print("Dirichlet BCs for each patch :")
         for i in range(self.num_patches):
             print(f" Patch {i+1} : {self.dirichlet[i]}")
-
+        print("Dirichlet BCs for each patch&Interface:")
+        for i in range(self.num_patches):
+            print(f" Patch {i+1} : {self.dirichlet_I[i]}")
     def __repr__(self):
         return f"pyrefMultpatch(num_patches={self.num_patches}, interfaces={self.interfaces}, dirichlet={self.dirichlet})"
     

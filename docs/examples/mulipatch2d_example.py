@@ -69,7 +69,7 @@ def poisson_solve(V, VT, pyrefMP, g):
     # ... Assemble Nitsche's global matrix
     Ni.assembleNitsche()
     # Assemble right-hand side vector
-    b             = zeros(Ni._Nitshedim[0])
+    # b             = zeros(Ni._Nitshedim[0])
     #...
     u_d           = []
     # Assemble stiffness matrix
@@ -84,22 +84,27 @@ def poisson_solve(V, VT, pyrefMP, g):
         #...
         stiffness  = StencilMatrix(V.vector_space, V.vector_space)
         stiffness  = assemble_matrix_un(VT, fields=[u11_mph, u12_mph], out=stiffness)
-        stiffness  = apply_dirichlet(V, stiffness, dirichlet = pyrefMP.getDirPatch(patch_nb))
+        # stiffness  = apply_dirichlet(V, stiffness, dirichlet = pyrefMP.getDirPatch(patch_nb))
         #...
-        Ni.appendBlock(stiffness, patch_nb)
+        Ni.appendStiffness(stiffness, patch_nb)
         # Assemble right-hand side vector
         rhs        = StencilVector(V.vector_space)
         rhs        = assemble_rhs_un( VT, fields=[u11_mph, u12_mph, u_d1], out= rhs)
-        rhs        = apply_dirichlet(V, rhs, pyrefMP.getDirPatch(patch_nb))
+        rhs        = apply_dirichlet(V, rhs)#, dirichlet = pyrefMP.getDirPatch(patch_nb))
         # ...
-        Ni.assembleNitsche_Dirichlet(u_d1, patch_nb)
+        Ni.assembleNitsche_Dirichlet(rhs, u_d1, patch_nb)
         #...
-        b[Ni._rhnb[patch_nb-1]:Ni._rhnb[patch_nb]] = rhs[:]
+        # b[Ni._rhnb[patch_nb-1]:Ni._rhnb[patch_nb]] = rhs[:]
     #=============================================
     # # # Assemble Nitsche's off diagonal matrices
     #=============================================
+    print("before merge", Ni.tosparse().toarray())
+    print("after merge", Ni.NitscheMerge().toarray())
     # Solve the linear system using CGS
-    x, inf          = sla.cg(Ni.tosparse(), b + Ni.rhs())
+    M       = Ni.NitscheMerge() # ... TODO : cannot merhs rhs before
+    b       = Ni.NitscheMergeRHS()
+    x, inf  = sla.cg(M, b)
+    x       = Ni.NitscheextractSol(x)
     l2_norm = 0.
     H1_norm = 0.
     x_sol   = []
@@ -143,11 +148,11 @@ print("(#=assembled Dirichlet, #=solve poisson)\n")
 # Define exact solution and Dirichlet boundary condition
 #------------------------------------------------------------------------------
 # Test 0
-# g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
+g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 # Test 1
 #g         = ['1./(1.+np.exp((x + y  - 0.5)/0.01) )']
 # Test 1
-g         = ['x**2+y**2']
+# g         = ['x*1.+0.*y**2']
 
 #------------------------------------------------------------------------------
 # Load CAD geometry
