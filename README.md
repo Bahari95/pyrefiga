@@ -62,7 +62,3 @@ You may work in the **newFolder** for your tasks, as it has been created automat
 ## Example
 
 ![PNG](https://github.com/Bahari95/pyrefiga/blob/main/r_adaptive_refinement/adaptive_meshes.png)
-
-## Application 
-<img src="https://raw.githubusercontent.com/Bahari95/pyrefiga/main/r_adaptive_refinement/admesh_sphere.png" width="45%" alt="mesh" />
-<img src="https://raw.githubusercontent.com/Bahari95/pyrefiga/main/r_adaptive_refinement/admesh_sol_sphere.png" width="45%" alt="solution" />
