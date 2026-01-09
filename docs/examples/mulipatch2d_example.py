@@ -69,7 +69,7 @@ def poisson_solve(V, VT, pyrefMP, u_d):
     # ... Assemble Nitsche's global matrix
     Ni.assembleNitsche()
     # Assemble stiffness matrix
-    for patch_nb in range(1, pyrefMP.getNumPatches()+1):
+    for patch_nb in range(1, pyrefMP.nb_patches+1):
         #... mapping in Stencil format
         u11_mph, u12_mph = pyrefMP.getStencilMapping(patch_nb)
         # Assemble Dirichlet boundary conditions
@@ -78,14 +78,14 @@ def poisson_solve(V, VT, pyrefMP, u_d):
         stiffness  = StencilMatrix(V.vector_space, V.vector_space)
         stiffness  = assemble_matrix_un(VT, fields=[u11_mph, u12_mph], out=stiffness)
         stiffness  = apply_dirichlet(V, stiffness, dirichlet = pyrefMP.getDirPatch(patch_nb))
-        print("shape in ", patch_nb, "is", stiffness.shape)
+        # print("shape in ", patch_nb, "is", stiffness.shape)
         #...
         Ni.appendBlock(stiffness, patch_nb)
         # Assemble right-hand side vector
         rhs        = StencilVector(V.vector_space)
         rhs        = assemble_rhs_un( VT, fields=[u11_mph, u12_mph, u_d1], out= rhs)
         rhs        = apply_dirichlet(V, rhs, dirichlet = pyrefMP.getDirPatch(patch_nb))
-        print("shape in ", patch_nb, "is", rhs.shape)
+        # print("shape in ", patch_nb, "is", rhs.shape)
         # ...
         Ni.assembleNitsche_Dirichlet(rhs, patch_nb)
         # ...
@@ -102,8 +102,8 @@ def poisson_solve(V, VT, pyrefMP, u_d):
     x_sol   = []
     u_sol   = []
     # ... Extract solution
-    for patch_nb in range(1,pyrefMP.getNumPatches()+1):
-        u1              = apply_dirichlet(V, x[Ni._rhnb[patch_nb-1]:Ni._rhnb[patch_nb]], dirichlet = pyrefMP.getDirPatch(patch_nb), update= u_d[patch_nb-1])#StencilVector(V.vector_space)
+    for patch_nb in range(1,pyrefMP.nb_patches+1):
+        u1              = apply_dirichlet(V, x[Ni._block_index[patch_nb-1]:Ni._block_index[patch_nb]], dirichlet = pyrefMP.getDirPatch(patch_nb), update= u_d[patch_nb-1])#StencilVector(V.vector_space)
         # ... to array
         x1              = u1.toarray().reshape(V.nbasis)
         x_sol.append(x1)
@@ -149,14 +149,14 @@ g         = ['x**2+y**2']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-geometry = load_xml('unitSquare.xml')
-idmp = (0,1)
+# geometry = load_xml('unitSquare.xml')
+# idmp = (0,1)
 # geometry = load_xml('lshape.xml')
 # idmp = (0,1)
 # geometry = load_xml('quart_annulus.xml')
 # idmp     = (0,1)
-# geometry = load_xml('annulus.xml')
-# idmp     = (0,1,2,3)
+geometry = load_xml('annulus.xml')
+idmp     = (0,1,2,3)
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 
@@ -164,8 +164,8 @@ print("Dirichlet boundary conditions", g)
 # Extract geometry mapping
 #------------------------------------------------------------------------------
 pyrefMP           = pyrefMultpatch(geometry,idmp)# .. First patch 
-degree[0]        += pyrefMP.degree()[0]
-degree[1]        += pyrefMP.degree()[1]
+degree[0]        += pyrefMP.degree[0]
+degree[1]        += pyrefMP.degree[1]
 nb_ne             = refGrid #16  # number of elements after refinement
 quad_degree       = max(degree[0],degree[1]) # Quadrature degree
 #... Print multipatch info

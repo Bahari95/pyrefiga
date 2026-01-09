@@ -235,49 +235,49 @@ class StencilNitsche(object):
         assert isinstance( W, TensorSpace)
         assert isinstance( pyrefMP, pyrefMultpatch)
 
-        nmp            = pyrefMP.getNumPatches()
+        nb_patches     = pyrefMP.nb_patches
         # -------
         if u_d is None:
-            u_d = [StencilVector(V.vector_space) for _ in range(nmp)]
-        self.u_d       = u_d
-        self._pads     = V.degree
-        self._ndim     = V.dim
-        self._domain   = V
-        self._codomain = W
-        Vmp1, Vmp2     = pyrefMP.UnifSplineSpace(mesh=V.mesh, quad_degree = (V.weights[0].shape[1]-1,V.weights[1].shape[1]-1))
-        self._mpdomain = TensorSpace(Vmp1, Vmp2)
-        self._Tdomain  = TensorSpace(V.spaces[0],V.spaces[1], Vmp1, Vmp2)
-        self._nmp      = nmp  # number of patches
-        self._type     = V.vector_space.dtype
-        self._nbs      = V.vector_space.npts
+            u_d = [StencilVector(V.vector_space) for _ in range(nb_patches)]
+        self.u_d         = u_d
+        self._pads       = V.degree
+        self._ndim       = V.dim
+        self._domain     = V
+        self._codomain   = W
+        Vmp1, Vmp2       = pyrefMP.UnifSplineSpace(mesh=V.mesh, quad_degree = (V.weights[0].shape[1]-1,V.weights[1].shape[1]-1))
+        self._mpdomain   = TensorSpace(Vmp1, Vmp2)
+        self._Tdomain    = TensorSpace(V.spaces[0],V.spaces[1], Vmp1, Vmp2)
+        self._nb_patches = nb_patches  # number of patches
+        self._type       = V.vector_space.dtype
+        self._nbs        = V.vector_space.npts
         # ------
-        elim_index     = np.zeros((nmp,self._ndim, 2), dtype = int) 
-        for i in range(nmp):
+        elim_index     = np.zeros((nb_patches,self._ndim, 2), dtype = int) 
+        for i in range(nb_patches):
             for j in range(self._ndim):
                 elim_index[i,j,0]    = 1             if pyrefMP.getDirPatch(i+1)[j][0] else 0
-                elim_index[i,j,1]    = V.nbasis[j]-1 if pyrefMP.getDirPatch(i+1)[j][1] else V.nbasis[0]
+                elim_index[i,j,1]    = V.nbasis[j]-1 if pyrefMP.getDirPatch(i+1)[j][1] else V.nbasis[j]
         # Build nbasis for each patch
         nbasis         = []
-        rhnb           = []
-        rhnb.append(0)
-        for j in range(nmp):
+        block_index    = []
+        block_index.append(0)
+        for j in range(nb_patches):
             nb = (elim_index[j,0,1]-elim_index[j,0,0])
             for i in range(1, V.dim):
                 nb = nb * (elim_index[j,i,1]-elim_index[j,i,0]) 
             nbasis.append(nb)
-            rhnb.append(sum(nbasis))
-        self._Nitshedim = (sum(nbasis), sum(nbasis))
-        self._nbasis    = nbasis
-        self._rhnb      = rhnb # position of each loc vector in global = [0]+nbasis
-        self.elim_index = elim_index # [nmpatch, dim, 2] local matrix start from
-        self.mp         = pyrefMP
+            block_index.append(sum(nbasis))
+        self._Nitshedim   = (sum(nbasis), sum(nbasis))
+        self._nbasis      = nbasis
+        self._block_index = block_index # position of each block
+        self.elim_index   = elim_index # [nb_patches, dim, 2] local matrix start from
+        self.mp           = pyrefMP
         #
         #... computes coeffs for Nitsche's method
-        stab          = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
-        m_h           = (V.nbasis[0]*V.nbasis[1])
-        self.Kappa    = 1e3#2.*stab*m_h
+        stab               = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
+        m_h                = (V.nbasis[0]*V.nbasis[1])
+        self.Kappa         = 1e3#2.*stab*m_h
         # ...
-        self.normS    = 0.5
+        self.normS         = 0.5
         #------------------------------------------------------
         #Build a global multipatch sparse matrix in COO format.
         #Diagonal blocks: full patch stencil.
@@ -332,13 +332,14 @@ class StencilNitsche(object):
             d2 = self.elim_index[patch_nb-1,0,1]
             d3 = self.elim_index[patch_nb-1,1,0]
             d4 = self.elim_index[patch_nb-1,1,1]
-            pw = self._rhnb[patch_nb-1]
-            cpw= self._rhnb[patch_nb_n-1]
+            pw = self._block_index[patch_nb-1]
+            cpw= self._block_index[patch_nb_n-1]
             #... [patche1: 2, patche2 : 1]
             if interface_like == 1: # x = 0
-                # add test if pd3==d3 and pd4==d4 TODO
+                # add test if 
+                assert(pd3==d3 and pd4==d4) # conform multipatch
                 for j in range(0,pd4-pd3):
-                    dof_p = cpw + 0*(pd4-pd3)        + j
+                    dof_p = cpw + 0*(pd4-pd3)      + j
                     dof_q = pw + (d2-d1-1)*(d4-d3) + j
 
                     rep = min(dof_p, dof_q)
@@ -348,9 +349,10 @@ class StencilNitsche(object):
                     dof_to_rep[dof_q] = rep
 
             if interface_like == 2: # x = 1
+                assert(pd3==d3 and pd4==d4) # conform multipatch
                 for j in range(0,pd4-pd3):
                     dof_p = cpw + (pd2-pd1-1)*(pd4-pd3) + j
-                    dof_q = pw +   0*(d4-d3)          + j
+                    dof_q = pw +   0*(d4-d3)            + j
 
                     rep = min(dof_p, dof_q)
                     equiv.setdefault(rep, set()).update({dof_p, dof_q})
@@ -358,9 +360,10 @@ class StencilNitsche(object):
                     dof_to_rep[dof_p] = rep
                     dof_to_rep[dof_q] = rep
             if interface_like == 3: # y = 0
+                assert(pd1==d1 and pd2==d2) # conform multipatch
                 for i in range(0,pd2-pd1):
                     dof_p = cpw + i*(pd4-pd3) + 0
-                    dof_q = pw +  i*(d4-d3) + (d4-d3-1)
+                    dof_q = pw +  i*(d4-d3)   + (d4-d3-1)
 
                     rep = min(dof_p, dof_q)
                     equiv.setdefault(rep, set()).update({dof_p, dof_q})
@@ -368,9 +371,10 @@ class StencilNitsche(object):
                     dof_to_rep[dof_p] = rep
                     dof_to_rep[dof_q] = rep
             if interface_like == 4: # y = 1
+                assert(pd1==d1 and pd2==d2) # conform multipatch
                 for i in range(0,pd2-pd1):
                     dof_p = cpw + i*(pd4-pd3) + (pd4-pd3-1)
-                    dof_q = pw +  i*(d4-d3) + 0
+                    dof_q = pw +  i*(d4-d3)   + 0
 
                     rep = min(dof_p, dof_q)
                     equiv.setdefault(rep, set()).update({dof_p, dof_q})
@@ -451,7 +455,7 @@ class StencilNitsche(object):
             rhsMerged[I] += value   # SUM contributions
 
         return rhsMerged
-    #... extract solution
+    #... Extract solution
     def NitscheextractSol(self, sol_Dof):
         '''
         NitscheextractSol:  Extract Solution DoFs from master/slave DoFs
@@ -499,8 +503,8 @@ class StencilNitsche(object):
         :param stiffness: stifness matrix 
         :param patch_nb: patch number start from 1
         '''
-        if not (1 <= patch_nb <= self._nmp):
-            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nmp}")
+        if not (1 <= patch_nb <= self._nb_patches):
+            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nb_patches}")
         # assemble mappings for patches
         u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
         #... get interfaces for a given patch
@@ -521,7 +525,7 @@ class StencilNitsche(object):
         :param self: Description
         '''
         # ...
-        for patch_nb in range(1,self.mp.getNumPatches()+1):
+        for patch_nb in range(1,self.mp.nb_patches+1):
             # ... initial diag stiffness matrix
             stiffness  = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
             # ... assemble 
@@ -550,7 +554,7 @@ class StencilNitsche(object):
         :param patch_nb: patch number start from 1
         '''
         # assert isinstance(u_d, StencilVector)
-        # for patch_nb in range(1, self.mp.getNumPatches()+1):
+        # for patch_nb in range(1, self.mp.nb_patches+1):
         # assemble mappings for patches
         u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
         #... get interfaces for a given patch
@@ -560,10 +564,10 @@ class StencilNitsche(object):
         nS = 1.
         self.assemble_nitsche2dDirichlet(self._Tdomain, fields=[u11_mph, u12_mph, self.u_d[patch_nb-1]], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, 0.*self.Kappa, 0.*self.normS, nS], out = u_tmp)
         u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
-        self.b_dir[self._rhnb[patch_nb-1]:self._rhnb[patch_nb]] = u_tmp[:]
+        self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = u_tmp[:]
         # ...
-        self.b_dir[self._rhnb[patch_nb-1]:self._rhnb[patch_nb]] += rhs[:]
-        # if patch_nb == self.mp.getNumPatches():
+        self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
+        # if patch_nb == self.mp.nb_patches:
         #     self.scalingRhs()
         #     print('hereyy')
         # ...
@@ -607,8 +611,8 @@ class StencilNitsche(object):
         :param u12_mph: mapping correspond to patch_nb comp 2
         :param patch_nb: patch number start from 1
         '''
-        if not (1 <= patch_nb <= self._nmp):
-            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nmp}")
+        if not (1 <= patch_nb <= self._nb_patches):
+            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nb_patches}")
         #... get interfaces for a given patch
         interfaces_like = self.mp.getInterfacePatch(patch_nb)
         #.. assemble diagonal matrix
@@ -703,17 +707,17 @@ class StencilNitsche(object):
         :param patch_nb: patch number
         :param patch_nb_n: patch number of neighbor patch
         '''
-        if not (1 <= patch_nb <= self._nmp):
-            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nmp}")
+        if not (1 <= patch_nb <= self._nb_patches):
+            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nb_patches}")
 
         if isinstance(B, StencilMatrix):
             B = B.tosparse()
 
         # compute position of block matrix in global Nitsche's matrix
-        row = self._rhnb[patch_nb-1]
-        col = self._rhnb[patch_nb-1]
+        row = self._block_index[patch_nb-1]
+        col = self._block_index[patch_nb-1]
         if patch_nb_n is not None :
-            col = self._rhnb[patch_nb_n-1]
+            col = self._block_index[patch_nb_n-1]
         # ...
         self.stencilNitsche += coo_matrix(
             (B.data.copy(), (row+B.row.copy(), col+B.col.copy())),

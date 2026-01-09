@@ -747,7 +747,8 @@ class pyrefMultpatch(object):
         mp        = []
         for i in id_list:
             mp.append( getGeometryMap(geometryname, i, Nurbs_check = Nurbs_check) )
-
+        self._dim     = mp[0].dim
+        self._geo_dim = mp[0].geo_dim
         #... edge id mapping
         idmapping = {
             1: (0, 0),
@@ -762,7 +763,7 @@ class pyrefMultpatch(object):
         #... list of patches connection (interface, pach next)
         # patch_connection = {} TODO L shape
         #... First we assume all boundaries are Dirichlet
-        dirichlet        = np.zeros((num_patches, 2, 2), dtype = bool)+True
+        dirichlet        = np.zeros((num_patches, self._dim, 2), dtype = bool)+True
         # ...
         patch_has_interface = [False] * num_patches
         #... loop over all patches
@@ -791,23 +792,54 @@ class pyrefMultpatch(object):
         self.id_list          = id_list
         self.patches          = mp
         self.idmapping        = idmapping
+        # ...
+        self._degree          = mp[0].degree
+        self._knots           = mp[0].knots
+        self._grids           = mp[0].grids
         self._weights         = mp[0].weights()
         self.Ninterfaces      = len(self.interfaces) 
         # self.patch_connection = patch_connection
+    @property
+    def dim(self):
+        return self._dim
+    @property
+    def geo_dim(self):
+        return self._geo_dim
     #.. get degree
+    @property
     def degree(self, num_patch=1):
-        return self.patches[num_patch-1].degree 
-    #.. get knots     
-    def knots(self, num_patch=1):
-        return self.patches[num_patch-1].knots
+        return self._degree 
+    #.. get knots
+    @property
+    def knots(self):
+        return [np.asarray(self._knots[i]) for i in range(self.dim)]  
+    #.. get grids
+    @property
+    def grids(self):
+        return self._grids
+    #.. get weights: same for all patches
+    @property
+    def weights(self):
+        return [self._weights[i] for i in range(self.dim)]  
+    #... get number of Interfaces
+    @property
+    def nb_interfaces(self):
+        return self.Ninterfaces
+    #.. get id list
+    @property
+    def getidlist(self):
+        return self.id_list
+    #.. get number of patches
+    @property
+    def nb_patches(self):
+        return self.num_patches
+    #.. get geometry name    
+    @property
+    def getGeometryname(self):
+        return self.geometryname
     #.. get coefs
     def getcoefs(self, num_patch=1):
         return self.patches[num_patch-1].coefs()    
-    #.. get weights: same for all patches
-    def weights(self):
-        return self._weights  
-    def grids(self, num_patch=1):
-        return self.patches[num_patch-1].grids
     #.. get coefs
     def getAllcoefs(self, direct='x'):
         map_xy = {
@@ -818,8 +850,8 @@ class pyrefMultpatch(object):
     #.. get tensor space
     def getTensorSpace(self):
         # ... space of a B-spline patches
-        Vmp1 = SplineSpace(degree=self.degree()[0], grid = self.grids()[0], omega = self.weights()[0])
-        Vmp2 = SplineSpace(degree=self.degree()[1], grid = self.grids()[1], omega = self.weights()[1])
+        Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
+        Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
         return TensorSpace(Vmp1, Vmp2)
             
     #.. get spline space on uniform mesh
@@ -827,8 +859,8 @@ class pyrefMultpatch(object):
         if isinstance(quad_degree, int):
             quad_degree = (quad_degree,quad_degree)
         # ... space of a B-spline patches on uniform mesh
-        Vmp1 = SplineSpace(degree=self.degree()[0], grid = self.grids()[0], omega = self.weights()[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree[0])
-        Vmp2 = SplineSpace(degree=self.degree()[1], grid = self.grids()[1], omega = self.weights()[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree[1])
+        Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree[0])
+        Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree[1])
         return Vmp1, Vmp2
 
     #.. get mapping in stencil vector format
@@ -888,23 +920,11 @@ class pyrefMultpatch(object):
                 boundary_dirichlet.append(edge)
         # print(f"Patch {num_patch} Dirichlet boundaries : {boundary_dirichlet}")
         return np.asarray(boundary_dirichlet)
-    #.. get id list
-    def getidlist(self):
-        return self.id_list
-    #.. get number of patches
-    def getNumPatches(self):
-        return self.num_patches
-    #... get number of Interfaces
-    def nb_interfaces(self):
-        return self.Ninterfaces
-    #.. get geometry name    
-    def getGeometryname(self):
-        return self.geometryname
     
     def getDirichlet(self, V, g):
         if isinstance(V, TensorSpace):
             u_d           = []
-            for patch_nb in range(1, self.getNumPatches()+1):
+            for patch_nb in range(1, self.nb_patches+1):
                 #... mapping as arrays
                 xmp, ymp         = self.getcoefs(patch_nb)
                 # Assemble Dirichlet boundary conditions

@@ -6,7 +6,7 @@
   <Basis type="TensorNurbsBasis2">
    <Basis type="TensorBSplineBasis2">
     <Basis type="BSplineBasis" index="0">
-     <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
+     <KnotVector degree="1">0 0 1 1 </KnotVector>
     </Basis>
     <Basis type="BSplineBasis" index="1">
      <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
@@ -16,9 +16,6 @@
     1 
     0.707106781186548 
     1 
-    0.707106781186548 
-    1 
-    0.707106781186548 
     1 
     0.707106781186548 
     1 
@@ -28,9 +25,6 @@
    1. 0 
    1. 1. 
    0 1. 
-   1.5 0 
-   1.5 1.5 
-   0 1.5 
    2 0 
    2 2 
    0 2 
@@ -41,7 +35,7 @@
   <Basis type="TensorNurbsBasis2">
    <Basis type="TensorBSplineBasis2">
     <Basis type="BSplineBasis" index="0">
-     <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
+     <KnotVector degree="1">0 0 1 1 </KnotVector>
     </Basis>
     <Basis type="BSplineBasis" index="1">
      <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
@@ -51,9 +45,6 @@
     1 
     0.707106781186548 
     1 
-    0.707106781186548 
-    1 
-    0.707106781186548 
     1 
     0.707106781186548 
     1 
@@ -63,9 +54,6 @@
    0 1. 
    -1. 1. 
    -1. 0 
-   0 1.5 
-   -1.5 1.5 
-   -1.5 0 
    0 2 
    -2 2 
    -2 0 
@@ -76,7 +64,7 @@
   <Basis type="TensorNurbsBasis2">
    <Basis type="TensorBSplineBasis2">
     <Basis type="BSplineBasis" index="0">
-     <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
+     <KnotVector degree="1">0 0 1 1 </KnotVector>
     </Basis>
     <Basis type="BSplineBasis" index="1">
      <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
@@ -86,9 +74,6 @@
     1 
     0.707106781186548 
     1 
-    0.707106781186548 
-    1 
-    0.707106781186548 
     1 
     0.707106781186548 
     1 
@@ -98,9 +83,6 @@
    -1. 0 
    -1. -1. 
    0 -1. 
-   -1.5 0 
-   -1.5 -1.5 
-   0 -1.5 
    -2 0 
    -2 -2 
    0 -2 
@@ -111,7 +93,7 @@
   <Basis type="TensorNurbsBasis2">
    <Basis type="TensorBSplineBasis2">
     <Basis type="BSplineBasis" index="0">
-     <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
+     <KnotVector degree="1">0 0 1 1 </KnotVector>
     </Basis>
     <Basis type="BSplineBasis" index="1">
      <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
@@ -121,9 +103,6 @@
     1 
     0.707106781186548 
     1 
-    0.707106781186548 
-    1 
-    0.707106781186548 
     1 
     0.707106781186548 
     1 
@@ -133,9 +112,6 @@
    0 -1. 
    1. -1. 
    1. 0 
-   0 -1.5 
-   1.5 -1.5 
-   1.5 0 
    0 -2 
    2 -2 
    2 0 
