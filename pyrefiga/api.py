@@ -218,6 +218,8 @@ class StencilNitsche(object):
         The function space containing basis and dimension information.
     pyrefMP : pyrefMultpatch
         The multipatch geometry information.
+    u_d: list of StensilVector 
+        Containes Dirichlet projection in V
     Isoparametric : bool, optional
         If True, use the same space for geometry and solution (default is True).
     Attributes
@@ -228,13 +230,16 @@ class StencilNitsche(object):
         The codomain function space.
     Methods 
     """
-    def __init__(self, V, W, pyrefMP, Isoparametric = True):
+    def __init__(self, V, W, pyrefMP, u_d = None, Isoparametric = True):
         assert isinstance( V, TensorSpace)
         assert isinstance( W, TensorSpace)
         assert isinstance( pyrefMP, pyrefMultpatch)
 
         nmp            = pyrefMP.getNumPatches()
         # -------
+        if u_d is None:
+            u_d = [StencilVector(V.vector_space) for _ in range(nmp)]
+        self.u_d       = u_d
         self._pads     = V.degree
         self._ndim     = V.dim
         self._domain   = V
@@ -270,7 +275,7 @@ class StencilNitsche(object):
         #... computes coeffs for Nitsche's method
         stab          = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
         m_h           = (V.nbasis[0]*V.nbasis[1])
-        self.Kappa    = 2.*stab*m_h
+        self.Kappa    = 1e3#2.*stab*m_h
         # ...
         self.normS    = 0.5
         #------------------------------------------------------
@@ -332,9 +337,9 @@ class StencilNitsche(object):
             #... [patche1: 2, patche2 : 1]
             if interface_like == 1: # x = 0
                 # add test if pd3==d3 and pd4==d4 TODO
-                for j in range(pd3,pd4):
-                    dof_p = cpw + 0      + j*(pd2-pd1)
-                    dof_q = pw + (d2-d1) + j*(d2-d1)
+                for j in range(0,pd4-pd3):
+                    dof_p = cpw + 0*(pd4-pd3)        + j
+                    dof_q = pw + (d2-d1-1)*(d4-d3) + j
 
                     rep = min(dof_p, dof_q)
                     equiv.setdefault(rep, set()).update({dof_p, dof_q})
@@ -343,9 +348,9 @@ class StencilNitsche(object):
                     dof_to_rep[dof_q] = rep
 
             if interface_like == 2: # x = 1
-                for j in range(pd3,pd4):
-                    dof_p = cpw + (pd2-pd1) + j*(pd2-pd1)
-                    dof_q = pw +   0        + j*(d2-d1)
+                for j in range(0,pd4-pd3):
+                    dof_p = cpw + (pd2-pd1-1)*(pd4-pd3) + j
+                    dof_q = pw +   0*(d4-d3)          + j
 
                     rep = min(dof_p, dof_q)
                     equiv.setdefault(rep, set()).update({dof_p, dof_q})
@@ -353,9 +358,9 @@ class StencilNitsche(object):
                     dof_to_rep[dof_p] = rep
                     dof_to_rep[dof_q] = rep
             if interface_like == 3: # y = 0
-                for i in range(pd1,pd2):
-                    dof_p = cpw + i + 0*(pd2-pd1)
-                    dof_q = pw +  i + (d4-d3)*(d2-d1)
+                for i in range(0,pd2-pd1):
+                    dof_p = cpw + i*(pd4-pd3) + 0
+                    dof_q = pw +  i*(d4-d3) + (d4-d3-1)
 
                     rep = min(dof_p, dof_q)
                     equiv.setdefault(rep, set()).update({dof_p, dof_q})
@@ -363,9 +368,9 @@ class StencilNitsche(object):
                     dof_to_rep[dof_p] = rep
                     dof_to_rep[dof_q] = rep
             if interface_like == 4: # y = 1
-                for i in range(pd1,pd2):
-                    dof_p = cpw + i + (pd4-pd3)*(pd2-pd1)
-                    dof_q = pw +  i + 0*(d2-d1)
+                for i in range(0,pd2-pd1):
+                    dof_p = cpw + i*(pd4-pd3) + (pd4-pd3-1)
+                    dof_q = pw +  i*(d4-d3) + 0
 
                     rep = min(dof_p, dof_q)
                     equiv.setdefault(rep, set()).update({dof_p, dof_q})
@@ -378,21 +383,24 @@ class StencilNitsche(object):
         # IMPORTANT: iterate over all DOFs appearing in matrix
         all_dofs = set(self.stencilNitsche.tocoo().row) | set(self.stencilNitsche.tocoo().col)
         for old_dof in sorted(all_dofs):
+            # for old_dof in range(self._Nitshedim[0]):
             if old_dof in new_id:
                 continue
             if old_dof in dof_to_rep:
                 rep = dof_to_rep[old_dof]
+                old_id[current] = set()
                 for d in equiv[rep]:
                     new_id[d] = current
-                    old_id[current] = d
+                    old_id[current].add(d)
             else:
                 new_id[old_dof] = current
-                old_id[current] = old_dof
+                old_id[current] = {old_dof}
             current += 1
         self._newdim    = (current, current)
         self.new_id     = new_id
         self.old_id     = old_id
-        #....
+        # ...
+        return 
     #--------------------------------------
     # Abstract interface
     #--------------------------------------
@@ -446,112 +454,13 @@ class StencilNitsche(object):
     #... extract solution
     def NitscheextractSol(self, sol_Dof):
         '''
-        NitscheextractSol:  extract Sol DoFs by doublicating interfaces
+        NitscheextractSol:  Extract Solution DoFs from master/slave DoFs
         '''
         SolExtracted = np.zeros(self._Nitshedim[0], dtype=self._type)
-
-        for new_dof, value in enumerate(sol_Dof):
-            I = self.old_id[new_dof]
-            SolExtracted[I] = value   # Extract contributions
-
+        for new_dof, olds in self.old_id.items():
+            for d in olds:
+                SolExtracted[d] = sol_Dof[new_dof]   # Extract contributions
         return SolExtracted
-    #...
-    def collect_offdiagStencilMatrix(self, stiffnessoffdiag, interface):
-        '''
-        Docstring for collect_offdiagStencilMatrix 
-        [i,j, i-p:i+p, j-p,j+p] to [i,j, n-i-p:n-i+p, j-p,j+p]
-        
-        :param stiffnessoffdiag: matrix off diagonal
-        :param patch_nb patch number
-        '''
-        # ... get interface and patch numbers
-        patch_nb       = interface[0]
-        patch_nb_n     = interface[1]
-        # ... get interface mappings
-        interface_like = interface[2][0]
-        # Shortcuts
-        nr = stiffnessoffdiag._codomain.npts
-        nd = stiffnessoffdiag._ndim
-        nc = stiffnessoffdiag._domain.npts
-        ss = stiffnessoffdiag._codomain.starts
-        pp = stiffnessoffdiag._codomain.pads
-
-        ravel_multi_index = np.ravel_multi_index
-
-        # COO storage
-        rows = []
-        cols = []
-        data = []
-        #...rows
-        pd1 = self.elim_index[patch_nb_n-1,0,0]# for x
-        pd2 = self.elim_index[patch_nb_n-1,0,1]
-        pd3 = self.elim_index[patch_nb_n-1,1,0]# for y
-        pd4 = self.elim_index[patch_nb_n-1,1,1]
-        #... cols
-        d1 = self.elim_index[patch_nb-1,0,0]
-        d2 = self.elim_index[patch_nb-1,0,1]
-        d3 = self.elim_index[patch_nb-1,1,0]
-        d4 = self.elim_index[patch_nb-1,1,1]
-        # Range of data owned by local process (no ghost regions)
-        local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
-        if interface_like == 1 or interface_like == 2:
-            for (index,value) in np.ndenumerate( stiffnessoffdiag._data[local] ):
-
-                # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
-
-                xx = index[:nd]  # x=i-s
-                ll = index[nd:]  # l=p+k
-
-                ii = [s+x for s,x in zip(ss,xx)]
-                jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,self._pads)]
-                #...correct index ix -> nx-1-ix
-                jj[0] = nc[0]-1-jj[0]
-                if ( pd1 <= ii[0] < pd2) and (pd3 <= ii[1] < pd4) and ( d1 <= jj[0] < d2) and (d3 <= jj[1] < d4):
-                    # correct index
-                    ii[0] = ii[0]-pd1
-                    ii[1] = ii[1]-pd3
-                    jj[0] = jj[0]-d1
-                    jj[1] = jj[1]-d3
-                    #...
-                    I = ravel_multi_index( ii, dims=(pd2-pd1, pd4-pd3), order='C' )
-                    J = ravel_multi_index( jj, dims=(d2-d1, d4-d3), order='C' )
-
-                    rows.append( I )
-                    cols.append( J )
-                    data.append( value )
-        else:
-            for (index,value) in np.ndenumerate( stiffnessoffdiag._data[local] ):
-
-                # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
-
-                xx = index[:nd]  # x=i-s
-                ll = index[nd:]  # l=p+k
-
-                ii = [s+x for s,x in zip(ss,xx)]
-                jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,self._pads)]
-                #...correct index iy -> ny-1-iy
-                jj[-1] = nc[-1]-1-jj[-1]
-                if ( pd1 <= ii[0] < pd2) and (pd3 <= ii[1] < pd4) and ( d1 <= jj[0] < d2) and (d3 <= jj[1] < d4):
-                    # correct index
-                    ii[0] = ii[0]-pd1
-                    ii[1] = ii[1]-pd3
-                    jj[0] = jj[0]-d1
-                    jj[1] = jj[1]-d3
-                    #...
-                    I = ravel_multi_index( ii, dims=(pd2-pd1, pd4-pd3), order='C' )
-                    J = ravel_multi_index( jj, dims=(d2-d1, d4-d3), order='C' )
-
-                    rows.append( I )
-                    cols.append( J )
-                    data.append( value )
-
-        M = coo_matrix(
-                (data,(rows,cols)),
-                shape = [self._nbasis[patch_nb_n-1],self._nbasis[patch_nb-1]],
-                dtype = self._type
-        )
-        M.eliminate_zeros()
-        return M
     #...
     def addNitscheoffDiag(self):
         '''
@@ -596,9 +505,10 @@ class StencilNitsche(object):
         u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
         #... get interfaces for a given patch
         interfaces_like = self.mp.getInterfacePatch(patch_nb)
-        #.. assemble diagonal matrix
+        # ... assemble diagonal matrix
         self.assemble_nitsche2dDiag(self._Tdomain, fields=[u11_mph, u12_mph], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)
-        #..
+        # ...
+        return
     
     #--------------------------------------
     # ... assemble global Nitsche's matrix
@@ -623,6 +533,7 @@ class StencilNitsche(object):
             # ...
         self.addNitscheoffDiag()
         #... scaling
+        # D = self.scalingNistcheVector()
         # A  = self.stencilNitsche.tocoo(copy=False)
         # self.stencilNitsche.data *= D[A.row] * D[A.col]
         #...
@@ -630,7 +541,7 @@ class StencilNitsche(object):
     #-------------------------------------------------
     # assemble Nitsche's Dirichlet contribution
     #-------------------------------------------------
-    def assembleNitsche_Dirichlet(self, rhs, u_d, patch_nb):
+    def assembleNitsche_Dirichlet(self, rhs, patch_nb):
         '''
         Docstring for assembleNitsche_Dirichlet: assemble rhs vector
         
@@ -638,58 +549,25 @@ class StencilNitsche(object):
         :param u_d: stencile vector
         :param patch_nb: patch number start from 1
         '''
-        if not (1 <= patch_nb <= self._nmp):
-            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nmp}")
-        assert isinstance(u_d, StencilVector)
+        # assert isinstance(u_d, StencilVector)
+        # for patch_nb in range(1, self.mp.getNumPatches()+1):
         # assemble mappings for patches
         u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
         #... get interfaces for a given patch
         interfaces_like = self.mp.getInterfacePatch(patch_nb)
-        # print("interface  = \n", interfaces_like)
-        # ... initial diag stiffness matrix
-        # stiffness  = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
-        # #.. assemble diagonal matrix
-        # self.assemble_nitsche2dDirichlet(self._Tdomain, fields=[u11_mph, u12_mph], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, -1.*self.normS, 0], out = stiffness)
-        # # ...
-        # print((stiffness.tosparse().toarray().reshape((self._domain.nbasis[0]*self._domain.nbasis[1],self._domain.nbasis[0]*self._domain.nbasis[1]))))
-        # print("dirichlet vector = \n", u_d.toarray().reshape(self._domain.nbasis))
+        # ...
         u_tmp = StencilVector(self._domain.vector_space)
-        # u_tmp.from_array(self._domain, (stiffness.tosparse().toarray().reshape((self._domain.nbasis[0]*self._domain.nbasis[1],self._domain.nbasis[0]*self._domain.nbasis[1])).dot(u_d.toarray())).reshape(self._domain.nbasis))
-        nS = 1.*self.normS
-        # if patch_nb == 1:
-        #     nS *=-1.
-        self.assemble_nitsche2dDirichlet(self._Tdomain, fields=[u11_mph, u12_mph, u_d], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, -1.*self.Kappa, nS], out = u_tmp)
-        # print("rhs Nitsche =\n", u_tmp.toarray().reshape(self._domain.nbasis))
-        # ... apply dirichlet
+        nS = 1.
+        self.assemble_nitsche2dDirichlet(self._Tdomain, fields=[u11_mph, u12_mph, self.u_d[patch_nb-1]], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, 0.*self.Kappa, 0.*self.normS, nS], out = u_tmp)
         u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
-        nx = self.elim_index[patch_nb-1,0,1] - self.elim_index[patch_nb-1,0,0]
-        ny = self.elim_index[patch_nb-1,1,1] - self.elim_index[patch_nb-1,1,0]
-        # print("after dirichlet elimination = \n",u_tmp.reshape((nx, ny) ))
+        self.b_dir[self._rhnb[patch_nb-1]:self._rhnb[patch_nb]] = u_tmp[:]
         # ...
-        # ... get interfaces for a given patch
-        interfaces_like = self.mp.getInterfacePatch(patch_nb)
+        self.b_dir[self._rhnb[patch_nb-1]:self._rhnb[patch_nb]] += rhs[:]
+        # if patch_nb == self.mp.getNumPatches():
+        #     self.scalingRhs()
+        #     print('hereyy')
         # ...
-        pd1 = 0
-        if 1 in interfaces_like:
-            pd1 = 1
-        pd2 = nx
-        if 2 in interfaces_like:
-            pd2 = nx-1
-        #__
-        pd3 = 0
-        if 3 in interfaces_like:
-            pd3 = 1
-        pd4 = ny
-        if 4 in interfaces_like:
-            pd4 = ny-1
-        # ...
-        rhs                    = rhs.reshape((self._domain.nbasis[0]-2,self._domain.nbasis[0]-2))
-        u_tmp                  = u_tmp.reshape((nx, ny))
-        # ...
-        u_tmp[pd1:pd2,pd3:pd4] = rhs[:,:] + u_tmp[pd1:pd2,pd3:pd4]
-        # ...
-        self.b_dir[self._rhnb[patch_nb-1]:self._rhnb[patch_nb]] = u_tmp.reshape(nx*ny)[:]
-        # ...
+        return
     #...
     def addNitscheoffDiag_SameSpace(self, u11_mph, u12_mph, u21_mph, u22_mph, interface):
         '''
@@ -736,7 +614,84 @@ class StencilNitsche(object):
         #.. assemble diagonal matrix
         self.assemble_nitsche2dDiag(self._domain, fields=[u11_mph, u12_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)
         #..
+    #====================================
+    #... collect off diag NItsch matrices
+    #====================================
+    def collect_offdiagStencilMatrix(self, stiffnessoffdiag, interface):
+        '''
+        Docstring for collect_offdiagStencilMatrix 
+        [i,j, i-p:i+p, j-p,j+p] to [i,j, n-i-p:n-i+p, j-p,j+p]
+        
+        :param stiffnessoffdiag: matrix off diagonal
+        :param patch_nb patch number
+        '''
+        # ... get interface and patch numbers
+        patch_nb       = interface[0]
+        patch_nb_n     = interface[1]
+        # ... get interface mappings
+        interface_like = interface[2][0]
+        # Shortcuts
+        nr = stiffnessoffdiag._codomain.npts
+        nd = stiffnessoffdiag._ndim
+        nc = stiffnessoffdiag._domain.npts
+        ss = stiffnessoffdiag._codomain.starts
+        pp = stiffnessoffdiag._codomain.pads
 
+        ravel_multi_index = np.ravel_multi_index
+
+        # COO storage
+        rows = []
+        cols = []
+        data = []
+        #...rows
+        pd1 = self.elim_index[patch_nb_n-1,0,0]# for x
+        pd2 = self.elim_index[patch_nb_n-1,0,1]
+        pd3 = self.elim_index[patch_nb_n-1,1,0]# for y
+        pd4 = self.elim_index[patch_nb_n-1,1,1]
+        #... cols
+        d1 = self.elim_index[patch_nb-1,0,0]
+        d2 = self.elim_index[patch_nb-1,0,1]
+        d3 = self.elim_index[patch_nb-1,1,0]
+        d4 = self.elim_index[patch_nb-1,1,1]
+        # Range of data owned by local process (no ghost regions)
+        local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
+        index_coll = 0
+        if interface_like == 1 or interface_like == 2:
+            index_coll = 0
+        else:
+            index_coll = -1
+        for (index,value) in np.ndenumerate( stiffnessoffdiag._data[local] ):
+
+            # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
+
+            xx = index[:nd]  # x=i-s
+            ll = index[nd:]  # l=p+k
+
+            ii = [s+x for s,x in zip(ss,xx)]
+            jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,self._pads)]
+            #...correct index ix -> nx-1-ix jj[0] = nc[0]-1-jj[0] #...correct index iy -> ny-1-iy//jj[-1] = nc[-1]-1-jj[-1]
+            jj[index_coll] = nc[index_coll]-1-jj[index_coll]
+            if ( pd1 <= ii[0] < pd2) and (pd3 <= ii[1] < pd4) and ( d1 <= jj[0] < d2) and (d3 <= jj[1] < d4):
+                # correct index
+                ii[0] = ii[0]-pd1
+                ii[1] = ii[1]-pd3
+                jj[0] = jj[0]-d1
+                jj[1] = jj[1]-d3
+                #...
+                I = ravel_multi_index( ii, dims=(pd2-pd1, pd4-pd3), order='C' )
+                J = ravel_multi_index( jj, dims=(d2-d1, d4-d3), order='C' )
+
+                rows.append( I )
+                cols.append( J )
+                data.append( value )
+
+        M = coo_matrix(
+                (data,(rows,cols)),
+                shape = [self._nbasis[patch_nb_n-1],self._nbasis[patch_nb-1]],
+                dtype = self._type
+        )
+        M.eliminate_zeros()
+        return M
     #--------------------------------------
     # append block COO matrix
     #--------------------------------------
@@ -767,98 +722,6 @@ class StencilNitsche(object):
         )
 
         self.stencilNitsche.eliminate_zeros()
-    #--------------------------------------
-    # append block COO matrix
-    #--------------------------------------
-    def appendStiffness(self, B, patch_nb):
-        '''
-        assemble stiffness matrices B in global Nitsche's matrix
-        
-        :param B: Stencile matrix
-        :param patch_nb: patch number
-        :param patch_nb_n: patch number of neighbor patch
-        '''
-        if not (1 <= patch_nb <= self._nmp):
-            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nmp}")
-
-        if isinstance(B, StencilMatrix):
-            # compute position of block matrix in global Nitsche's matrix
-            row = self._rhnb[patch_nb-1]
-            col = self._rhnb[patch_nb-1]
-            #... get interfaces for a given patch
-            interfaces_like = self.mp.getInterfacePatch(patch_nb)
-            pd1 = 0
-            if 1 in interfaces_like:
-                pd1 = 1
-            pd3 = 0
-            if 3 in interfaces_like:
-                pd3 = 1
-            # ...
-            d1 = self.elim_index[patch_nb-1,0,0]
-            d2 = self.elim_index[patch_nb-1,0,1]
-            d3 = self.elim_index[patch_nb-1,1,0]
-            d4 = self.elim_index[patch_nb-1,1,1]
-            # ...
-            n1,n2  = self._domain.nbasis
-            #indeces for elimination True for all
-            Dd1 = 1    #if dirichlet[0][0] else 0 
-            Dd2 = n1-1 #if dirichlet[0][1] else n1
-            Dd3 = 1    #if dirichlet[1][0] else 0 
-            Dd4 = n2-1 #if dirichlet[1][1] else n2
-            # Shortcuts
-            nd = B._ndim
-            nc = B._domain.npts
-            ss = B._codomain.starts
-            pp = B._codomain.pads
-
-            ravel_multi_index = np.ravel_multi_index
-
-            # COO storage
-            rows = []
-            cols = []
-            data = []
-            # Range of data owned by local process (no ghost regions)
-            local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
-            for (index,value) in np.ndenumerate( B._data[local] ):
-
-                # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
-
-                xx = index[:nd]  # x=i-s
-                ll = index[nd:]  # l=p+k
-
-                ii = [s+x for s,x in zip(ss,xx)]
-                jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,pp)]
-
-                if ( Dd1 <= ii[0] < Dd2) and (Dd3 <= ii[1] < Dd4) and ( Dd1 <= jj[0] < Dd2) and (Dd3 <= jj[1] < Dd4):
-                    # correct index in nitsche's matrix
-                    ii[0] = ii[0]-Dd1+pd1
-                    ii[1] = ii[1]-Dd3+pd3
-                    jj[0] = jj[0]-Dd1+pd1
-                    jj[1] = jj[1]-Dd3+pd3
-                    #...
-                    I = ravel_multi_index( ii, dims=(d2-d1, d4-d3), order='C' )
-                    J = ravel_multi_index( jj, dims=(d2-d1, d4-d3), order='C' )
-
-                    rows.append( I )
-                    cols.append( J )
-                    data.append( value )
-
-            M = coo_matrix(
-                    (data,(rows,cols)),
-                    shape = [(d2-d1)*(d4-d3),(d2-d1)*(d4-d3)],
-                    dtype = B._domain.dtype
-            )
-            M.eliminate_zeros()
-            # ...
-            self.stencilNitsche += coo_matrix(
-                (M.data.copy(), (row+M.row.copy(), col+M.col.copy())),
-                shape = self._Nitshedim,
-                dtype = self._type
-            )
-
-            self.stencilNitsche.eliminate_zeros()
-        else:
-            raise TypeError('Expecting StencilMatrix')            
 
 #==============================================================================
 def apply_dirichlet(V, x, dirichlet = True, update = None):

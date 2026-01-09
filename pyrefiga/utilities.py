@@ -756,12 +756,13 @@ class pyrefMultpatch(object):
             4: (1, 1)
         }
         #... number of patches
-        num_patches = len(mp)
+        num_patches      = len(mp)
         #... list of interfaces (patch1, patch2, [edge_patch1, edge_patch2])
-        interfaces  = []
+        interfaces       = []
+        #... list of patches connection (interface, pach next)
+        # patch_connection = {} TODO L shape
         #... First we assume all boundaries are Dirichlet
-        dirichlet_I = np.zeros((num_patches, 2, 2), dtype = bool)+True
-        dirichlet   = np.zeros((num_patches, 2, 2), dtype = bool)+True
+        dirichlet        = np.zeros((num_patches, 2, 2), dtype = bool)+True
         # ...
         patch_has_interface = [False] * num_patches
         #... loop over all patches
@@ -773,28 +774,26 @@ class pyrefMultpatch(object):
                 interface_obj = pyrefInterface(xmp, ymp, xmp1, ymp1)
                 if interface_obj.interface is False :
                     continue
-                #...
+                # ...
                 interfaces.append( (i+1, j+1, interface_obj.interface) )
                 #... set the Dirichlet BCs False for the interface edges
                 dirichlet[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
                 dirichlet[j,idmapping[interface_obj.interface[1]][0],idmapping[interface_obj.interface[1]][1]] = False
-                # ... set Dirichlet BCs False for interface patch+
-                dirichlet_I[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
                 #...
                 patch_has_interface[i] = True
                 patch_has_interface[j] = True
         assert all(patch_has_interface), "Invalid geometry: at least one patch has no interface"
         # ...
-        self.num_patches  = num_patches
-        self.interfaces   = interfaces
-        self.dirichlet    = dirichlet.tolist()
-        self.dirichlet_I  = dirichlet_I.tolist()
-        self.geometryname = geometryname
-        self.id_list      = id_list
-        self.patches      = mp
-        self.idmapping    = idmapping
-        self._weights     = mp[0].weights()
-        self.Ninterfaces  = len(self.interfaces) 
+        self.num_patches      = num_patches
+        self.interfaces       = interfaces
+        self.dirichlet        = dirichlet.tolist()
+        self.geometryname     = geometryname
+        self.id_list          = id_list
+        self.patches          = mp
+        self.idmapping        = idmapping
+        self._weights         = mp[0].weights()
+        self.Ninterfaces      = len(self.interfaces) 
+        # self.patch_connection = patch_connection
     #.. get degree
     def degree(self, num_patch=1):
         return self.patches[num_patch-1].degree 
@@ -864,9 +863,12 @@ class pyrefMultpatch(object):
     #.. get dirichlet BCs for a given patch
     def getDirPatch(self, num_patch):
         return self.dirichlet[num_patch-1]
-    #.. get dirichlet BCs for a given patch counting interfaces
-    def getDirPatchInt(self, num_patch):
-        return self.dirichlet_I[num_patch-1]
+    # .. get singularity points L shape TODO
+    # def getSingularityPatch(self, num_patch):
+    #     interfaceP = self.getInterfacePatch(num_patch)
+    #     if 2 in interfaceP and 4 in interfaceP:            
+    #         patch_tmp = self.patch_connection(num_patch)
+    #     return 0
 
     #.. get interfaces for a given patch
     def getInterfacePatch(self, num_patch):
@@ -899,6 +901,18 @@ class pyrefMultpatch(object):
     def getGeometryname(self):
         return self.geometryname
     
+    def getDirichlet(self, V, g):
+        if isinstance(V, TensorSpace):
+            u_d           = []
+            for patch_nb in range(1, self.getNumPatches()+1):
+                #... mapping as arrays
+                xmp, ymp         = self.getcoefs(patch_nb)
+                # Assemble Dirichlet boundary conditions
+                u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace()), Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
+                u_d.append(u_d1)
+            return u_d
+        else:
+            raise TypeError('Expecting TensorSpace')
     #.. print multipatch info
     def detail(self):
         print(f"Number of patches : {self.num_patches}")
@@ -908,9 +922,6 @@ class pyrefMultpatch(object):
         print("Dirichlet BCs for each patch :")
         for i in range(self.num_patches):
             print(f" Patch {i+1} : {self.dirichlet[i]}")
-        print("Dirichlet BCs for each patch&Interface:")
-        for i in range(self.num_patches):
-            print(f" Patch {i+1} : {self.dirichlet_I[i]}")
     def __repr__(self):
         return f"pyrefMultpatch(num_patches={self.num_patches}, interfaces={self.interfaces}, dirichlet={self.dirichlet})"
     

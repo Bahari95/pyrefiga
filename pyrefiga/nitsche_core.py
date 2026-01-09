@@ -1907,7 +1907,7 @@ def assemble_vector_Dirichlet(
     vector_m1: 'float[:,:]', vector_m2: 'float[:,:]', vector_d: 'float[:,:]',
     omega_1: 'float[:]', omega_2: 'float[:]',
     interfaces: 'int[:]', Kappa: 'float',
-    normalS: 'float', rhs: 'float[:,:]'
+    normalS: 'float', Ugrad:'float', rhs: 'float[:,:]'
 ):
     #..assemble  solution times noraml(test fuction)
     from numpy import zeros
@@ -1993,8 +1993,10 @@ def assemble_vector_Dirichlet(
 
                         bj_0     = basis_2[ie2,il_2,0,g2]
                         bj_y     = basis_2[ie2,il_2,1,g2]
+                        # ...
                         coeff_d  = lcoeffs_d[0, il_2]
                         coeff_d1 = lcoeffs_d[1, il_2]
+                        # ...
                         ud      +=  coeff_d * bj_0
                         udx     +=  (coeff_d1-coeff_d) * bj_0 * bx_leftFE
                         udy     +=  coeff_d * bj_y
@@ -2023,18 +2025,18 @@ def assemble_vector_Dirichlet(
                         udx   = u_d2x[g2]
                         udy   = u_d2y[g2]
                         # ...
-                        comp_1          = +1 * ( F_2y[g2]*bi_x - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += -1 * (-F_1y[g2]*bi_x + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = -1 * ( F_2y[g2]*bi_x - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += +1 * (-F_1y[g2]*bi_x + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_2          = +1 * ( F_2y[g2]*udx - F_2x[g2]*udy)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_2         += -1 * (-F_1y[g2]*udx + F_1x[g2]*udy)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_2          = -1 * ( F_2y[g2]*udx - F_2x[g2]*udy)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_2         += +1 * (-F_1y[g2]*udx + F_1x[g2]*udy)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_3          = +1 * ( F_2y[g2]*bi_px - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_3         += -1 * (-F_1y[g2]*bi_px + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_3          = -1 * ( F_2y[g2]*bi_px - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_3         += +1 * (-F_1y[g2]*bi_px + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         # ...
                         wvol    = weights_2[ie2, g2]
                         # ...
-                        v      +=  normalS * (comp_1 * ud  + 0.*bi_0*comp_2) * wvol + Kappa * bi_0 * ud * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
+                        v      +=  normalS * (comp_1 * ud)  + Ugrad*bi_0*comp_2 * wvol + Kappa * bi_0 * ud * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
                         vip    +=  normalS * (comp_3 * ud) * wvol
 
                     rhs[p1, p2+i2]    += v
@@ -2047,6 +2049,7 @@ def assemble_vector_Dirichlet(
             i_span_1 = spans_1[ie1]
             for ie2 in range(0, ne2):         
                 i_span_2 = spans_2[ie2]
+                
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]                
                 for g2 in range(0, k2):
                     i_span_3 = spans_3[ie1, k1-1]
@@ -2083,7 +2086,7 @@ def assemble_vector_Dirichlet(
                         coeff_d  = lcoeffs_d[p1, il_2]
                         coeff_d1 = lcoeffs_d[p1-1, il_2]
                         ud      +=  coeff_d * bj_0
-                        udx     +=  (coeff_d-coeff_d1) * bj_0 * bx_leftFE
+                        udx     +=  (coeff_d-coeff_d1) * bj_0 * bx_rightFE
                         udy     +=  coeff_d * bj_y
 
                     u_d2[g2]  = ud
@@ -2112,18 +2115,18 @@ def assemble_vector_Dirichlet(
                         udx   = u_d2x[g2]
                         udy   = u_d2y[g2]
                         # ...
-                        comp_1          = -1 * ( F_2y[g2]*bi_x - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += +1 * (-F_1y[g2]*bi_x + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = +1 * ( F_2y[g2]*bi_x - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += -1 * (-F_1y[g2]*bi_x + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_2          = -1 * ( F_2y[g2]*udx - F_2x[g2]*udy)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_2         += +1 * (-F_1y[g2]*udx + F_1x[g2]*udy)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_2          = +1 * ( F_2y[g2]*udx - F_2x[g2]*udy)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_2         += -1 * (-F_1y[g2]*udx + F_1x[g2]*udy)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_3          = -1 * ( F_2y[g2]*bi_px - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
-                        comp_3         += +1 * (-F_1y[g2]*bi_px + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_3          = +1 * ( F_2y[g2]*bi_px - F_2x[g2]*bi_y)/J_mat2[g2] * F_2y[g2] #/sqrt(F1y**2+ F2y**2)
+                        comp_3         += -1 * (-F_1y[g2]*bi_px + F_1x[g2]*bi_y)/J_mat2[g2] * F_1y[g2] #/sqrt(F1y**2+ F2y**2)
                         #...
                         wvol  = weights_2[ie2, g2]
                         # ... - 0.5*u1*v1_n - 0.5*u1_n*v1
-                        v    += normalS * (comp_1 * ud + 0.*bi_0*comp_2)  * wvol + Kappa * bi_0 * ud * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
+                        v    += normalS * (comp_1 * ud) + Ugrad*bi_0*comp_2  * wvol + Kappa * bi_0 * ud * wvol * sqrt(F_1y[g2]**2 + F_2y[g2]**2)
                         vpi  += normalS * (comp_3 * ud)  * wvol 
 
                     rhs[i_span_1+p1, p2+i2]      += v
@@ -2163,12 +2166,21 @@ def assemble_vector_Dirichlet(
                         F2y     +=  (coeff_m22-coeff_m2) * bj_0 * by_left
                     # ... compute dirichlet
                     ud  = 0.0
+                    udx = 0.0
+                    udy = 0.0
                     for il_1 in range(0, p1+1):
 
                         bj_0     = basis_1[ie1,il_1,0,g1]
+                        bj_x     = basis_1[ie1,il_1,1,g1]
+                        # ...
                         coeff_d  = lcoeffs_d[il_1, 0]
+                        coeff_d1 = lcoeffs_d[il_1, 1]
                         ud      +=  coeff_d * bj_0
-                    u_d1[g1] = ud
+                        udx     +=  coeff_d * bj_x
+                        udy     +=  (coeff_d1-coeff_d) * bj_0 * by_leftFE
+                    u_d1[g1]  = ud
+                    u_d1x[g1] = udx
+                    u_d1y[g1] = udy
                     # ... compute the normal derivative
                     F1_1x[g1]  = F1x
                     F1_2x[g1]  = F2x
@@ -2186,18 +2198,23 @@ def assemble_vector_Dirichlet(
                         bi_x  = basis_1[ie1, il_1, 1, g1]
                         bi_y  = -1* bi_0 * by_leftFE
                         bi_py =  1* bi_0 * by_leftFE
+                        #...
+                        ud    = u_d1[g1]
+                        udx   = u_d1x[g1]
+                        udy   = u_d1y[g1]
                         # ...
-                        comp_1          = -1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += +1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = +1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += -1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_3          = -1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_3         += +1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2          = +1 * ( F1_2y[g1]*udx - F1_2x[g1]*udy)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2         += -1 * (-F1_1y[g1]*udx + F1_1x[g1]*udy)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        ud = u_d1[g1]
+                        comp_3          = +1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_3         += -1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         #...
                         wvol            = weights_1[ie1, g1]
                         # ...
-                        v              +=  normalS * (comp_1 * ud) * wvol + Kappa * bi_0 * ud * wvol * sqrt(F1_1x[g1]**2 + F1_2x[g1]**2)
+                        v              +=  normalS * (comp_1 * ud) * wvol + Ugrad*bi_0*comp_2 * wvol + Kappa * bi_0 * ud * wvol * sqrt(F1_1x[g1]**2 + F1_2x[g1]**2)
                         vip            +=  normalS * (comp_3 * ud) * wvol
 
                     rhs[p1+i1, p2]   += v
@@ -2236,12 +2253,22 @@ def assemble_vector_Dirichlet(
                         F2y     +=  (coeff_m2-coeff_m20) * bj_0*by_right
                     # ... compute dirichlet
                     ud  = 0.0
+                    udx = 0.0
+                    udy = 0.0
                     for il_1 in range(0, p1+1):
 
                         bj_0     = basis_1[ie1,il_1,0,g1]
+                        bj_x     = basis_1[ie1,il_1,1,g1]
+                        # ...
                         coeff_d  = lcoeffs_d[il_1, p2]
+                        coeff_d0 = lcoeffs_d[il_1, p2-1]
+                        # ...
                         ud      +=  coeff_d * bj_0
-                    u_d1[g1] = ud
+                        udx     +=  coeff_d * bj_x
+                        udy     +=  (coeff_d-coeff_d0) * bj_0*by_rightFE
+                    u_d1[g1]  = ud
+                    u_d1x[g1] = udx
+                    u_d1y[g1] = udy
                     # ... compute the normal derivative
                     F1_1x[g1]  = F1x
                     F1_2x[g1]  = F2x
@@ -2258,19 +2285,24 @@ def assemble_vector_Dirichlet(
                         bi_0  = basis_1[ie1, il_1, 0, g1]
                         bi_x  = basis_1[ie1, il_1, 1, g1]
                         bi_y  = bi_0*by_rightFE
-                        bi_py  = -1.*bi_0*by_rightFE
+                        bi_py = -1.*bi_0*by_rightFE
+                        #...
+                        ud    = u_d1[g1]
+                        udx   = u_d1x[g1]
+                        udy   = u_d1y[g1]
                         # ...
-                        comp_1          = +1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_1         += -1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1          = -1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_y)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_1         += +1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_y)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        comp_3          = +1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
-                        comp_3         += -1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2          = -1 * ( F1_2y[g1]*udx - F1_2x[g1]*udy)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_2         += +1 * (-F1_1y[g1]*udx + F1_1x[g1]*udy)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         # ...
-                        ud = u_d1[g1]
+                        comp_3          = -1 * ( F1_2y[g1]*bi_x - F1_2x[g1]*bi_py)/J_mat1[g1] * F1_2x[g1] #/sqrt(F1y**2+ F2y**2)
+                        comp_3         += +1 * (-F1_1y[g1]*bi_x + F1_1x[g1]*bi_py)/J_mat1[g1] * F1_1x[g1] #/sqrt(F1y**2+ F2y**2)
                         #...
                         wvol  = weights_1[ie1, g1]
                         # ...
-                        v    +=  normalS * (comp_1 *ud) * wvol + Kappa * bi_0 * ud * wvol * sqrt(F1_1x[g1]**2 + F1_2x[g1]**2)
+                        v    +=  normalS * (comp_1 *ud) * wvol + Ugrad*bi_0*comp_2 * wvol + Kappa * bi_0 * ud * wvol * sqrt(F1_1x[g1]**2 + F1_2x[g1]**2)
                         vip  +=  normalS * (comp_3 *ud) * wvol
                     rhs[p1+i1, i_span_2+p2]   += v
                     rhs[p1+i1, i_span_2+p2-1] += vip

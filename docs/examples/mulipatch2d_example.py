@@ -58,52 +58,44 @@ args = parser.parse_args()
 #                                                |_______|
 #                                                    3
 #------------------------------------------------------------------------------
-def poisson_solve(V, VT, pyrefMP, g):
+def poisson_solve(V, VT, pyrefMP, u_d):
 
     assert isinstance( pyrefMP, pyrefMultpatch)
     assert isinstance( V,  TensorSpace)
     assert isinstance( VT, TensorSpace)
 
     #... Nitsche's class
-    Ni            = StencilNitsche(V, V, pyrefMP, Isoparametric= False)
+    Ni            = StencilNitsche(V, V, pyrefMP, u_d, Isoparametric= False)
     # ... Assemble Nitsche's global matrix
     Ni.assembleNitsche()
-    # Assemble right-hand side vector
-    # b             = zeros(Ni._Nitshedim[0])
-    #...
-    u_d           = []
     # Assemble stiffness matrix
     for patch_nb in range(1, pyrefMP.getNumPatches()+1):
         #... mapping in Stencil format
         u11_mph, u12_mph = pyrefMP.getStencilMapping(patch_nb)
-        #... mapping as arrays
-        xmp, ymp         = pyrefMP.getcoefs(patch_nb)
         # Assemble Dirichlet boundary conditions
-        u_d1 = build_dirichlet(V, g, map = (xmp, ymp, pyrefMP.getTensorSpace()), Boundaries  = pyrefMP.getDirichletBoundaries(patch_nb))[1]
-        u_d.append(u_d1)
+        u_d1 = u_d[patch_nb-1]
         #...
         stiffness  = StencilMatrix(V.vector_space, V.vector_space)
         stiffness  = assemble_matrix_un(VT, fields=[u11_mph, u12_mph], out=stiffness)
-        # stiffness  = apply_dirichlet(V, stiffness, dirichlet = pyrefMP.getDirPatch(patch_nb))
+        stiffness  = apply_dirichlet(V, stiffness, dirichlet = pyrefMP.getDirPatch(patch_nb))
+        print("shape in ", patch_nb, "is", stiffness.shape)
         #...
-        Ni.appendStiffness(stiffness, patch_nb)
+        Ni.appendBlock(stiffness, patch_nb)
         # Assemble right-hand side vector
         rhs        = StencilVector(V.vector_space)
         rhs        = assemble_rhs_un( VT, fields=[u11_mph, u12_mph, u_d1], out= rhs)
-        rhs        = apply_dirichlet(V, rhs)#, dirichlet = pyrefMP.getDirPatch(patch_nb))
+        rhs        = apply_dirichlet(V, rhs, dirichlet = pyrefMP.getDirPatch(patch_nb))
+        print("shape in ", patch_nb, "is", rhs.shape)
         # ...
-        Ni.assembleNitsche_Dirichlet(rhs, u_d1, patch_nb)
-        #...
-        # b[Ni._rhnb[patch_nb-1]:Ni._rhnb[patch_nb]] = rhs[:]
+        Ni.assembleNitsche_Dirichlet(rhs, patch_nb)
+        # ...
     #=============================================
     # # # Assemble Nitsche's off diagonal matrices
     #=============================================
-    print("before merge", Ni.tosparse().toarray())
-    print("after merge", Ni.NitscheMerge().toarray())
-    # Solve the linear system using CGS
-    M       = Ni.NitscheMerge() # ... TODO : cannot merhs rhs before
+    M       = Ni.NitscheMerge()
     b       = Ni.NitscheMergeRHS()
-    x, inf  = sla.cg(M, b)
+    # print("after merge", b.shape, b)
+    x, inf  = sla.cg(M, b, rtol=1e-30)
     x       = Ni.NitscheextractSol(x)
     l2_norm = 0.
     H1_norm = 0.
@@ -148,11 +140,11 @@ print("(#=assembled Dirichlet, #=solve poisson)\n")
 # Define exact solution and Dirichlet boundary condition
 #------------------------------------------------------------------------------
 # Test 0
-g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
+# g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
 # Test 1
 #g         = ['1./(1.+np.exp((x + y  - 0.5)/0.01) )']
 # Test 1
-# g         = ['x*1.+0.*y**2']
+g         = ['x**2+y**2']
 
 #------------------------------------------------------------------------------
 # Load CAD geometry
@@ -192,16 +184,17 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
 
     # Refine geometry mapping
     # Create spline spaces for refined mesh
-    V1 = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
-    V2 = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
+    V1  = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
+    V2  = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
     # ... mapping spaces
     V1mp, V2mp = pyrefMP.UnifSplineSpace(mesh=(V1.mesh, V2.mesh), quad_degree= (quad_degree,quad_degree), nders=1)
-    Vh = TensorSpace(V1, V2)
-    VT = TensorSpace(V1, V2, V1mp, V2mp)
+    Vh  = TensorSpace(V1, V2)
+    VT  = TensorSpace(V1, V2, V1mp, V2mp)
+    u_d = pyrefMP.getDirichlet(Vh, g)
     print('#spaces')
     # Solve Poisson equation on refined mesh
     start = time.time()
-    xuh, l2_error,  H1_error = poisson_solve(Vh, VT, pyrefMP, g)
+    xuh, l2_error,  H1_error = poisson_solve(Vh, VT, pyrefMP, u_d)
     times.append(time.time()- start)
     print('#')
     # Store results
