@@ -1,7 +1,7 @@
 """
 results_f90.py: A fast post-processing script for visualizing the solution and its derivatives using B-spline functions.
 
-Author: M. Mustapha Bahari
+Author: M. Mustapha Bahari TODO DELETE
 """
 
 from   .               import results_f90_core as core

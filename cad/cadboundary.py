@@ -242,8 +242,8 @@ parser.add_argument("--plot", action="store_true", help="Enable plotting and sav
 parser.add_argument("--degree", type=int, default=2, help="Degree of the polynomial (default: 2)")
 parser.add_argument("--nelements", type=int, default=16, help="Number of elements (default: 16)")
 parser.add_argument("--name", type=str, default='Geometry', help="Name of geometry (default: Geometry)")
-parser.add_argument("--expr1", type=str, default="x", help="First mathematical expression (default: 'x')")
-parser.add_argument("--expr2", type=str, default="y", help="Second mathematical expression (default: 'y')")
+parser.add_argument("--expr1", type=str, default="1.+(2.*x-1.)*np.sqrt(1.-(2.*y-1.)**2/2.0)", help="First mathematical expression (default: 'x')")
+parser.add_argument("--expr2", type=str, default="0.5*(2.*y-1.)*np.sqrt(1.-(2.*x-1.)**2/2.0)", help="Second mathematical expression (default: 'y')")
 #.. If the boundary is given by four curves insted of analytic tranfsormation
 parser.add_argument("--Xx0", type=str, default=None, help="mathematical expression in x direction (default: 'None')")
 parser.add_argument("--Xx1", type=str, default=None, help="mathematical expression in x direction (default: 'None')")
