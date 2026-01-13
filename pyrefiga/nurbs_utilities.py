@@ -437,7 +437,7 @@ from   .spaces                      import TensorSpace
 import os
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = None, Vg = None, adspace = None, solution = None, functions = None, precomputed = None, filename = "figs/admultipatch_multiblock", plot = True): 
+def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp = None, Vg = None, adspace = None, solution = None, functions = None, precomputed = None, Analytic = None, filename = "figs/admultipatch_multiblock", plot = True): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -484,6 +484,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
          {"name": "velocity", "data": yuh},   # e.g., velocity field control points
          # Add more solution fields as needed
       ]
+   Analytic = [
+   {"name": "Anlytic", "x": '(1.+sx*np.cos(2.*np.pi*sy))**0.5', "y": 'sx*np.sin(2.*np.pi*sy)*0.5'}
+   ]
    Returns
    -------
    None
@@ -546,6 +549,11 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                #---Compute a image by initial mapping
                x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg.omega, Vg.knots, Vg.degree, meshes=(sx, sy))[0:3]
                y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg.omega, Vg.knots, Vg.degree, meshes=(sx, sy))[0:3]
+               #...Compute analytic
+               if Analytic is not None:
+                  A = Analytic[i]
+                  x = eval(A["x"])
+                  y = eval(A["y"])
                #...Compute a Jacobian
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
@@ -573,7 +581,11 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                #---Compute a image by initial mapping
                x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg.omega, Vg.knots, Vg.degree, meshes=(sx, sy))[0:3]
                y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg.omega, Vg.knots, Vg.degree, meshes=(sx, sy))[0:3]
-               #...Compute a Jacobian
+               #...Compute analytic
+               if Analytic is not None:
+                  A = Analytic[i]
+                  x = eval(A["x"])
+                  y = eval(A["y"])
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
                #...
@@ -606,6 +618,11 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                #---Compute a image by initial mapping
                x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg.omega, Vg.knots, Vg.degree, meshes=(sx, sy))[0:3]
                y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg.omega, Vg.knots, Vg.degree, meshes=(sx, sy))[0:3]
+               #...Compute analytic
+               if Analytic is not None:
+                  A = Analytic[i]
+                  x = eval(A["x"])
+                  y = eval(A["y"])
                #...Compute a Jacobian
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
@@ -637,7 +654,11 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, zad = None, zmp
                #---Compute a image by initial mapping
                x, F1x, F1y = sol_field_NURBS_2d((None, None), xmp[i], Vg.omega, Vg.knots, Vg.degree, meshes=(sx, sy))[0:3]
                y, F2x, F2y = sol_field_NURBS_2d((None, None), ymp[i], Vg.omega, Vg.knots, Vg.degree, meshes=(sx, sy))[0:3]
-
+               #...Compute analytic
+               if Analytic is not None:
+                  A = Analytic[i]
+                  x = eval(A["x"])
+                  y = eval(A["y"])
                #...Compute a Jacobian
                #Jf = (F1x*F2y - F1y*F2x)
                Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)

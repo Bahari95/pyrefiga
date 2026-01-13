@@ -894,6 +894,13 @@ class pyrefMultpatch(object):
     @property
     def getGeometryname(self):
         return self.geometryname
+    #.. get tensor space
+    @property
+    def getTensorSpace(self):
+        # ... space of a B-spline patches
+        Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
+        Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
+        return TensorSpace(Vmp1, Vmp2)
     #.. get coefs
     def getcoefs(self, num_patch=1):
         return self.patches[num_patch-1].coefs
@@ -904,12 +911,6 @@ class pyrefMultpatch(object):
             'y':1 
         }
         return [self.patches[np].coefs[map_xy[direct]] for np in range(self.num_patches)]
-    #.. get tensor space
-    def getTensorSpace(self):
-        # ... space of a B-spline patches
-        Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
-        Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
-        return TensorSpace(Vmp1, Vmp2)
             
     #.. get spline space on uniform mesh
     def UnifSplineSpace(self, mesh, quad_degree, nders = 1):
@@ -932,7 +933,7 @@ class pyrefMultpatch(object):
     #.. get mapping in stencil vector format
     def getStencilMapping(self, num_patch=1):
         # ... space of a B-spline patches
-        Vh  = self.getTensorSpace()
+        Vh  = self.getTensorSpace
         #... create stencil vector for mapping
         u1  = StencilVector(Vh.vector_space)
         u2  = StencilVector(Vh.vector_space)
@@ -987,18 +988,39 @@ class pyrefMultpatch(object):
         # print(f"Patch {num_patch} Dirichlet boundaries : {boundary_dirichlet}")
         return np.asarray(boundary_dirichlet)
     
-    def getDirichlet(self, V, g):
-        if isinstance(V, TensorSpace):
-            u_d           = []
-            for patch_nb in range(1, self.nb_patches+1):
-                #... mapping as arrays
-                xmp, ymp         = self.getcoefs(patch_nb)
-                # Assemble Dirichlet boundary conditions
-                u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace()), Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
-                u_d.append(u_d1)
-            return u_d
+    def getDirichlet(self, V, g, admap = None):
+        '''
+        Docstring pour getDirichlet
+            computes StencilVector Dirichlet Solution zero inside the domaine
+        :param self: Description
+        :param V: Description
+        :param g: Description
+        :param admap: class for multipatch adaptive mapping
+        :param boundaries: Description
+        '''
+        if isinstance(V, TensorSpace) and V.dim == 2:
+            if admap is None:
+                u_d           = []
+                for patch_nb in range(1, self.nb_patches+1):
+                    #... mapping as arrays
+                    xmp, ymp         = self.getcoefs(patch_nb)
+                    # Assemble Dirichlet boundary conditions
+                    u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
+                    u_d.append(u_d1)
+                return u_d
+            else:
+                u_d           = []
+                for patch_nb in range(1, self.nb_patches+1):
+                    # each mapping has is own space in Hdiv space = 4 components
+                    admap = (admap.x11[patch_nb-1],admap.x12[patch_nb-1],admap.spaces[2],admap.spaces[2])
+                    #... mapping as arrays
+                    xmp, ymp         = self.getcoefs(patch_nb)
+                    # Assemble Dirichlet boundary conditions
+                    u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), admap = admap, Boundaries  = boundaries)[1]
+                    u_d.append(u_d1)
+
         else:
-            raise TypeError('Expecting TensorSpace')
+            raise TypeError('Expecting two dimensions TensorSpace')
     #.. print multipatch info
     def detail(self):
         print(f"Number of patches : {self.num_patches}")

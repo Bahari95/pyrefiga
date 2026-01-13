@@ -231,7 +231,7 @@ if args.plot :
     functions = [
         {"name": "Exact solution", "expression": g[0]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP.getAllcoefs('x'), pyrefMP.getAllcoefs('y'), Vg = pyrefMP.getTensorSpace(),  solution = solutions, functions = functions)
+    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP.getAllcoefs('x'), pyrefMP.getAllcoefs('y'), Vg = pyrefMP.getTensorSpace,  solution = solutions, functions = functions)
     import subprocess
 
     # Load the multipatch VTM
