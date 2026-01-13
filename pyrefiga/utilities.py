@@ -592,22 +592,96 @@ class getGeometryMap:
     @property
     def grids(self):
         return self._grids
+    @property
     def weights(self):
         Omega = self._weights.reshape(self._nbasis)
         if self.dim == 2:
             return Omega[:,0], Omega[0,:]
-        elif self.dim == 3:
+        else:
             return Omega[:,0,0], Omega[0,:,0], Omega[0,0,:]
-        else:
-            return Omega
+    @property
     def coefs(self):    
-        if self.geo_dim == 2:
-            return self._coefs[0].reshape(self._nbasis), self._coefs[1].reshape(self._nbasis)
-        elif self.geo_dim == 3:
-            return self._coefs[0].reshape(self._nbasis), self._coefs[1].reshape(self._nbasis), self._coefs[2].reshape(self._nbasis)
+        return [self._coefs[i].reshape(self._nbasis) for i in range( self.geo_dim)]
+    #.. get tensor space
+    @property
+    def getTensorSpace(self):
+        if self.dim == 2:
+            # ... space of a B-spline patches
+            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
+            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
+            return TensorSpace(Vmp1, Vmp2)
         else:
-            return self._coefs
+            # ... space of a B-spline patches
+            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
+            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
+            Vmp3 = SplineSpace(degree=self.degree[2], grid = self.grids[2], omega = self.weights[2])
+            return TensorSpace(Vmp1, Vmp2, Vmp3)        
+    #.. get mapping in stencil vector format
+    @property
+    def getStencilMapping(self):
+        # ... space of a B-spline patches
+        Vh  = self.getTensorSpace
+        #... create stencil vector for mapping
+        u1  = StencilVector(Vh.vector_space)
+        u2  = StencilVector(Vh.vector_space)
+        #... get coefs
+        xmp, ymp = self.coefs
+        #... fill the stencil vector
+        u1.from_array(Vh, xmp)
+        u2.from_array(Vh, ymp)        
+        return u1, u2
+    #.. get spline space on uniform mesh
+    def UnifSplineSpace(self, mesh, quad_degree, nders = 1):
+        '''
+        Docstring pour UnifSplineSpace
+        Compues basis in mesh using quad_degree quadrature points 
         
+        :param self: Description
+        :param mesh: grid discretizations used for numerical integration
+        :param quad_degree: number of quadrature points
+        :param nders: Description
+        '''
+        if isinstance(quad_degree, int):
+            quad_degree = [quad_degree for _ in range(self.dim)]
+        if self.dim == 2:
+            # ... space of a B-spline patches on uniform mesh
+            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree[0])
+            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree[1])
+            return Vmp1, Vmp2
+        else:
+            # ... space of a B-spline patches on uniform mesh
+            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree[0])
+            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree[1])
+            Vmp3 = SplineSpace(degree=self.degree[2], grid = self.grids[2], omega = self.weights[2], nderiv= nders, mesh= mesh[2], quad_degree= quad_degree[2])
+            return Vmp1, Vmp2, Vmp3        
+    def getDirichlet(self, V, g, admap = None, boundaries = [1,2,3,4]):
+        '''
+        Docstring pour getDirichlet
+            computes StencilVector Dirichlet Solution zero inside the domaine
+        :param self: Description
+        :param V: Description
+        :param g: Description
+        :param admap: list of adaptive mapping components and its space
+        :param boundaries: Description
+        '''
+        if isinstance(V, TensorSpace) and V.dim == 2:
+            if admap is None:
+                #... mapping as arrays
+                xmp, ymp         = self.coefs
+                # Assemble Dirichlet boundary conditions
+                u_d = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), Boundaries  = boundaries)[1]
+                return u_d
+            else:
+                # each mapping has is own space in Hdiv space = 4 components
+                if len(admap) == 3:
+                    admap = (admap[0],admap[1],admap[2],admap[2])
+                #... mapping as arrays
+                xmp, ymp         = self.coefs
+                # Assemble Dirichlet boundary conditions
+                u_d = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), admap = admap, Boundaries  = boundaries)[1]
+                return u_d                
+        else:
+            raise TypeError('Expecting two dimensions TensorSpace')
     def rotated_2d(self, theta):
         '''
         Docstring pour rotated_2d
@@ -655,16 +729,6 @@ class getGeometryMap:
             Grid_refined = np.sort(np.concatenate([Grid_refined, midpoints]))
         
         return Grid_refined
-        # grids      = []
-        # numElevate = Nelements[j_direct]//self.nelements[j_direct]
-        # for i in range(0, self.nelements[j_direct]):
-        #     a = (self._grids[j_direct][i+1] - self._grids[j_direct][i])/numElevate
-        #     grids.append(self._grids[j_direct][i])
-        #     if a != 0. :
-        #         for j in range(1,numElevate):
-        #             grids.append(grids[-1] + a)
-        # grids.append(self._grids[j_direct][-1])
-        # return grids
     
     def RefineGeometryMap(self, numElevate=1):
         """
@@ -677,23 +741,16 @@ class getGeometryMap:
             Vh1       = SplineSpace(degree=self.degree[0], grid= self.Refinegrid(0, numElevate))
             Vh2       = SplineSpace(degree=self.degree[1], grid= self.Refinegrid(1, numElevate))
             Vh        = TensorSpace(Vh1, Vh2)# after refinement
-            # Extract knots data and degree
-            VH1       = SplineSpace(degree=self.degree[0], grid= self._grids[0])
-            VH2       = SplineSpace(degree=self.degree[1], grid= self._grids[1])
-
+            #... initial
             nbasis_tot = self._nbasis[0]*self._nbasis[1]
-            VH         = TensorSpace(VH1, VH2)# after refinement
+            VH         = self.getTensorSpace
         else:
             Vh1        = SplineSpace(degree=self.degree[0], grid= self.Refinegrid(0, numElevate))
             Vh2        = SplineSpace(degree=self.degree[1], grid= self.Refinegrid(1, numElevate))
             Vh3        = SplineSpace(degree=self.degree[2], grid= self.Refinegrid(2, numElevate))            
             Vh         = TensorSpace(Vh1, Vh2, Vh3)# after refinement
-            # Extract knots data and degree
-            #print(f"Refined space : {self.nelements[0]} x {self.nelements[1]} Nelements")
-            VH1        = SplineSpace(degree=self.degree[0], grid= self._grids[0])
-            VH2        = SplineSpace(degree=self.degree[1], grid= self._grids[1])
-            VH3        = SplineSpace(degree=self.degree[2], grid= self._grids[2])
-            VH         = TensorSpace(VH1, VH2, VH3)# after refinement
+            #... initial
+            VH         = self.getTensorSpace
             nbasis_tot = self._nbasis[0]*self._nbasis[1]*self._nbasis[2]
 
         # Extract coefs data
@@ -769,8 +826,8 @@ class pyrefMultpatch(object):
         #... loop over all patches
         for i in range(num_patches):
             for j in range(i+1, num_patches):
-                xmp, ymp     = mp[i].coefs()
-                xmp1, ymp1   = mp[j].coefs()
+                xmp, ymp     = mp[i].coefs
+                xmp1, ymp1   = mp[j].coefs
                 #... test if they share an interface
                 interface_obj = pyrefInterface(xmp, ymp, xmp1, ymp1)
                 if interface_obj.interface is False :
@@ -796,7 +853,7 @@ class pyrefMultpatch(object):
         self._degree          = mp[0].degree
         self._knots           = mp[0].knots
         self._grids           = mp[0].grids
-        self._weights         = mp[0].weights()
+        self._weights         = mp[0].weights
         self.Ninterfaces      = len(self.interfaces) 
         # self.patch_connection = patch_connection
     @property
@@ -839,14 +896,14 @@ class pyrefMultpatch(object):
         return self.geometryname
     #.. get coefs
     def getcoefs(self, num_patch=1):
-        return self.patches[num_patch-1].coefs()    
+        return self.patches[num_patch-1].coefs
     #.. get coefs
     def getAllcoefs(self, direct='x'):
         map_xy = {
             'x':0,
             'y':1 
         }
-        return [self.patches[np].coefs()[map_xy[direct]] for np in range(self.num_patches)]
+        return [self.patches[np].coefs[map_xy[direct]] for np in range(self.num_patches)]
     #.. get tensor space
     def getTensorSpace(self):
         # ... space of a B-spline patches
@@ -856,6 +913,15 @@ class pyrefMultpatch(object):
             
     #.. get spline space on uniform mesh
     def UnifSplineSpace(self, mesh, quad_degree, nders = 1):
+        '''
+        Docstring pour UnifSplineSpace
+        Compues basis in mesh using quad_degree quadrature points 
+        
+        :param self: Description
+        :param mesh: grid discretizations used for numerical integration
+        :param quad_degree: number of quadrature points
+        :param nders: Description
+        '''
         if isinstance(quad_degree, int):
             quad_degree = (quad_degree,quad_degree)
         # ... space of a B-spline patches on uniform mesh

@@ -17,7 +17,6 @@ from   pyrefiga                    import sol_field_NURBS_2d
 from   pyrefiga                    import paraview_nurbsSolutionMultipatch
 from   pyrefiga                    import getGeometryMap
 from   pyrefiga                    import load_xml
-from   pyrefiga                    import build_dirichlet
 
 # Import Poisson assembly tools for uniform mesh
 from gallery.gallery_section_06    import assemble_matrix_un_ex01
@@ -28,7 +27,6 @@ assemble_matrix_un   = compile_kernel(assemble_matrix_un_ex01, arity=2)
 assemble_rhs_un      = compile_kernel(assemble_vector_un_ex01, arity=1)
 assemble_norm_un     = compile_kernel(assemble_norm_un_ex01, arity=1)
 
-from   scipy.sparse                 import csr_matrix
 from   scipy.sparse                 import csc_matrix, linalg as sla
 from   numpy                        import zeros
 import numpy                        as     np
@@ -133,19 +131,11 @@ degree[1]        += mp.degree[1]
 mp.nurbs_check   = True # Activate NURBS if geometry uses NURBS
 nb_ne            = refGrid # number of elements after refinement
 quad_degree      = max(degree[0],degree[1]) # Quadrature degree
-# ... Assembling mapping
-xmp, ymp         = mp.coefs()
-wm1, wm2         = mp.weights()
 
 # Create spline spaces for each direction for mapping
-V1mp            = SplineSpace(degree=mp.degree[0], grid = mp.grids[0], omega = wm1, quad_degree = quad_degree)
-V2mp            = SplineSpace(degree=mp.degree[1], grid = mp.grids[1], omega = wm2, quad_degree = quad_degree)
-Vmp             = TensorSpace(V1mp, V2mp)
+Vmp             = mp.getTensorSpace
 # ...
-u11_mp          = StencilVector(Vmp.vector_space)
-u12_mp          = StencilVector(Vmp.vector_space)
-u11_mp.from_array(Vmp, xmp)
-u12_mp.from_array(Vmp, ymp)
+u11_mp, u12_mp  = mp.getStencilMapping
 
 i_save = 0
 for ne in range(refGrid,refGrid+RefinNumber+1):
@@ -165,14 +155,13 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     #-----------------------------------------------------------
     # Create spline spaces for each direction for mapping (compute basis in new integral grid)
     #-----------------------------------------------------------
-    V1mp            = SplineSpace(degree=mp.degree[0], grid = mp.grids[0], omega = wm1, mesh =  V1.mesh, quad_degree = quad_degree)
-    V2mp            = SplineSpace(degree=mp.degree[1], grid = mp.grids[1], omega = wm2, mesh =  V2.mesh, quad_degree = quad_degree)
+    V1mp, V2mp      = mp.UnifSplineSpace(Vh.mesh, quad_degree=quad_degree)
     VT              = TensorSpace(V1, V2, V1mp, V2mp)
     print('#spces; VT.nelements:',VT.nelements)
     #-----------------------------------------------------------
     # Assemble Dirichlet boundary conditions
     #-----------------------------------------------------------
-    u_d   = build_dirichlet(Vh, g, map = (xmp, ymp, Vmp))[1]
+    u_d             = mp.getDirichlet(Vh, g)
     print('#')
 
     #-----------------------------------------------------------
@@ -196,7 +185,15 @@ print("Degree $p =",degree,"\n")
 print("cells & $L^2$-Err & $H^1$-Err & cpu-time")
 print("----------------------------------------")
 for i in range(0,RefinNumber+1):
-    print("",int(table[i,2]),"X", int(table[i,3]), "&", np.format_float_scientific(table[i,4], unique=False, precision=2), "&", np.format_float_scientific(table[i,5], unique=False, precision=6), "&", np.format_float_scientific(table[i,4], unique=False, precision=2))
+    # extract values first
+    rows, cols = int(table[i, 2]), int(table[i, 3])
+    val1 = np.format_float_scientific(table[i, 4], unique=False, precision=2)
+    val2 = np.format_float_scientific(table[i, 5], unique=False, precision=6)
+    val3 = np.format_float_scientific(table[i, 4], unique=False, precision=2)  # if intentional repeat
+
+    # use f-string
+    print(f"{rows}X{cols} & {val1} & {val2} & {val3}")
+
 print('\n')
 
 #------------------------------------------------------------------------------
@@ -207,8 +204,8 @@ if args.plot :
     #---Solution in uniform mesh
     un = pyccel_sol_field_2d((nbpts,nbpts),  xuh , Vh.knots, Vh.degree)[0]
     #---Compute a mapping
-    x = sol_field_NURBS_2d((nbpts,nbpts),  xmp, Vmp.omega, Vmp.knots, Vmp.degree)[0]
-    y = sol_field_NURBS_2d((nbpts,nbpts),  ymp, Vmp.omega, Vmp.knots, Vmp.degree)[0]
+    x = sol_field_NURBS_2d((nbpts,nbpts),  mp.coefs[0], Vmp.omega, Vmp.knots, Vmp.degree)[0]
+    y = sol_field_NURBS_2d((nbpts,nbpts),  mp.coefs[1], Vmp.omega, Vmp.knots, Vmp.degree)[0]
     # ...
     Sol_un = eval(g[0])
 
@@ -220,7 +217,7 @@ if args.plot :
             {"name": "numerical_solution", "data": [un]},
             {"name": "Error", "data": [np.absolute(un-Sol_un)]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, [Vh], [xmp], [ymp], Vg = [Vmp], functions = functions, precomputed= precomputed,filename = 'figs/poisson_un_2dexample')
+    paraview_nurbsSolutionMultipatch(nbpts, Vh, [mp.coefs[0]], [mp.coefs[1]], Vg = Vmp, functions = functions, precomputed= precomputed,filename = 'figs/poisson_un_2dexample')
     import subprocess
 
     # Load the multipatch VTM

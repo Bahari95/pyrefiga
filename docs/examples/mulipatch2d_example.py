@@ -208,7 +208,14 @@ print("Degree $p =",degree,"\n")
 print("cells & $L^2$-Err & $H^1$-Err & cpu-time")
 print("----------------------------------------")
 for i in range(0,RefinNumber+1):
-    print("",int(table[i,2]),"X", int(table[i,3]), "&", np.format_float_scientific(table[i,4], unique=False, precision=2), "&", np.format_float_scientific(table[i,5], unique=False, precision=6), "&", np.format_float_scientific(table[i,6], unique=False, precision=2))
+    # extract values first
+    rows, cols = int(table[i, 2]), int(table[i, 3])
+    val1 = np.format_float_scientific(table[i, 4], unique=False, precision=2)
+    val2 = np.format_float_scientific(table[i, 5], unique=False, precision=6)
+    val3 = np.format_float_scientific(table[i, 4], unique=False, precision=2)  # if intentional repeat
+
+    # use f-string
+    print(f"{rows}X{cols} & {val1} & {val2} & {val3}")
 print('\n')
 
 #------------------------------------------------------------------------------
