@@ -266,6 +266,7 @@ class StencilNitsche(object):
                 nb = nb * (elim_index[j,i,1]-elim_index[j,i,0]) 
             nbasis.append(nb)
             block_index.append(sum(nbasis))
+        print(block_index)
         self._Nitshedim   = (sum(nbasis), sum(nbasis))
         self._nbasis      = nbasis
         self._block_index = block_index # position of each block
@@ -273,9 +274,9 @@ class StencilNitsche(object):
         self.mp           = pyrefMP
         #
         #... computes coeffs for Nitsche's method
-        stab               = 4.*( V.degree[0] + V.dim ) * ( V.degree[0] + 1 )
+        stab               = 4.*( V.degree[0] + V.dim ) *( V.degree[1] + V.dim ) * ( V.degree[0] + 1 )
         m_h                = (V.nbasis[0]*V.nbasis[1])
-        self.Kappa         = 1e3#2.*stab*m_h
+        self.Kappa         = 2.*stab*m_h
         # ...
         self.normS         = 0.5
         #------------------------------------------------------
@@ -403,6 +404,7 @@ class StencilNitsche(object):
         self._newdim    = (current, current)
         self.new_id     = new_id
         self.old_id     = old_id
+        print(self.new_id)
         # ...
         return 
     #--------------------------------------
@@ -756,7 +758,7 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
     ndarray
         The matrix or vector with dirichlet boundaries applied and reshaped accordingly.
     """
-    if dirichlet is True :
+    if dirichlet is True or dirichlet is False:
         if V.dim == 1:
             dirichlet = [dirichlet, dirichlet]
         elif V.dim == 2:

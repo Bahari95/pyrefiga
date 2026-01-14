@@ -799,7 +799,7 @@ class pyrefMultpatch(object):
         [False, True] : Dirichlet BC on the right edge
     The input are the control points of all patches.
     """
-    def __init__(self, geometryname, id_list, Nurbs_check = True):
+    def __init__(self, geometryname, id_list, Nurbs_check = True, Dirichlet_all = True):
         #.. TODO FIND ID automatically from the XML file
         mp        = []
         for i in id_list:
@@ -820,7 +820,7 @@ class pyrefMultpatch(object):
         #... list of patches connection (interface, pach next)
         # patch_connection = {} TODO L shape
         #... First we assume all boundaries are Dirichlet
-        dirichlet        = np.zeros((num_patches, self._dim, 2), dtype = bool)+True
+        dirichlet        = np.zeros((num_patches, self._dim, 2), dtype = bool)+Dirichlet_all
         # ...
         patch_has_interface = [False] * num_patches
         #... loop over all patches
@@ -1016,7 +1016,7 @@ class pyrefMultpatch(object):
                     #... mapping as arrays
                     xmp, ymp         = self.getcoefs(patch_nb)
                     # Assemble Dirichlet boundary conditions
-                    u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), admap = admap, Boundaries  = boundaries)[1]
+                    u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), admap = admap, Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
                     u_d.append(u_d1)
 
         else:
