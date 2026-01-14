@@ -266,7 +266,6 @@ class StencilNitsche(object):
                 nb = nb * (elim_index[j,i,1]-elim_index[j,i,0]) 
             nbasis.append(nb)
             block_index.append(sum(nbasis))
-        print(block_index)
         self._Nitshedim   = (sum(nbasis), sum(nbasis))
         self._nbasis      = nbasis
         self._block_index = block_index # position of each block
@@ -404,7 +403,6 @@ class StencilNitsche(object):
         self._newdim    = (current, current)
         self.new_id     = new_id
         self.old_id     = old_id
-        print(self.new_id)
         # ...
         return 
     #--------------------------------------
