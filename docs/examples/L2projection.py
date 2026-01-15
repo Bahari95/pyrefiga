@@ -47,7 +47,7 @@ parser.add_argument("--e", type=int, default=0, help="Number of elements to elev
 args = parser.parse_args()
 
 #------------------------------------------------------------------------------
-# Poisson solver algorithm for two patches
+# Projection solver algorithm for multipatches
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 # The convention for the patches is as follows:
@@ -57,14 +57,15 @@ args = parser.parse_args()
 #                                                |_______|
 #                                                    3
 #------------------------------------------------------------------------------
-def projection_solve(V, VT, pyrefMP):
+def projection_solve(V, pyrefMP):
 
     assert isinstance( pyrefMP, pyrefMultpatch)
     assert isinstance( V,  TensorSpace)
-    assert isinstance( VT, TensorSpace)
 
+    #... space FE&Mapping
+    VT            = pyrefMP.getspace(V) 
     #... Nitsche's class
-    Ni            = StencilNitsche(V, V, pyrefMP, Isoparametric= False)
+    Ni            = StencilNitsche(V, VT, pyrefMP)
     # Assemble stiffness matrix
     for patch_nb in range(1, pyrefMP.nb_patches+1):
         #... mapping in Stencil format
@@ -83,7 +84,7 @@ def projection_solve(V, VT, pyrefMP):
         rhs        = apply_dirichlet(V, rhs, dirichlet = False)
         # print("shape in ", patch_nb, "is", rhs.shape)
         # ...
-        Ni.assembleNitsche_Dirichlet(rhs, patch_nb)
+        Ni.assembleNitsche_Dirichlet(rhs, patch_nb, False)
         # ...
     #=============================================
     # # # Assemble Nitsche's off diagonal matrices
@@ -99,9 +100,10 @@ def projection_solve(V, VT, pyrefMP):
     u_sol   = []
     # ... Extract solution
     for patch_nb in range(1,pyrefMP.nb_patches+1):
-        u1              = apply_dirichlet(V, x[Ni._block_index[patch_nb-1]:Ni._block_index[patch_nb]], dirichlet = False, update= StencilVector(V.vector_space))
+        u1              = StencilVector(V.vector_space)
         # ... to array
-        x1              = u1.toarray().reshape(V.nbasis)
+        x1              = x[Ni._block_index[patch_nb-1]:Ni._block_index[patch_nb]].reshape(V.nbasis)
+        u1.from_array(V, x1)
         x_sol.append(x1)
         u_sol.append(u1)
         #... mapping in Stencil format
@@ -159,7 +161,7 @@ print("Dirichlet boundary conditions", g)
 #------------------------------------------------------------------------------
 # Extract geometry mapping
 #------------------------------------------------------------------------------
-pyrefMP           = pyrefMultpatch(geometry,idmp, Dirichlet_all=False)# .. First patch 
+pyrefMP           = pyrefMultpatch(geometry,idmp, Dirichlet_all=False)
 degree[0]        += pyrefMP.degree[0]
 degree[1]        += pyrefMP.degree[1]
 nb_ne             = refGrid #16  # number of elements after refinement
@@ -182,14 +184,11 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     # Create spline spaces for refined mesh
     V1  = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
     V2  = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
-    # ... mapping spaces
-    V1mp, V2mp = pyrefMP.UnifSplineSpace(mesh=(V1.mesh, V2.mesh), quad_degree= (quad_degree,quad_degree), nders=1)
     Vh  = TensorSpace(V1, V2)
-    VT  = TensorSpace(V1, V2, V1mp, V2mp)
     print('#spaces')
     # Solve Poisson equation on refined mesh
     start = time.time()
-    xuh, l2_error,  H1_error = projection_solve(Vh, VT, pyrefMP)
+    xuh, l2_error,  H1_error = projection_solve(Vh, pyrefMP)
     times.append(time.time()- start)
     print('#')
     # Store results

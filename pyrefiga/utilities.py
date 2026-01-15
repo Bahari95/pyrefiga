@@ -126,6 +126,25 @@ def identity_bspline_mapping(V):
     else:
         raise NotImplementedError('Please give V as TensorSpace or SplineSpace in 1D case!')  
 #========================================================================
+# ... computes the order of convergence
+#========================================================================
+def compute_eoc(nbasis, err, dim = 2):
+    '''
+    compute_eoc: computes the order of convergence
+    nbasis: list of number of basis functions  
+    err: list of errors
+    dim: spatial dimension
+    '''
+    nbasis = np.asarray(nbasis, dtype=float)
+    err    = np.asarray(err, dtype=float)
+    eoc    = np.zeros(nbasis.shape[0])
+    if nbasis.shape[0] == 1 or err.shape[0] == 1:
+        raise TypeError('Expect at least list of two values')
+    # ...
+    eoc[1:] = dim * np.log(err[:-1] / err[1:]) / np.log(nbasis[1:] / nbasis[:-1])
+    return eoc
+
+#========================================================================
 # ... build Dirichlet in two dimensions from analytic form
 #========================================================================
 def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = None):
@@ -502,7 +521,7 @@ class getGeometryMap:
         The path to the XML file containing the geometry data.
     element_id : str
         The id of the geometry element to extract.
-    Nurbs_check : bool, optional
+    nurbs_check : bool, optional
         If True, weights will be extracted; otherwise, weights default to ones. Default is False.
     Returns
     -------
@@ -516,7 +535,7 @@ class getGeometryMap:
     - _grids : list of lists
         The grid points for each dimension. 
     """
-    def __init__(self, filename, element_id, Nurbs_check = False):
+    def __init__(self, filename, element_id, nurbs_check = False, Dirichlet_all = True):
       #print("""Initialize with the XML filename.""", filename)
       root            = ET.parse(filename).getroot()
       """Retrieve coefs table, knots table, and degree for a given id."""
@@ -550,14 +569,29 @@ class getGeometryMap:
       # Extract weights data or default to ones
       weights_element = GeometryMap.find(".//weights")
       if weights_element is not None:
-          Nurbs_check  = True
+          nurbs_check  = True
           weights_text = weights_element.text.strip()
           weights_data = np.array([
               float(w) for line in weights_text.split("\n") for w in line.strip().split() if w
           ])
       else:
           weights_data = np.ones(len(coefs_data[:,0]))
-
+      # ...
+      boundaries  = [1,2,3,4]
+      if Dirichlet_all is False:
+          boundaries = False
+      elif Dirichlet_all is list:
+          if Dirichlet_all[0][0]:
+              boundaries.remove(1)
+          if Dirichlet_all[0][1]:
+              boundaries.remove(2)
+          if Dirichlet_all[1][0]:
+              boundaries.remove(3)
+          if Dirichlet_all[1][0]:
+              boundaries.remove(4)
+      else:
+          assert TypeError('Only [[False/Dirichlet on x=0, True/x=1],[False/y=0, True/y=1]] as example or True/False')
+      # ...
       self.root        = root
       self.GeometryMap = GeometryMap
       self.knots_data  = knots_data
@@ -566,10 +600,14 @@ class getGeometryMap:
       self._grids      = [knots_data[n][degree_data[n]:-degree_data[n]] for n in range(dim)]
       self._weights    = weights_data
       self._dim        = dim
-      self.nurbs_check = Nurbs_check
+      self.nurbs_check = nurbs_check
       self._geo_dim    = geo_dim
       self._nbasis     = _nbasis
       self._nelements  = [_nbasis[n]-degree_data[n] for n in range(dim)]
+      self.filename    = filename        
+      self.element_id  = element_id
+      self.boundaries  = boundaries
+      self.dirichmlet  = Dirichlet_all
 
     @property
     def nbasis(self):
@@ -616,6 +654,10 @@ class getGeometryMap:
             Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
             Vmp3 = SplineSpace(degree=self.degree[2], grid = self.grids[2], omega = self.weights[2])
             return TensorSpace(Vmp1, Vmp2, Vmp3)        
+    def clone(self, Dirichlet_all = None):
+        if Dirichlet_all is None:
+            Dirichlet_all = self.Dirichlet_all
+        return getGeometryMap(self.filename, self.element_id, nurbs_check = self.nurbs_check, Dirichlet_all = Dirichlet_all)
     #.. get mapping in stencil vector format
     @property
     def getStencilMapping(self):
@@ -631,55 +673,45 @@ class getGeometryMap:
         u2.from_array(Vh, ymp)        
         return u1, u2
     #.. get spline space on uniform mesh
-    def UnifSplineSpace(self, mesh, quad_degree, nders = 1):
+    def getspace(self, V):
         '''
-        Docstring pour UnifSplineSpace
-        Compues basis in mesh using quad_degree quadrature points 
+        Docstring pour getspace
+        Compues basis in mesh using quad_degree quadrature points and unified integral discretization
         
         :param self: Description
-        :param mesh: grid discretizations used for numerical integration
-        :param quad_degree: number of quadrature points
-        :param nders: Description
+        :param V: TensorSpace from finite element
         '''
-        if isinstance(quad_degree, int):
-            quad_degree = [quad_degree for _ in range(self.dim)]
+        if self._weights is None:
+            raise TypeError('Geometry is not NURBs please use same basis as for FE')
         if self.dim == 2:
             # ... space of a B-spline patches on uniform mesh
-            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree[0])
-            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree[1])
-            return Vmp1, Vmp2
+            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= V.nderiv[0], mesh= V.mesh[0], quad_degree= V.weights[0].shape[1]-1)
+            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= V.nderiv[1], mesh= V.mesh[1], quad_degree= V.weights[1].shape[1]-1)
+            return TensorSpace(V.spaces[0], V.spaces[1], Vmp1, Vmp2)
         else:
             # ... space of a B-spline patches on uniform mesh
-            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree[0])
-            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree[1])
-            Vmp3 = SplineSpace(degree=self.degree[2], grid = self.grids[2], omega = self.weights[2], nderiv= nders, mesh= mesh[2], quad_degree= quad_degree[2])
-            return Vmp1, Vmp2, Vmp3        
-    def getDirichlet(self, V, g, admap = None, boundaries = [1,2,3,4]):
+            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= V.nderiv[0], mesh= V.mesh[0], quad_degree= V.weights[0].shape[1]-1)
+            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= V.nderiv[1], mesh= V.mesh[1], quad_degree= V.weights[1].shape[1]-1)
+            Vmp3 = SplineSpace(degree=self.degree[2], grid = self.grids[2], omega = self.weights[2], nderiv= V.nderiv[2], mesh= V.mesh[2], quad_degree= V.weights[2].shape[1]-1)
+            return TensorSpace(V.spaces[0], V.spaces[1], V.spaces[2], Vmp1, Vmp2, Vmp3)
+    def getDirichlet(self, V, g, boundaries = None):
         '''
         Docstring pour getDirichlet
             computes StencilVector Dirichlet Solution zero inside the domaine
         :param self: Description
         :param V: Description
         :param g: Description
-        :param admap: list of adaptive mapping components and its space
         :param boundaries: Description
         '''
+        if boundaries is None:
+           boundaries = self.boundaries
         if isinstance(V, TensorSpace) and V.dim == 2:
-            if admap is None:
-                #... mapping as arrays
-                xmp, ymp         = self.coefs
-                # Assemble Dirichlet boundary conditions
-                u_d = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), Boundaries  = boundaries)[1]
-                return u_d
-            else:
-                # each mapping has is own space in Hdiv space = 4 components
-                if len(admap) == 3:
-                    admap = (admap[0],admap[1],admap[2],admap[2])
-                #... mapping as arrays
-                xmp, ymp         = self.coefs
-                # Assemble Dirichlet boundary conditions
-                u_d = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), admap = admap, Boundaries  = boundaries)[1]
-                return u_d                
+            #... mapping as arrays
+            xmp, ymp         = self.coefs
+            # Assemble Dirichlet boundary conditions
+            u_d = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), Boundaries  = boundaries)[1]
+            return u_d
+             
         else:
             raise TypeError('Expecting two dimensions TensorSpace')
     def rotated_2d(self, theta):
@@ -799,11 +831,11 @@ class pyrefMultpatch(object):
         [False, True] : Dirichlet BC on the right edge
     The input are the control points of all patches.
     """
-    def __init__(self, geometryname, id_list, Nurbs_check = True, Dirichlet_all = True):
+    def __init__(self, geometryname, id_list, nurbs_check = True, Dirichlet_all = True):
         #.. TODO FIND ID automatically from the XML file
         mp        = []
         for i in id_list:
-            mp.append( getGeometryMap(geometryname, i, Nurbs_check = Nurbs_check) )
+            mp.append( getGeometryMap(geometryname, i, nurbs_check = nurbs_check) )
         self._dim     = mp[0].dim
         self._geo_dim = mp[0].geo_dim
         #... edge id mapping
@@ -849,6 +881,7 @@ class pyrefMultpatch(object):
         self.id_list          = id_list
         self.patches          = mp
         self.idmapping        = idmapping
+        self.nurbs_check      = nurbs_check
         # ...
         self._degree          = mp[0].degree
         self._knots           = mp[0].knots
@@ -856,6 +889,9 @@ class pyrefMultpatch(object):
         self._weights         = mp[0].weights
         self.Ninterfaces      = len(self.interfaces) 
         # self.patch_connection = patch_connection
+    @property
+    def NURBS(self):
+        return self.nurbs_check
     @property
     def dim(self):
         return self._dim
@@ -901,6 +937,11 @@ class pyrefMultpatch(object):
         Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
         Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
         return TensorSpace(Vmp1, Vmp2)
+    @property
+    def setFalseDirichlet(self):
+        self.dirichlet = np.zeros((self.num_patches, self._dim, 2), dtype = bool)+False
+    def clone(self, Dirichlet_all = True):
+        return pyrefMultpatch(self.geometryname, self.id_list, nurbs_check = self.nurbs_check, Dirichlet_all = Dirichlet_all)
     #.. get coefs
     def getcoefs(self, num_patch=1):
         return self.patches[num_patch-1].coefs
@@ -913,22 +954,20 @@ class pyrefMultpatch(object):
         return [self.patches[np].coefs[map_xy[direct]] for np in range(self.num_patches)]
             
     #.. get spline space on uniform mesh
-    def UnifSplineSpace(self, mesh, quad_degree, nders = 1):
+    def getspace(self, V):
         '''
-        Docstring pour UnifSplineSpace
-        Compues basis in mesh using quad_degree quadrature points 
+        Docstring pour getspace
+        Computes basis in mesh using quad_degree quadrature points and smae integral discretization
         
-        :param self: Description
-        :param mesh: grid discretizations used for numerical integration
-        :param quad_degree: number of quadrature points
-        :param nders: Description
+        :param V: TensorSpace
         '''
-        if isinstance(quad_degree, int):
-            quad_degree = (quad_degree,quad_degree)
-        # ... space of a B-spline patches on uniform mesh
-        Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= nders, mesh= mesh[0], quad_degree= quad_degree[0])
-        Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= nders, mesh= mesh[1], quad_degree= quad_degree[1])
-        return Vmp1, Vmp2
+        if isinstance(V, TensorSpace):
+            # ... space of a B-spline patches on uniform mesh
+            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= V.nderiv[0], mesh= V.mesh[0], quad_degree= V.weights[0].shape[1]-1)
+            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= V.nderiv[1], mesh= V.mesh[1], quad_degree= V.weights[1].shape[1]-1)
+            return TensorSpace(V.spaces[0], V.spaces[1], Vmp1, Vmp2)
+        else :
+            raise TypeError('Expect only TensorSpace')
 
     #.. get mapping in stencil vector format
     def getStencilMapping(self, num_patch=1):
@@ -988,37 +1027,24 @@ class pyrefMultpatch(object):
         # print(f"Patch {num_patch} Dirichlet boundaries : {boundary_dirichlet}")
         return np.asarray(boundary_dirichlet)
     
-    def getDirichlet(self, V, g, admap = None):
+    def getDirichlet(self, V, g):
         '''
         Docstring pour getDirichlet
             computes StencilVector Dirichlet Solution zero inside the domaine
         :param self: Description
         :param V: Description
         :param g: Description
-        :param admap: class for multipatch adaptive mapping
         :param boundaries: Description
         '''
         if isinstance(V, TensorSpace) and V.dim == 2:
-            if admap is None:
-                u_d           = []
-                for patch_nb in range(1, self.nb_patches+1):
-                    #... mapping as arrays
-                    xmp, ymp         = self.getcoefs(patch_nb)
-                    # Assemble Dirichlet boundary conditions
-                    u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
-                    u_d.append(u_d1)
-                return u_d
-            else:
-                u_d           = []
-                for patch_nb in range(1, self.nb_patches+1):
-                    # each mapping has is own space in Hdiv space = 4 components
-                    admap = (admap.x11[patch_nb-1],admap.x12[patch_nb-1],admap.spaces[2],admap.spaces[2])
-                    #... mapping as arrays
-                    xmp, ymp         = self.getcoefs(patch_nb)
-                    # Assemble Dirichlet boundary conditions
-                    u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), admap = admap, Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
-                    u_d.append(u_d1)
-
+            u_d           = []
+            for patch_nb in range(1, self.nb_patches+1):
+                #... mapping as arrays
+                xmp, ymp         = self.getcoefs(patch_nb)
+                # Assemble Dirichlet boundary conditions
+                u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
+                u_d.append(u_d1)
+            return u_d
         else:
             raise TypeError('Expecting two dimensions TensorSpace')
     #.. print multipatch info

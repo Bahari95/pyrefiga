@@ -8,9 +8,12 @@ from glob                       import glob
 from setuptools                 import Command
 import subprocess
 
-# Read library version into '__version__' variable
-path = Path(__file__).parent / 'pyrefiga' / 'version.py'
-exec(path.read_text())
+# Try to read version, fallback to '0.0.0' if file doesn't exist
+try:
+    path = Path(__file__).parent / 'pyrefiga' / 'version.py'
+    exec(path.read_text())
+except FileNotFoundError:
+    __version__ = '0.0.0'
 
 NAME = 'pyrefiga'
 VERSION = __version__
@@ -61,6 +64,7 @@ class RunPyccelCommand(Command):
             'pyrefiga/results_f90_core.py',
             'pyrefiga/fast_diag_core.py',
             'pyrefiga/nurbs_utilities_core.py',
+            'pyrefiga/adnitsche_core.py',
         ]
         for file in files_to_process:
             print(f"Running pyccel on {file} with OpenMP...")

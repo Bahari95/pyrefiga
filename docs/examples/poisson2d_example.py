@@ -155,9 +155,9 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     #-----------------------------------------------------------
     # Create spline spaces for each direction for mapping (compute basis in new integral grid)
     #-----------------------------------------------------------
-    V1mp, V2mp      = mp.UnifSplineSpace(Vh.mesh, quad_degree=quad_degree)
-    VT              = TensorSpace(V1, V2, V1mp, V2mp)
-    print('#spces; VT.nelements:',VT.nelements)
+    VT              = mp.getspace(Vh)
+
+    print('#spces; VT.nelements:', VT.nelements)
     #-----------------------------------------------------------
     # Assemble Dirichlet boundary conditions
     #-----------------------------------------------------------

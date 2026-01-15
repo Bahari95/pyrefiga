@@ -467,7 +467,7 @@ functions = [
         {"name": "density", "expression": rho[0]},
 ]
 
-paraview_nurbsAdMeshMultipatch(nbpts, [Vhmp], [xmp], [ymp], [x11uh], [x12uh], adspace =[[Vh01],[Vh10]], functions = functions, filename = 'figs/admesh_2dexample')
+paraview_nurbsAdMeshMultipatch(nbpts, Vhmp, [xmp], [ymp], [x11uh], [x12uh], adspace =[Vh01,Vh10], functions = functions, filename = 'figs/admesh_2dexample')
 #------------------------------------------------------------------------------
 # Show or close plots depending on argument
 if args.plot :

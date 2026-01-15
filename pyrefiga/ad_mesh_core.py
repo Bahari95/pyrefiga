@@ -2282,3 +2282,38 @@ def assemble_matrix_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[
 
                             matrix[i1+p1,i2+p2]  += v
     # ...
+
+#---1 : mass matrix
+def assemble_massmatrix2D(ne1:'int', ne2:'int', p1:'int', p2:'int',  spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]',  matrix:'float64[:,:,:,:]'):
+
+    # ... sizes
+    k1 = weights_1.shape[1]
+    k2 = weights_2.shape[1]
+    # ... build matrices
+    for ie1 in range(0, ne1):
+        i_span_1 = spans_1[ie1]
+        for ie2 in range(0, ne2):
+            i_span_2 = spans_2[ie2]
+
+            for il_1 in range(0, p1+1):
+                for il_2 in range(0, p2+1):
+                    for jl_1 in range(0, p1+1):
+                        for jl_2 in range(0, p2+1):
+                            i1 = i_span_1 - p1 + il_1
+                            j1 = i_span_1 - p1 + jl_1
+
+                            i2 = i_span_2 - p2 + il_2
+                            j2 = i_span_2 - p2 + jl_2
+
+                            v = 0.0
+                            for g1 in range(0, k1):
+                                for g2 in range(0, k2):
+                                    bi_0 = basis_1[ie1, il_1, 0, g1] * basis_2[ie2, il_2, 0, g2]
+                                    bj_0 = basis_1[ie1, jl_1, 0, g1] * basis_2[ie2, jl_2, 0, g2]
+
+                                    wvol = weights_1[ie1, g1] * weights_2[ie2, g2]
+
+                                    v += bi_0 * bj_0 * wvol
+
+                            matrix[p1+i1, p2+i2, p1+j1-i1, p2+j2-i2]  += v
+    # ...

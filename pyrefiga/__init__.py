@@ -72,6 +72,7 @@ from pyrefiga.quadratures import gauss_legendre
 from pyrefiga.utilities import ( plot_field_1d,
                                   prolongation_matrix,
                                   identity_bspline_mapping,
+                                  compute_eoc,
                                   build_dirichlet,
                                   getGeometryMap,
                                   save_geometry_to_xml,
@@ -84,6 +85,7 @@ from pyrefiga.results import ( sol_field_2d)
 from pyrefiga.ad_mesh_tools import ( quadratures_in_admesh,
                                      assemble_stiffness1D,
                                      assemble_mass1D,
+                                     assemble_mass2D,
                                      assemble_matrix_ex01)
 
 from pyrefiga.fast_diag import ( Poisson)

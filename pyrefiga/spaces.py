@@ -180,6 +180,7 @@ class SplineSpace(object):
         self._weights   = weights
         self._basis     = basis
         self._omega     = omega
+        self._nderiv    = nderiv
 
         self._vector_space = StencilVectorSpace([nbasis], [degree], [periodic])
 
@@ -234,6 +235,9 @@ class SplineSpace(object):
     def omega(self):
         return self._omega
     
+    @property
+    def nderiv(self):
+        return self._nderiv
     @property
     def dim(self):
         return 1
@@ -301,7 +305,10 @@ class TensorSpace(object):
     @property
     def omega(self):
         return [V.omega for V in self.spaces]
-    
+
+    @property
+    def nderiv(self):
+        return [V.nderiv for V in self.spaces]
     @property
     def dim(self):
         return sum([V.dim for V in self.spaces])

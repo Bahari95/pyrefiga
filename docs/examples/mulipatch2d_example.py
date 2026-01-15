@@ -15,6 +15,7 @@ from   pyrefiga                         import StencilNitsche
 from   pyrefiga                         import pyrefMultpatch
 from   pyrefiga                         import build_dirichlet
 from   pyrefiga                         import load_xml
+from   pyrefiga                         import compute_eoc
 # Import Poisson assembly tools for uniform mesh
 from gallery.gallery_section_06         import assemble_matrix_un_ex01
 from gallery.gallery_section_10         import assemble_vector_un_ex02
@@ -48,7 +49,7 @@ parser.add_argument("--e", type=int, default=0, help="Number of elements to elev
 args = parser.parse_args()
 
 #------------------------------------------------------------------------------
-# Poisson solver algorithm for two patches
+# Poisson solver algorithm for mulitipatches
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 # The convention for the patches is as follows:
@@ -58,14 +59,14 @@ args = parser.parse_args()
 #                                                |_______|
 #                                                    3
 #------------------------------------------------------------------------------
-def poisson_solve(V, VT, pyrefMP, u_d):
+def poisson_solve(V, pyrefMP, u_d):
 
     assert isinstance( pyrefMP, pyrefMultpatch)
     assert isinstance( V,  TensorSpace)
-    assert isinstance( VT, TensorSpace)
-
+    #... space FE&Mapping
+    VT            = pyrefMP.getspace(V) 
     #... Nitsche's class
-    Ni            = StencilNitsche(V, V, pyrefMP, u_d, Isoparametric= False)
+    Ni            = StencilNitsche(V, VT, pyrefMP, u_d)
     # ... Assemble Nitsche's global matrix
     Ni.assembleNitsche()
     # Assemble stiffness matrix
@@ -150,7 +151,7 @@ g         = ['x**2+y**2']
 # Load CAD geometry
 #------------------------------------------------------------------------------
 # geometry = load_xml('unitSquare.xml')
-# idmp = (0,1)
+# idmp = (0,1) # L shape TODO
 # geometry = load_xml('lshape.xml')
 # idmp = (0,1)
 # geometry = load_xml('quart_annulus.xml')
@@ -186,15 +187,14 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     # Create spline spaces for refined mesh
     V1  = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
     V2  = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
-    # ... mapping spaces
-    V1mp, V2mp = pyrefMP.UnifSplineSpace(mesh=(V1.mesh, V2.mesh), quad_degree= (quad_degree,quad_degree), nders=1)
+
     Vh  = TensorSpace(V1, V2)
-    VT  = TensorSpace(V1, V2, V1mp, V2mp)
+
     u_d = pyrefMP.getDirichlet(Vh, g)
     print('#spaces')
     # Solve Poisson equation on refined mesh
     start = time.time()
-    xuh, l2_error,  H1_error = poisson_solve(Vh, VT, pyrefMP, u_d)
+    xuh, l2_error,  H1_error = poisson_solve(Vh, pyrefMP, u_d)
     times.append(time.time()- start)
     print('#')
     # Store results
@@ -205,17 +205,19 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
 # Print error results in LaTeX table format
 #------------------------------------------------------------------------------
 print("Degree $p =",degree,"\n")
-print("cells & $L^2$-Err & $H^1$-Err & cpu-time")
+print("cells & $L^2$-Err & $H^1$-Err & cpu-time & eoc")
 print("----------------------------------------")
+eroc = compute_eoc(table[:, 0]+table[:, 2], table[:, 4])
 for i in range(0,RefinNumber+1):
     # extract values first
     rows, cols = int(table[i, 2]), int(table[i, 3])
     val1 = np.format_float_scientific(table[i, 4], unique=False, precision=2)
-    val2 = np.format_float_scientific(table[i, 5], unique=False, precision=6)
-    val3 = np.format_float_scientific(table[i, 4], unique=False, precision=2)  # if intentional repeat
-
+    val2 = np.format_float_scientific(table[i, 5], unique=False, precision=2)
+    val3 = np.format_float_scientific(table[i, 6], unique=False, precision=2)  # if intentional repeat
+    val4 = np.format_float_scientific(eroc[i], unique=False, precision=2)
     # use f-string
-    print(f"{rows}X{cols} & {val1} & {val2} & {val3}")
+
+    print(f"{rows}X{cols} & {val1} & {val2} & {val3} & {val4}")
 print('\n')
 
 #------------------------------------------------------------------------------

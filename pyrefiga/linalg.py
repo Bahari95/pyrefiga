@@ -213,7 +213,10 @@ class StencilVector( object ):
     def __setitem__(self, key, value):
         index = self._getindex( key )
         self._data[index] = value
-
+    # ...
+    def eval(self):
+        # TODO evaluate at a given data points
+        return 0
     #--------------------------------------
     # Private methods
     #--------------------------------------
