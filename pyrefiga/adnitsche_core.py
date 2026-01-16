@@ -14,7 +14,7 @@ def assemble_matrix_DiffSpacediagnitsche(
     points_1: 'float[:,:]', points_2: 'float[:,:]',
     knots_1: 'float[:]', knots_2: 'float[:]', knots_3: 'float[:]', knots_4: 'float[:]',
     vector_m1: 'float[:,:]', vector_m2: 'float[:,:]', vector_geo1:'float64[:,:]', vector_geo2:'float64[:,:]',
-    spans_geo1:'int[:,:,:,:]', spans_geo2:'int[:,:,:,:]', basis_geo1:'float64[:,:,:,:,:,:]', basis_geo2:'float64[:,:,:,:,:,:]',
+    spans_geo1:'int[:,:,:]', spans_geo2:'int[:,:,:]', basis_geo1:'float64[:,:,:,:,:]', basis_geo2:'float64[:,:,:,:,:]',
     knots_5: 'float[:]', knots_6: 'float[:]', omega_5: 'float[:]', omega_6: 'float[:]',
     interfaces: 'int[:]', Kappa: 'float',
     normalS: 'float', matrix: 'float[:,:,:,:]'
@@ -36,8 +36,8 @@ def assemble_matrix_DiffSpacediagnitsche(
     n_omega5    = omega_5.shape[0]-1
     n_omega6    = omega_6.shape[0]-1
     #.. mapping degree
-    p5          = basis_geo1.shape[2]-1
-    p6          = basis_geo2.shape[2]-1
+    p5          = basis_geo1.shape[1]-1
+    p6          = basis_geo2.shape[1]-1
     # ...
     lcoeffs_m1  = zeros((p3+1,p4+1))
     lcoeffs_m2  = zeros((p3+1,p4+1))
@@ -67,13 +67,13 @@ def assemble_matrix_DiffSpacediagnitsche(
             bx_leftAD = p3/(knots_3[p3+1]-knots_3[0])
             #... Assemble the boundary condition for Nitsche (x=left)
             ie1      = 0
-            i_span_1 = spans_1[ie1]
+            i_span_1 = p1
             for ie2 in range(0, ne2):
                 i_span_2 = spans_2[ie2]
 
                 for g2 in range(0, k2):
 
-                    i_span_3 = spans_3[ie1, 0]
+                    i_span_3 = p3
                     i_span_4 = spans_4[ie2, g2]
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -96,8 +96,8 @@ def assemble_matrix_DiffSpacediagnitsche(
                         sxy     +=  coeff_m1 * bj_y
                         syy     +=  coeff_m2 * bj_y
                     #... We compute firstly the span in new adapted points
-                    span_5 = spans_geo1[ie1, ie2, 0, g2]
-                    span_6 = spans_geo2[ie1, ie2, 0, g2]
+                    span_5 = p5
+                    span_6 = spans_geo2[ie2, g2, 0] # 0 fpr for interface 0:1 1:2
                     lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     # ... compute the normal derivative
@@ -107,8 +107,8 @@ def assemble_matrix_DiffSpacediagnitsche(
                     F2y = 0.0
                     for il_2 in range(0, p6+1):
 
-                        bj_0        = basis_geo2[ie1, ie2, il_2, 0, 0, g2]
-                        bj_y        = basis_geo2[ie1, ie2, il_2, 1, 0, g2]
+                        bj_0        = basis_geo2[ie2, il_2, 0, g2, 0] # interface 0:1 1:2
+                        bj_y        = basis_geo2[ie2, il_2, 1, g2, 0] # interface 0:1 1:2
                         coeff_geo1  = lcoeffs_geo1[0, il_2]
                         coeff_geo2  = lcoeffs_geo2[0, il_2]
                         coeff_geo11 = lcoeffs_geo1[1, il_2]
@@ -176,12 +176,12 @@ def assemble_matrix_DiffSpacediagnitsche(
             bx_rightAD = p3/(knots_3[n_knots3]-knots_3[n_knots3-p3-1])
             #... Assemble the boundary condition for Nitsche (x=right)
             ie1      = ne1 -1
-            i_span_1 = spans_1[ie1]
+            i_span_1 = n_knots1-p1-1
             for ie2 in range(0, ne2):         
                 i_span_2 = spans_2[ie2]
                 
                 for g2 in range(0, k2):
-                    i_span_3 = spans_3[ie1, k1-1]
+                    i_span_3 = n_knots3-p3-1
                     i_span_4 = spans_4[ie2, g2]
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -205,8 +205,8 @@ def assemble_matrix_DiffSpacediagnitsche(
                         sxx      +=  (coeff_m1-coeff_m10) * bj_0 * bx_rightAD
                         syx      +=  (coeff_m2-coeff_m20) * bj_0 * bx_rightAD
                     #... We compute firstly the span in new adapted points
-                    span_5 = spans_geo1[ie1, ie2, k1-1, g2]
-                    span_6 = spans_geo2[ie1, ie2, k1-1, g2]
+                    span_5 = n_knots5-p5-1
+                    span_6 = spans_geo2[ie2,   g2, 1]#interface 2
                     lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     # ... Compute the normal derivative
@@ -216,8 +216,8 @@ def assemble_matrix_DiffSpacediagnitsche(
                     F2y = 0.0
                     for il_2 in range(0, p6+1):
 
-                        bj_0        = basis_geo2[ie1, ie2, il_2, 0, k1-1, g2]
-                        bj_y        = basis_geo2[ie1, ie2, il_2, 1, k1-1, g2]
+                        bj_0        = basis_geo2[ie2, il_2, 0, g2, 1]# interface 2
+                        bj_y        = basis_geo2[ie2, il_2, 1, g2, 1]# interface 2
                         coeff_geo1  = lcoeffs_geo1[p5, il_2]
                         coeff_geo2  = lcoeffs_geo2[p5, il_2]
                         coeff_geo10 = lcoeffs_geo1[p5-1, il_2]
@@ -287,13 +287,13 @@ def assemble_matrix_DiffSpacediagnitsche(
             by_leftAD  = p4/(knots_4[p4+1]-knots_4[0])
             #... Assemble the boundary condition for Nitsche (y=left)
             ie2      = 0
-            i_span_2 = spans_2[ie2]
+            i_span_2 = p2
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
                 for g1 in range(0, k1):
                     i_span_3 = spans_3[ie1, g1]
-                    i_span_4 = spans_4[ie2, 0]
+                    i_span_4 = p4
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     # ... compute the normal derivative
@@ -315,8 +315,8 @@ def assemble_matrix_DiffSpacediagnitsche(
                         sxy     +=  (coeff_m11-coeff_m1) * bj_0 * by_leftAD
                         syy     +=  (coeff_m22-coeff_m2) * bj_0 * by_leftAD
                     #... We compute firstly the span in new adapted points
-                    span_5 = spans_geo1[ie1, ie2, g1, 0]
-                    span_6 = spans_geo2[ie1, ie2, g1, 0]
+                    span_5 = spans_geo1[ie1, g1, 0]# interface 3 
+                    span_6 = p6
                     lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     # ... compute the normal derivative
@@ -326,8 +326,8 @@ def assemble_matrix_DiffSpacediagnitsche(
                     F2y = 0.0
                     for il_1 in range(0, p5+1):
 
-                        bj_0       = basis_geo1[ie1, ie2, il_1, 0, g1, 0]
-                        bj_x       = basis_geo1[ie1, ie2, il_1, 1, g1, 0]
+                        bj_0       = basis_geo1[ie1, il_1, 0, g1, 0]# interface 3
+                        bj_x       = basis_geo1[ie1, il_1, 1, g1, 0]# interface 3
                         coeff_geo1 = lcoeffs_geo1[il_1, 0]
                         coeff_geo2 = lcoeffs_geo2[il_1, 0]
                         coeff_geo11= lcoeffs_geo1[il_1, 1]
@@ -395,13 +395,13 @@ def assemble_matrix_DiffSpacediagnitsche(
             by_rightAD = p4/(knots_4[n_knots4]-knots_4[n_knots4-p4-1])
             #... Assemble the boundary condition for Nitsche (y=right)
             ie2      = ne2 -1
-            i_span_2 = spans_2[ie2]
+            i_span_2 = n_knots2-p2-1
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
                 for g1 in range(0, k1):
                     i_span_3 = spans_3[ie1, g1]
-                    i_span_4 = spans_4[ie2, k2-1]
+                    i_span_4 = n_knots4-p4-1
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     sxx = 0.0
@@ -422,8 +422,8 @@ def assemble_matrix_DiffSpacediagnitsche(
                         sxy     +=  (coeff_m1-coeff_m10) * bj_0*by_rightAD
                         syy     +=  (coeff_m2-coeff_m20) * bj_0*by_rightAD
                     #... We compute firstly the span in new adapted points
-                    span_5 = spans_geo1[ie1, ie2, g1, k2-1]
-                    span_6 = spans_geo2[ie1, ie2, g1, k2-1]
+                    span_5 = spans_geo1[ie1, g1,   1] # interface 4
+                    span_6 = n_knots6-p6-1
                     lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     # ... compute the normal derivative
@@ -433,8 +433,8 @@ def assemble_matrix_DiffSpacediagnitsche(
                     F2y = 0.0
                     for il_1 in range(0, p5+1):
 
-                        bj_0       = basis_geo1[ie1, ie2, il_1, 0, g1, k2-1]
-                        bj_x       = basis_geo1[ie1, ie2, il_1, 1, g1, k2-1]
+                        bj_0       = basis_geo1[ie1, il_1, 0, g1, 1]
+                        bj_x       = basis_geo1[ie1, il_1, 1, g1, 1]
                         coeff_geo1 = lcoeffs_geo1[il_1, p6]
                         coeff_geo2 = lcoeffs_geo2[il_1, p6]
                         coeff_geo10= lcoeffs_geo1[il_1, p6-1]
@@ -510,8 +510,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
     knots_1: 'float[:]', knots_2: 'float[:]', knots_3: 'float[:]', knots_4: 'float[:]',
     vector_m1: 'float[:,:]', vector_m2: 'float[:,:]', vector_geo1:'float64[:,:]', vector_geo2:'float64[:,:]',
     vector_m3: 'float[:,:]', vector_m4: 'float[:,:]', vector_geo3:'float64[:,:]', vector_geo4:'float64[:,:]',
-    spans_geo1:'int[:,:,:,:]', spans_geo2:'int[:,:,:,:]', basis_geo1:'float64[:,:,:,:,:,:]', basis_geo2:'float64[:,:,:,:,:,:]',
-    spans_geo3:'int[:,:,:,:]', spans_geo4:'int[:,:,:,:]', basis_geo3:'float64[:,:,:,:,:,:]', basis_geo4:'float64[:,:,:,:,:,:]',
+    spans_geo1:'int[:,:,:]', spans_geo2:'int[:,:,:]', basis_geo1:'float64[:,:,:,:,:]', basis_geo2:'float64[:,:,:,:,:]',
+    spans_geo3:'int[:,:,:]', spans_geo4:'int[:,:,:]', basis_geo3:'float64[:,:,:,:,:]', basis_geo4:'float64[:,:,:,:,:]',
     knots_5: 'float[:]', knots_6: 'float[:]', omega_5: 'float[:]', omega_6: 'float[:]',
     interface_nb: 'int', Kappa: 'float',
     normalS:'float', matrix: 'float[:,:,:,:]'
@@ -531,8 +531,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
     n_omega5    = omega_5.shape[0]-1
     n_omega6    = omega_6.shape[0]-1
     #.. mapping degree
-    p5         = basis_geo1.shape[2]-1
-    p6         = basis_geo2.shape[2]-1
+    p5         = basis_geo1.shape[1]-1
+    p6         = basis_geo2.shape[1]-1
     # ...
     lcoeffs_m1  = zeros((p3+1,p4+1))
     lcoeffs_m2  = zeros((p3+1,p4+1))
@@ -563,13 +563,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
         bx_rightAD = p3/(knots_3[n_knots3]-knots_3[n_knots3-p3-1])
         # ... v1*u2
         ie1      = 0
-        i_span_1 = spans_1[ie1]
+        i_span_1 = p1
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
             for g2 in range(0, k2):
 
-                i_span_3 = spans_3[ie1, 0]
+                i_span_3 = p3
                 i_span_4 = spans_4[ie2, g2]
                 lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -592,8 +592,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                     sxy     +=  coeff_m1 * bj_y
                     syy     +=  coeff_m2 * bj_y
                 #... We compute firstly the span in new adapted points
-                span_5 = spans_geo1[ie1, ie2, 0, g2]
-                span_6 = spans_geo2[ie1, ie2, 0, g2]
+                span_5 = p5
+                span_6 = spans_geo2[ie2, g2, 0]
                 lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 # ... compute the normal derivative
@@ -603,8 +603,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                 F2y = 0.0
                 for il_2 in range(0, p6+1):
 
-                    bj_0        = basis_geo2[ie1, ie2, il_2, 0, 0, g2]
-                    bj_y        = basis_geo2[ie1, ie2, il_2, 1, 0, g2]
+                    bj_0        = basis_geo2[ie2, il_2, 0, g2, 0]
+                    bj_y        = basis_geo2[ie2, il_2, 1, g2, 0]
                     coeff_geo1  = lcoeffs_geo1[0, il_2]
                     coeff_geo2  = lcoeffs_geo2[0, il_2]
                     coeff_geo11 = lcoeffs_geo1[1, il_2]
@@ -658,12 +658,12 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
-        i_span_1 = spans_1[ie1]
+        i_span_1 = n_knots1-p1-1
         for ie2 in range(0, ne2):         
             i_span_2 = spans_2[ie2]
             
             for g2 in range(0, k2):
-                i_span_3 = spans_3[ie1, k1-1]
+                i_span_3 = n_knots3-p3-1
                 i_span_4 = spans_4[ie2, g2]
                 lcoeffs_m1[ : , : ] = vector_m3[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m4[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -687,8 +687,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                     sxx      +=  (coeff_m1-coeff_m10) * bj_0 * bx_rightAD
                     syx      +=  (coeff_m2-coeff_m20) * bj_0 * bx_rightAD
                 #... We compute firstly the span in new adapted points
-                span_5 = spans_geo3[ie1, ie2, k1-1, g2]
-                span_6 = spans_geo4[ie1, ie2, k1-1, g2]
+                span_5 = n_knots5-p5-1
+                span_6 = spans_geo4[ie2,   g2, 1]
                 lcoeffs_geo1[ : , : ] = vector_geo3[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 lcoeffs_geo2[ : , : ] = vector_geo4[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 # ... Compute the normal derivative
@@ -698,8 +698,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                 F2y = 0.0
                 for il_2 in range(0, p6+1):
 
-                    bj_0        = basis_geo4[ie1, ie2, il_2, 0, k1-1, g2]
-                    bj_y        = basis_geo4[ie1, ie2, il_2, 1, k1-1, g2]
+                    bj_0        = basis_geo4[ie2, il_2, 0, g2, 1]
+                    bj_y        = basis_geo4[ie2, il_2, 1, g2, 1]
                     coeff_geo1  = lcoeffs_geo1[p5, il_2]
                     coeff_geo2  = lcoeffs_geo2[p5, il_2]
                     coeff_geo10 = lcoeffs_geo1[p5-1, il_2]
@@ -762,13 +762,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
         bx_rightAD = p3/(knots_3[n_knots3]-knots_3[n_knots3-p3-1])
         # ... u1*v2
         ie1      = 0
-        i_span_1 = spans_1[ie1]
+        i_span_1 = p1
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
             for g2 in range(0, k2):
 
-                i_span_3 = spans_3[ie1, 0]
+                i_span_3 = p3
                 i_span_4 = spans_4[ie2, g2]
                 lcoeffs_m1[ : , : ] = vector_m3[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m4[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -791,8 +791,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                     sxy     +=  coeff_m1 * bj_y
                     syy     +=  coeff_m2 * bj_y
                 #... We compute firstly the span in new adapted points
-                span_5 = spans_geo3[ie1, ie2, 0, g2]
-                span_6 = spans_geo4[ie1, ie2, 0, g2]
+                span_5 = p5
+                span_6 = spans_geo4[ie2, g2, 0]
                 lcoeffs_geo1[ : , : ] = vector_geo3[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 lcoeffs_geo2[ : , : ] = vector_geo4[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 # ... compute the normal derivative
@@ -802,8 +802,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                 F2y = 0.0
                 for il_2 in range(0, p6+1):
 
-                    bj_0        = basis_geo4[ie1, ie2, il_2, 0, 0, g2]
-                    bj_y        = basis_geo4[ie1, ie2, il_2, 1, 0, g2]
+                    bj_0        = basis_geo4[ie2, il_2, 0, g2, 0]
+                    bj_y        = basis_geo4[ie2, il_2, 1, g2, 0]
                     coeff_geo1  = lcoeffs_geo1[0, il_2]
                     coeff_geo2  = lcoeffs_geo2[0, il_2]
                     coeff_geo11 = lcoeffs_geo1[1, il_2]
@@ -857,12 +857,12 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
-        i_span_1 = spans_1[ie1]
+        i_span_1 = n_knots1-p1-1
         for ie2 in range(0, ne2):         
             i_span_2 = spans_2[ie2]
 
             for g2 in range(0, k2):
-                i_span_3 = spans_3[ie1, k1-1]
+                i_span_3 = n_knots3-p3-1
                 i_span_4 = spans_4[ie2, g2]
                 lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -886,8 +886,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                     sxx      +=  (coeff_m1-coeff_m10) * bj_0 * bx_rightAD
                     syx      +=  (coeff_m2-coeff_m20) * bj_0 * bx_rightAD
                 #... We compute firstly the span in new adapted points
-                span_5 = spans_geo1[ie1, ie2, k1-1, g2]
-                span_6 = spans_geo2[ie1, ie2, k1-1, g2]
+                span_5 = n_knots5-p5-1
+                span_6 = spans_geo2[ie2,   g2, 1]
                 lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 # ... Compute the normal derivative
@@ -897,8 +897,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                 F2y = 0.0
                 for il_2 in range(0, p6+1):
 
-                    bj_0        = basis_geo2[ie1, ie2, il_2, 0, k1-1, g2]
-                    bj_y        = basis_geo2[ie1, ie2, il_2, 1, k1-1, g2]
+                    bj_0        = basis_geo2[ie2, il_2, 0, g2, 1]
+                    bj_y        = basis_geo2[ie2, il_2, 1, g2, 1]
                     coeff_geo1  = lcoeffs_geo1[p5, il_2]
                     coeff_geo2  = lcoeffs_geo2[p5, il_2]
                     coeff_geo10 = lcoeffs_geo1[p5-1, il_2]
@@ -961,13 +961,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
         by_rightAD = p4/(knots_4[n_knots4]-knots_4[n_knots4-p4-1])
         # ...
         ie2      = 0
-        i_span_2 = spans_2[ie2]
+        i_span_2 = p2
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
             for g1 in range(0, k1):
                 i_span_3 = spans_3[ie1, g1]
-                i_span_4 = spans_4[ie2, 0]
+                i_span_4 = p4
                 lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 # ... compute the normal derivative
@@ -989,8 +989,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                     sxx     +=  coeff_m1 * bj_x
                     syx     +=  coeff_m2 * bj_x
                 #... We compute firstly the span in new adapted points
-                span_5 = spans_geo1[ie1, ie2, g1, 0]
-                span_6 = spans_geo2[ie1, ie2, g1, 0]
+                span_5 = spans_geo1[ie1, g1, 0]
+                span_6 = p6
                 lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 # ... compute the normal derivative
@@ -1000,8 +1000,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                 F2y = 0.0
                 for il_1 in range(0, p5+1):
 
-                    bj_0       = basis_geo1[ie1, ie2, il_1, 0, g1, 0]
-                    bj_x       = basis_geo1[ie1, ie2, il_1, 1, g1, 0]
+                    bj_0       = basis_geo1[ie1, il_1, 0, g1, 0]
+                    bj_x       = basis_geo1[ie1, il_1, 1, g1, 0]
                     coeff_geo1 = lcoeffs_geo1[il_1, 0]
                     coeff_geo2 = lcoeffs_geo2[il_1, 0]
                     coeff_geo11= lcoeffs_geo1[il_1, 1]
@@ -1054,13 +1054,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie2      = ne2 -1
-        i_span_2 = spans_2[ie2]
+        i_span_2 = n_knots2-p2-1
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
             for g1 in range(0, k1):
                 i_span_3 = spans_3[ie1, g1]
-                i_span_4 = spans_4[ie2, k2-1]
+                i_span_4 = n_knots4-p4-1
                 lcoeffs_m1[ : , : ] = vector_m3[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m4[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 # ... compute the normal derivative
@@ -1082,8 +1082,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                     sxx     +=  coeff_m1 * bj_x
                     syx     +=  coeff_m2 * bj_x
                 #... We compute firstly the span in new adapted points
-                span_5 = spans_geo3[ie1, ie2, g1, k2-1]
-                span_6 = spans_geo4[ie1, ie2, g1, k2-1]
+                span_5 = spans_geo3[ie1,   g1, 1]
+                span_6 = n_knots6-p6-1
                 lcoeffs_geo1[ : , : ] = vector_geo3[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 lcoeffs_geo2[ : , : ] = vector_geo4[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 # ... compute the normal derivative
@@ -1093,8 +1093,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                 F2y = 0.0
                 for il_1 in range(0, p5+1):
 
-                    bj_0       = basis_geo3[ie1, ie2, il_1, 0, g1, k2-1]
-                    bj_x       = basis_geo3[ie1, ie2, il_1, 1, g1, k2-1]
+                    bj_0       = basis_geo3[ie1, il_1, 0, g1, 1]
+                    bj_x       = basis_geo3[ie1, il_1, 1, g1, 1]
                     coeff_geo1 = lcoeffs_geo1[il_1, p6]
                     coeff_geo2 = lcoeffs_geo2[il_1, p6]
                     coeff_geo10= lcoeffs_geo1[il_1, p6-1]
@@ -1157,13 +1157,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
         by_rightAD = p4/(knots_4[n_knots4]-knots_4[n_knots4-p4-1])
         #... Assemble the boundary condition for Nitsche (x=left)
         ie2      = 0
-        i_span_2 = spans_2[ie2]
+        i_span_2 = p2
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
             for g1 in range(0, k1):
                 i_span_3 = spans_3[ie1, g1]
-                i_span_4 = spans_4[ie2, 0]
+                i_span_4 = p4
                 lcoeffs_m1[ : , : ] = vector_m3[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m4[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 # ... compute the normal derivative
@@ -1185,8 +1185,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                     sxx     +=  coeff_m1 * bj_x
                     syx     +=  coeff_m2 * bj_x
                 #... We compute firstly the span in new adapted points
-                span_5 = spans_geo3[ie1, ie2, g1, 0]
-                span_6 = spans_geo4[ie1, ie2, g1, 0]
+                span_5 = spans_geo3[ie1, g1, 0]
+                span_6 = p6
                 lcoeffs_geo1[ : , : ] = vector_geo3[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 lcoeffs_geo2[ : , : ] = vector_geo4[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 # ... compute the normal derivative
@@ -1196,8 +1196,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                 F2y = 0.0
                 for il_1 in range(0, p5+1):
 
-                    bj_0       = basis_geo3[ie1, ie2, il_1, 0, g1, 0]
-                    bj_x       = basis_geo3[ie1, ie2, il_1, 1, g1, 0]
+                    bj_0       = basis_geo3[ie1, il_1, 0, g1, 0]
+                    bj_x       = basis_geo3[ie1, il_1, 1, g1, 0]
                     coeff_geo1 = lcoeffs_geo1[il_1, 0]
                     coeff_geo2 = lcoeffs_geo2[il_1, 0]
                     coeff_geo11= lcoeffs_geo1[il_1, 1]
@@ -1250,13 +1250,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie2      = ne2 -1
-        i_span_2 = spans_2[ie2]
+        i_span_2 = n_knots2-p2-1
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
             for g1 in range(0, k1):
                 i_span_3 = spans_3[ie1, g1]
-                i_span_4 = spans_4[ie2, k2-1]
+                i_span_4 = n_knots4-p4-1
                 lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 # ... compute the normal derivative
@@ -1278,8 +1278,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                     sxx     +=  coeff_m1 * bj_x
                     syx     +=  coeff_m2 * bj_x
                 #... We compute firstly the span in new adapted points
-                span_5 = spans_geo1[ie1, ie2, g1, k2-1]
-                span_6 = spans_geo2[ie1, ie2, g1, k2-1]
+                span_5 = spans_geo1[ie1,   g1, 1]
+                span_6 = n_knots6-p6-1
                 lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                 # ... compute the normal derivative
@@ -1289,8 +1289,8 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                 F2y = 0.0
                 for il_1 in range(0, p5+1):
 
-                    bj_0       = basis_geo1[ie1, ie2, il_1, 0, g1, k2-1]
-                    bj_x       = basis_geo1[ie1, ie2, il_1, 1, g1, k2-1]
+                    bj_0       = basis_geo1[ie1, il_1, 0, g1, 1]
+                    bj_x       = basis_geo1[ie1, il_1, 1, g1, 1]
                     coeff_geo1 = lcoeffs_geo1[il_1, p6]
                     coeff_geo2 = lcoeffs_geo2[il_1, p6]
                     coeff_geo10= lcoeffs_geo1[il_1, p6-1]
@@ -1354,7 +1354,7 @@ def assemble_vector_Dirichlet(
     knots_1: 'float[:]', knots_2: 'float[:]', knots_3: 'float[:]', knots_4: 'float[:]',
     vector_m1: 'float[:,:]', vector_m2: 'float[:,:]', 
     vector_geo1:'float64[:,:]', vector_geo2:'float64[:,:]', vector_d: 'float[:,:]',
-    spans_geo1:'int[:,:,:,:]', spans_geo2:'int[:,:,:,:]', basis_geo1:'float64[:,:,:,:,:,:]', basis_geo2:'float64[:,:,:,:,:,:]',
+    spans_geo1:'int[:,:,:]', spans_geo2:'int[:,:,:]', basis_geo1:'float64[:,:,:,:,:]', basis_geo2:'float64[:,:,:,:,:]',
     knots_5: 'float[:]', knots_6: 'float[:]', omega_5: 'float[:]', omega_6: 'float[:]',
     interfaces: 'int[:]', Kappa: 'float',
     normalS: 'float', Ugrgeo:'float', rhs: 'float[:,:]'
@@ -1376,8 +1376,8 @@ def assemble_vector_Dirichlet(
     n_omega5    = omega_5.shape[0]-1
     n_omega6    = omega_6.shape[0]-1
     #.. mapping degree
-    p5         = basis_geo1.shape[2]-1
-    p6         = basis_geo2.shape[2]-1
+    p5         = basis_geo1.shape[1]-1
+    p6         = basis_geo2.shape[1]-1
     # ...
     lcoeffs_geo1 = zeros((p5+1,p6+1))
     lcoeffs_geo2 = zeros((p5+1,p6+1))
@@ -1416,14 +1416,14 @@ def assemble_vector_Dirichlet(
             bx_leftAD  = p3/(knots_3[p3+1]-knots_3[0])
             #... Assemble the boundary condition for Nitsche (x=left)
             ie1      = 0
-            i_span_1 = spans_1[ie1]
+            i_span_1 = p1
             for ie2 in range(0, ne2):
                 i_span_2 = spans_2[ie2]
 
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                 for g2 in range(0, k2):
 
-                    i_span_3 = spans_3[ie1, 0]
+                    i_span_3 = p3
                     i_span_4 = spans_4[ie2, g2]
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -1446,8 +1446,8 @@ def assemble_vector_Dirichlet(
                         sxy     +=  coeff_m1 * bj_y
                         syy     +=  coeff_m2 * bj_y
                     #... We compute firstly the span in new adapted points
-                    span_5 = spans_geo1[ie1, ie2, 0, g2]
-                    span_6 = spans_geo2[ie1, ie2, 0, g2]
+                    span_5 = p5
+                    span_6 = spans_geo2[ie2, g2, 0]
                     lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     # ... compute the normal derivative
@@ -1457,8 +1457,8 @@ def assemble_vector_Dirichlet(
                     F2y = 0.0
                     for il_2 in range(0, p6+1):
 
-                        bj_0        = basis_geo2[ie1, ie2, il_2, 0, 0, g2]
-                        bj_y        = basis_geo2[ie1, ie2, il_2, 1, 0, g2]
+                        bj_0        = basis_geo2[ie2, il_2, 0, g2, 0]
+                        bj_y        = basis_geo2[ie2, il_2, 1, g2, 0]
                         coeff_geo1  = lcoeffs_geo1[0, il_2]
                         coeff_geo2  = lcoeffs_geo2[0, il_2]
                         coeff_geo11 = lcoeffs_geo1[1, il_2]
@@ -1535,13 +1535,13 @@ def assemble_vector_Dirichlet(
             bx_rightAD = p3/(knots_3[n_knots3]-knots_3[n_knots3-p3-1])
             #... Assemble the boundary condition for Nitsche (x=right)
             ie1      = ne1 -1
-            i_span_1 = spans_1[ie1]
+            i_span_1 = n_knots1-p1-1
             for ie2 in range(0, ne2):         
                 i_span_2 = spans_2[ie2]
                 
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]                
                 for g2 in range(0, k2):
-                    i_span_3 = spans_3[ie1, k1-1]
+                    i_span_3 = n_knots3-p3-1
                     i_span_4 = spans_4[ie2, g2]
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -1565,8 +1565,8 @@ def assemble_vector_Dirichlet(
                         sxx      +=  (coeff_m1-coeff_m10) * bj_0 * bx_rightAD
                         syx      +=  (coeff_m2-coeff_m20) * bj_0 * bx_rightAD
                     #... We compute firstly the span in new adapted points
-                    span_5 = spans_geo1[ie1, ie2, k1-1, g2]
-                    span_6 = spans_geo2[ie1, ie2, k1-1, g2]
+                    span_5 = n_knots5-p5-1
+                    span_6 = spans_geo2[ie2,   g2, 1]
                     lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     # ... Compute the normal derivative
@@ -1576,8 +1576,8 @@ def assemble_vector_Dirichlet(
                     F2y = 0.0
                     for il_2 in range(0, p6+1):
 
-                        bj_0        = basis_geo2[ie1, ie2, il_2, 0, k1-1, g2]
-                        bj_y        = basis_geo2[ie1, ie2, il_2, 1, k1-1, g2]
+                        bj_0        = basis_geo2[ie2, il_2, 0, g2, 1]
+                        bj_y        = basis_geo2[ie2, il_2, 1, g2, 1]
                         coeff_geo1  = lcoeffs_geo1[p5, il_2]
                         coeff_geo2  = lcoeffs_geo2[p5, il_2]
                         coeff_geo10 = lcoeffs_geo1[p5-1, il_2]
@@ -1654,14 +1654,14 @@ def assemble_vector_Dirichlet(
             by_leftAD  = p4/(knots_4[p4+1]-knots_4[0])
             #... Assemble the boundary condition for Nitsche (y=left)
             ie2      = 0
-            i_span_2 = spans_2[ie2]
+            i_span_2 = p2
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                 for g1 in range(0, k1):
                     i_span_3 = spans_3[ie1, g1]
-                    i_span_4 = spans_4[ie2, 0]
+                    i_span_4 = p4
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     # ... compute the normal derivative
@@ -1683,8 +1683,8 @@ def assemble_vector_Dirichlet(
                         sxy     +=  (coeff_m11-coeff_m1) * bj_0 * by_leftAD
                         syy     +=  (coeff_m22-coeff_m2) * bj_0 * by_leftAD
                     #... We compute firstly the span in new adapted points
-                    span_5 = spans_geo1[ie1, ie2, g1, 0]
-                    span_6 = spans_geo2[ie1, ie2, g1, 0]
+                    span_5 = spans_geo1[ie1, g1, 0]
+                    span_6 = p6
                     lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     # ... compute the normal derivative
@@ -1694,8 +1694,8 @@ def assemble_vector_Dirichlet(
                     F2y = 0.0
                     for il_1 in range(0, p5+1):
 
-                        bj_0       = basis_geo1[ie1, ie2, il_1, 0, g1, 0]
-                        bj_x       = basis_geo1[ie1, ie2, il_1, 1, g1, 0]
+                        bj_0       = basis_geo1[ie1, il_1, 0, g1, 0]
+                        bj_x       = basis_geo1[ie1, il_1, 1, g1, 0]
                         coeff_geo1 = lcoeffs_geo1[il_1, 0]
                         coeff_geo2 = lcoeffs_geo2[il_1, 0]
                         coeff_geo11= lcoeffs_geo1[il_1, 1]
@@ -1771,14 +1771,14 @@ def assemble_vector_Dirichlet(
             by_rightAD = p4/(knots_4[n_knots4]-knots_4[n_knots4-p4-1])
             #... Assemble the boundary condition for Nitsche (y=right)
             ie2      = ne2 -1
-            i_span_2 = spans_2[ie2]
+            i_span_2 = n_knots2-p2-1
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                 for g1 in range(0, k1):
                     i_span_3 = spans_3[ie1, g1]
-                    i_span_4 = spans_4[ie2, k2-1]
+                    i_span_4 = n_knots4-p4-1
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     sxx = 0.0
@@ -1799,8 +1799,8 @@ def assemble_vector_Dirichlet(
                         sxy     +=  (coeff_m1-coeff_m10) * bj_0*by_rightAD
                         syy     +=  (coeff_m2-coeff_m20) * bj_0*by_rightAD
                     #... We compute firstly the span in new adapted points
-                    span_5 = spans_geo1[ie1, ie2, g1, k2-1]
-                    span_6 = spans_geo2[ie1, ie2, g1, k2-1]
+                    span_5 = spans_geo1[ie1,   g1, 1]
+                    span_6 = n_knots6-p6-1
                     lcoeffs_geo1[ : , : ] = vector_geo1[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     lcoeffs_geo2[ : , : ] = vector_geo2[span_5 : span_5+p5+1, span_6 : span_6+p6+1]
                     # ... compute the normal derivative
@@ -1810,8 +1810,8 @@ def assemble_vector_Dirichlet(
                     F2y = 0.0
                     for il_1 in range(0, p5+1):
 
-                        bj_0       = basis_geo1[ie1, ie2, il_1, 0, g1, k2-1]
-                        bj_x       = basis_geo1[ie1, ie2, il_1, 1, g1, k2-1]
+                        bj_0       = basis_geo1[ie1, il_1, 0, g1, 1]
+                        bj_x       = basis_geo1[ie1, il_1, 1, g1, 1]
                         coeff_geo1 = lcoeffs_geo1[il_1, p6]
                         coeff_geo2 = lcoeffs_geo2[il_1, p6]
                         coeff_geo10= lcoeffs_geo1[il_1, p6-1]

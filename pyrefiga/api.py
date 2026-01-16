@@ -510,20 +510,20 @@ class StencilNitsche(object):
                 # ... get interface mappings
                 interface_like = interface[2][0]
                 # assemble mappings for patches
-                u_mae                                          = self.admp.getStencilMapping(patch_nb)
+                u_mae                                  = self.admp.getStencilMapping(patch_nb)
                 # asemble new basis and spans for geometry mapping
-                spans_ad1, spans_ad2, basis_ad1, basis_ad2     = self.admp.getbasispans(self._domain, patch_nb)
-                # assemble mappings for patches _n
-                u_maen                                         = self.admp.getStencilMapping(patch_nb_n)
+                spansx, spansy, basisx, basisy     = self.admp.getBoundary_basis(self._domain, patch_nb)
+                # assemble mappings for patches _n 
+                u_maen                                 = self.admp.getStencilMapping(patch_nb_n)
                 # asemble new basis and spans for geometry mapping
-                spans_ad1n, spans_ad2n, basis_ad1n, basis_ad2n = self.admp.getbasispans(self._domain, patch_nb_n)
+                spansx_n, spansy_n, basisx_n, basisy_n = self.admp.getBoundary_basis(self._domain, patch_nb_n)
                 # assemble mappings for patches
                 u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
                 u21_mph, u22_mph = self.mp.getStencilMapping(patch_nb_n)
                 #... assemble off diagonal matrix
                 stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
                 self.assemble_nitsche2dUnderDiag(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph , u_maen[0], u_maen[1], u21_mph, u22_mph], knots=True, 
-                                                value=[spans_ad1, spans_ad2, basis_ad1, basis_ad2, spans_ad1n, spans_ad2n, basis_ad1n, basis_ad2n, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interface_like, self.Kappa, self.normS], 
+                                                value=[spansx, spansy, basisx, basisy, spansx_n, spansy_n, basisx_n, basisy_n, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interface_like, self.Kappa, self.normS], 
                                                 out = stiffnessoffdiag)
                 #... correct coo matrix
                 stiffnessoffdiag = self.collect_offdiagStencilMatrix(stiffnessoffdiag, interface)
@@ -551,16 +551,16 @@ class StencilNitsche(object):
             # ... assemble diagonal matrix
             self.assemble_nitsche2dDiag(self._Alldomain, fields=[u11_mph, u12_mph], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)
         else:
-            # assemble mappings for patches TODO : COMPUTES BASIS AND SPANS AT THE INTERFACE
-            u_mae                                      = self.admp.getStencilMapping(patch_nb)
+            # assemble mappings for patches
+            u_mae                          = self.admp.getStencilMapping(patch_nb)
             # asemble new basis and spans for geometry mapping
-            spans_ad1, spans_ad2, basis_ad1, basis_ad2 = self.admp.getbasispans(self._domain, patch_nb)
+            spansx, spansy, basisx, basisy = self.admp.getBoundary_basis(self._domain, patch_nb)
             # assemble mappings for patches
             u11_mph, u12_mph     = self.mp.getStencilMapping(patch_nb)
             #... get interfaces for a given patch
             interfaces_like      = self.mp.getInterfacePatch(patch_nb)
             # ... assemble diagonal matrix
-            self.assemble_nitsche2dDiag(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph], knots=True, value=[spans_ad1, spans_ad2, basis_ad1, basis_ad2, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)            
+            self.assemble_nitsche2dDiag(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph], knots=True, value=[spansx, spansy, basisx, basisy, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)            
         # ...
         return
     
@@ -625,7 +625,7 @@ class StencilNitsche(object):
                 # assemble mappings for patches
                 u_mae                                      = self.admp.getStencilMapping(patch_nb)
                 # asemble new basis and spans for geometry mapping
-                spans_ad1, spans_ad2, basis_ad1, basis_ad2 = self.admp.getbasispans(self._domain, patch_nb)
+                spansx, spansy, basisx, basisy = self.admp.getBoundary_basis(self._domain, patch_nb)
                 # assemble mappings for patches
                 u11_mph, u12_mph                           =  self.mp.getStencilMapping(patch_nb)
                 #... get interfaces for a given patch
@@ -633,7 +633,7 @@ class StencilNitsche(object):
                 # ...
                 u_tmp = StencilVector(self._domain.vector_space)
                 nS    = 1.
-                self.assemble_nitsche2dDirichlet(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph, self.u_d[patch_nb-1]], knots=True, value=[spans_ad1, spans_ad2, basis_ad1, basis_ad2, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, 0.*self.Kappa, 0.*self.normS, nS], out = u_tmp)
+                self.assemble_nitsche2dDirichlet(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph, self.u_d[patch_nb-1]], knots=True, value=[spansx, spansy, basisx, basisy, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, 0.*self.Kappa, 0.*self.normS, nS], out = u_tmp)
                 assert not np.isnan(u_tmp._data).any(), "Dirichlet Nitsche Stencile vector contains NaNs"
                 u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = u_tmp[:]

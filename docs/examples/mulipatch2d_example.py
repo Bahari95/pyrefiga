@@ -205,19 +205,21 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
 # Print error results in LaTeX table format
 #------------------------------------------------------------------------------
 print("Degree $p =",degree,"\n")
-print("cells & $L^2$-Err & $H^1$-Err & cpu-time & eoc")
+print("cells & $L^2$-Err & eoc & $H^1$-Err & eoc & cpu-time")
 print("----------------------------------------")
-eroc = compute_eoc(table[:, 0]+table[:, 2], table[:, 4])
+erocl2 = compute_eoc(table[:, 4])
+eroch1 = compute_eoc(table[:, 5])
 for i in range(0,RefinNumber+1):
     # extract values first
     rows, cols = int(table[i, 2]), int(table[i, 3])
     val1 = np.format_float_scientific(table[i, 4], unique=False, precision=2)
     val2 = np.format_float_scientific(table[i, 5], unique=False, precision=2)
     val3 = np.format_float_scientific(table[i, 6], unique=False, precision=2)  # if intentional repeat
-    val4 = np.format_float_scientific(eroc[i], unique=False, precision=2)
+    val4 = np.format_float_scientific(erocl2[i], unique=False, precision=2)
+    val5 = np.format_float_scientific(eroch1[i], unique=False, precision=2)
     # use f-string
 
-    print(f"{rows}X{cols} & {val1} & {val2} & {val3} & {val4}")
+    print(f"{rows}X{cols} & {val1} & {val4} & {val2} & {val5} & {val3}")
 print('\n')
 
 #------------------------------------------------------------------------------

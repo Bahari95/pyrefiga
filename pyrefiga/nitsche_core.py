@@ -57,7 +57,7 @@ def assemble_matrix_diagnitsche(
             bx_left = p1/(knots_1[p1+1]-knots_1[0])*(omega_1[1]/omega_1[0])
             #... Assemble the boundary condition for Nitsche (x=left)
             ie1      = 0
-            i_span_1 = spans_1[ie1]
+            i_span_1 = p1
             for ie2 in range(0, ne2):
                 i_span_2 = spans_2[ie2]
 
@@ -133,7 +133,7 @@ def assemble_matrix_diagnitsche(
             bx_right = p1/(knots_1[n_knots1]-knots_1[n_knots1-p1-1])*(omega_1[n_omega1-1]/omega_1[n_omega1])
             #... Assemble the boundary condition for Nitsche (x=right)
             ie1      = ne1 -1
-            i_span_1 = spans_1[ie1]
+            i_span_1 = n_knots1-p1-1
             for ie2 in range(0, ne2):         
                 i_span_2 = spans_2[ie2]
                 
@@ -211,7 +211,7 @@ def assemble_matrix_diagnitsche(
             by_left = p2/(knots_2[p2+1]-knots_2[0])*omega_2[1]/omega_2[0]
             #... Assemble the boundary condition for Nitsche (y=left)
             ie2      = 0
-            i_span_2 = spans_2[ie2]
+            i_span_2 = p2
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
@@ -287,7 +287,7 @@ def assemble_matrix_diagnitsche(
             by_right = p2/(knots_2[n_knots2]-knots_2[n_knots2-p2-1])*(omega_2[n_omega2-1]/omega_2[n_omega2])
             #... Assemble the boundary condition for Nitsche (y=right)
             ie2      = ne2 -1
-            i_span_2 = spans_2[ie2]
+            i_span_2 = n_knots2-p2-1
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
@@ -407,7 +407,7 @@ def assemble_matrix_offdiagnitsche(
         bx_right = p1/(knots_1[n_knots1]-knots_1[n_knots1-p1-1])*omega_1[n_omega1-1]/omega_1[n_omega1]
         # ... v1*u2
         ie1      = 0
-        i_span_1 = spans_1[ie1]
+        i_span_1 = p1
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
@@ -470,7 +470,7 @@ def assemble_matrix_offdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
-        i_span_1 = spans_1[ie1]
+        i_span_1 = n_knots1-p1-1
         for ie2 in range(0, ne2):         
             i_span_2 = spans_2[ie2]
             
@@ -537,7 +537,7 @@ def assemble_matrix_offdiagnitsche(
         bx_right = p1/(knots_1[n_knots1]-knots_1[n_knots1-p1-1])*omega_1[n_omega1-1]/omega_1[n_omega1]
         # ... u1*v2
         ie1      = 0
-        i_span_1 = spans_1[ie1]
+        i_span_1 = p1
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
@@ -600,7 +600,7 @@ def assemble_matrix_offdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
-        i_span_1 = spans_1[ie1]
+        i_span_1 = n_knots1-p1-1
         for ie2 in range(0, ne2):         
             i_span_2 = spans_2[ie2]
             
@@ -667,7 +667,7 @@ def assemble_matrix_offdiagnitsche(
         by_right = p2/(knots_2[n_knots2]-knots_2[n_knots2-p2-1])*omega_2[n_omega2-1]/omega_2[n_omega2]
         # ...
         ie2      = 0
-        i_span_2 = spans_2[ie2]
+        i_span_2 = p2
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
@@ -730,7 +730,7 @@ def assemble_matrix_offdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie2      = ne2 -1
-        i_span_2 = spans_2[ie2]
+        i_span_2 = n_knots2-p2-1
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
@@ -797,7 +797,7 @@ def assemble_matrix_offdiagnitsche(
         by_right = p2/(knots_2[n_knots2]-knots_2[n_knots2-p2-1])*omega_2[n_omega2-1]/omega_2[n_omega2]
         #... Assemble the boundary condition for Nitsche (x=left)
         ie2      = 0
-        i_span_2 = spans_2[ie2]
+        i_span_2 = p2
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
@@ -860,7 +860,7 @@ def assemble_matrix_offdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie2      = ne2 -1
-        i_span_2 = spans_2[ie2]
+        i_span_2 = n_knots2-p2-1
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
@@ -982,13 +982,13 @@ def assemble_matrix_DiffSpacediagnitsche(
             bx_leftFE = p1/(knots_1[p1+1]-knots_1[0])
             #... Assemble the boundary condition for Nitsche (x=left)
             ie1      = 0
-            i_span_1 = spans_1[ie1]
+            i_span_1 = p1
             for ie2 in range(0, ne2):
                 i_span_2 = spans_2[ie2]
 
                 for g2 in range(0, k2):
 
-                    i_span_3 = spans_3[ie1, 0]
+                    i_span_3 = p3
                     i_span_4 = spans_4[ie2, g2]
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -1062,12 +1062,12 @@ def assemble_matrix_DiffSpacediagnitsche(
             bx_rightFE = p1/(knots_1[n_knots1]-knots_1[n_knots1-p1-1])
             #... Assemble the boundary condition for Nitsche (x=right)
             ie1      = ne1 -1
-            i_span_1 = spans_1[ie1]
+            i_span_1 = n_knots1-p1-1
             for ie2 in range(0, ne2):         
                 i_span_2 = spans_2[ie2]
                 
                 for g2 in range(0, k2):
-                    i_span_3 = spans_3[ie1, k1-1]
+                    i_span_3 = n_knots3-p3-1
                     i_span_4 = spans_4[ie2, g2]
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -1144,13 +1144,13 @@ def assemble_matrix_DiffSpacediagnitsche(
             by_leftFE = p2/(knots_2[p2+1]-knots_2[0])
             #... Assemble the boundary condition for Nitsche (y=left)
             ie2      = 0
-            i_span_2 = spans_2[ie2]
+            i_span_2 = p2
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
                 for g1 in range(0, k1):
                     i_span_3 = spans_3[ie1, g1]
-                    i_span_4 = spans_4[ie2, 0]
+                    i_span_4 = p4
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     # ... compute the normal derivative
@@ -1223,13 +1223,13 @@ def assemble_matrix_DiffSpacediagnitsche(
             by_rightFE = p2/(knots_2[n_knots2]-knots_2[n_knots2-p2-1])
             #... Assemble the boundary condition for Nitsche (y=right)
             ie2      = ne2 -1
-            i_span_2 = spans_2[ie2]
+            i_span_2 = n_knots2-p2-1
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
                 for g1 in range(0, k1):
                     i_span_3 = spans_3[ie1, g1]
-                    i_span_4 = spans_4[ie2, k2-1]
+                    i_span_4 = n_knots4-p4-1
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     F1x = 0.0
@@ -1350,13 +1350,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
         bx_rightFE = p1/(knots_1[n_knots1]-knots_1[n_knots1-p1-1])
         # ... v1*u2
         ie1      = 0
-        i_span_1 = spans_1[ie1]
+        i_span_1 = p1
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
             for g2 in range(0, k2):
 
-                i_span_3 = spans_3[ie1, 0]
+                i_span_3 = p3
                 i_span_4 = spans_4[ie2, g2]
                 lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -1416,12 +1416,12 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
-        i_span_1 = spans_1[ie1]
+        i_span_1 = n_knots1-p1-1
         for ie2 in range(0, ne2):         
             i_span_2 = spans_2[ie2]
             
             for g2 in range(0, k2):
-                i_span_3 = spans_3[ie1, k1-1]
+                i_span_3 = n_knots3-p3-1
                 i_span_4 = spans_4[ie2, g2]
                 lcoeffs_m1[ : , : ] = vector_m3[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m4[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -1489,13 +1489,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
         bx_rightFE = p1/(knots_1[n_knots1]-knots_1[n_knots1-p1-1])
         # ... u1*v2
         ie1      = 0
-        i_span_1 = spans_1[ie1]
+        i_span_1 = p1
         for ie2 in range(0, ne2):
             i_span_2 = spans_2[ie2]
 
             for g2 in range(0, k2):
 
-                i_span_3 = spans_3[ie1, 0]
+                i_span_3 = p3
                 i_span_4 = spans_4[ie2, g2]
                 lcoeffs_m1[ : , : ] = vector_m3[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m4[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -1555,12 +1555,12 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie1      = ne1 -1
-        i_span_1 = spans_1[ie1]
+        i_span_1 = n_knots1-p1-1
         for ie2 in range(0, ne2):         
             i_span_2 = spans_2[ie2]
 
             for g2 in range(0, k2):
-                i_span_3 = spans_3[ie1, k1-1]
+                i_span_3 = n_knots3-p3-1
                 i_span_4 = spans_4[ie2, g2]
                 lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -1628,13 +1628,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
         by_rightFE = p2/(knots_2[n_knots2]-knots_2[n_knots2-p2-1])
         # ...
         ie2      = 0
-        i_span_2 = spans_2[ie2]
+        i_span_2 = p2
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
             for g1 in range(0, k1):
                 i_span_3 = spans_3[ie1, g1]
-                i_span_4 = spans_4[ie2, 0]
+                i_span_4 = p4
                 lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 # ... compute the normal derivative
@@ -1693,13 +1693,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie2      = ne2 -1
-        i_span_2 = spans_2[ie2]
+        i_span_2 = n_knots2-p2-1
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
             for g1 in range(0, k1):
                 i_span_3 = spans_3[ie1, g1]
-                i_span_4 = spans_4[ie2, k2-1]
+                i_span_4 = n_knots4-p4-1
                 lcoeffs_m1[ : , : ] = vector_m3[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m4[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 # ... compute the normal derivative
@@ -1765,13 +1765,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
         by_rightFE = p2/(knots_2[n_knots2]-knots_2[n_knots2-p2-1])
         #... Assemble the boundary condition for Nitsche (x=left)
         ie2      = 0
-        i_span_2 = spans_2[ie2]
+        i_span_2 = p2
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
             for g1 in range(0, k1):
                 i_span_3 = spans_3[ie1, g1]
-                i_span_4 = spans_4[ie2, 0]
+                i_span_4 = p4
                 lcoeffs_m1[ : , : ] = vector_m3[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m4[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 # ... compute the normal derivative
@@ -1830,13 +1830,13 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
 
         #... Assemble the boundary condition for Nitsche (x=right)
         ie2      = ne2 -1
-        i_span_2 = spans_2[ie2]
+        i_span_2 = n_knots2-p2-1
         for ie1 in range(0, ne1):
             i_span_1 = spans_1[ie1]
 
             for g1 in range(0, k1):
                 i_span_3 = spans_3[ie1, g1]
-                i_span_4 = spans_4[ie2, k2-1]
+                i_span_4 = n_knots4-p4-1
                 lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                 # ... compute the normal derivative
@@ -1956,14 +1956,14 @@ def assemble_vector_Dirichlet(
             bx_leftFE = p1/(knots_1[p1+1]-knots_1[0])
             #... Assemble the boundary condition for Nitsche (x=left)
             ie1      = 0
-            i_span_1 = spans_1[ie1]
+            i_span_1 = p1
             for ie2 in range(0, ne2):
                 i_span_2 = spans_2[ie2]
 
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                 for g2 in range(0, k2):
 
-                    i_span_3 = spans_3[ie1, 0]
+                    i_span_3 = p3
                     i_span_4 = spans_4[ie2, g2]
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -2046,13 +2046,13 @@ def assemble_vector_Dirichlet(
             bx_rightFE = p1/(knots_1[n_knots1]-knots_1[n_knots1-p1-1])
             #... Assemble the boundary condition for Nitsche (x=right)
             ie1      = ne1 -1
-            i_span_1 = spans_1[ie1]
+            i_span_1 = n_knots1-p1-1
             for ie2 in range(0, ne2):         
                 i_span_2 = spans_2[ie2]
                 
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]                
                 for g2 in range(0, k2):
-                    i_span_3 = spans_3[ie1, k1-1]
+                    i_span_3 = n_knots3-p3-1
                     i_span_4 = spans_4[ie2, g2]
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
@@ -2136,14 +2136,14 @@ def assemble_vector_Dirichlet(
             by_leftFE = p2/(knots_2[p2+1]-knots_2[0])
             #... Assemble the boundary condition for Nitsche (y=left)
             ie2      = 0
-            i_span_2 = spans_2[ie2]
+            i_span_2 = p2
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                 for g1 in range(0, k1):
                     i_span_3 = spans_3[ie1, g1]
-                    i_span_4 = spans_4[ie2, 0]
+                    i_span_4 = p4
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     # ... compute the normal derivative
@@ -2224,14 +2224,14 @@ def assemble_vector_Dirichlet(
             by_rightFE = p2/(knots_2[n_knots2]-knots_2[n_knots2-p2-1])
             #... Assemble the boundary condition for Nitsche (y=right)
             ie2      = ne2 -1
-            i_span_2 = spans_2[ie2]
+            i_span_2 = n_knots2-p2-1
             for ie1 in range(0, ne1):
                 i_span_1 = spans_1[ie1]
 
                 lcoeffs_d[ : , : ] = vector_d[i_span_1 : i_span_1+p1+1, i_span_2 : i_span_2+p2+1]
                 for g1 in range(0, k1):
                     i_span_3 = spans_3[ie1, g1]
-                    i_span_4 = spans_4[ie2, k2-1]
+                    i_span_4 = n_knots4-p4-1
                     lcoeffs_m1[ : , : ] = vector_m1[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     lcoeffs_m2[ : , : ] = vector_m2[i_span_3 : i_span_3+p3+1, i_span_4 : i_span_4+p4+1]
                     F1x = 0.0

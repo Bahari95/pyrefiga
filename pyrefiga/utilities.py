@@ -128,21 +128,21 @@ def identity_bspline_mapping(V):
 #========================================================================
 # ... computes the order of convergence
 #========================================================================
-def compute_eoc(nbasis, err, dim = 2):
+def compute_eoc(err):
     '''
     compute_eoc: computes the order of convergence
-    nbasis: list of number of basis functions  
     err: list of errors
-    dim: spatial dimension
     '''
-    nbasis = np.asarray(nbasis, dtype=float)
-    err    = np.asarray(err, dtype=float)
-    eoc    = np.zeros(nbasis.shape[0])
-    if nbasis.shape[0] == 1 or err.shape[0] == 1:
-        raise TypeError('Expect at least list of two values')
-    # ...
-    eoc[1:] = dim * np.log(err[:-1] / err[1:]) / np.log(nbasis[1:] / nbasis[:-1])
-    return eoc
+    err       = np.asarray(err, dtype=float)
+    numRefine = err.shape[0]
+    if numRefine > 1:
+        eoc       = np.zeros(numRefine)
+        # ...
+        eoc[1:] = np.log(err[:-1] / err[1:])/ np.log(2.)
+        # eoc[1:] = np.log(err[:-1] / err[1:]) / np.log(size_mesh[1:] / size_mesh[:-1])
+        return eoc
+    else:
+        return [0.]
 
 #========================================================================
 # ... build Dirichlet in two dimensions from analytic form

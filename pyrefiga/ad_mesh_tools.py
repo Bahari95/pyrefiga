@@ -33,7 +33,12 @@ class quadratures_in_admesh(object):
 		if nurbs_space:
 			if sp_dim == 1 :
 				# ... 1D reparametrization
-				self.basis_spans_in_adquadrature_1d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_1DL2map
+				if len(V.spans.shape) == 1:
+					# S same grid for knots and integral
+					self.basis_spans_in_adquadrature_1d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_1DL2map
+				else:
+					# 	# Refined integration grid
+					self.basis_spans_in_adquadrature_1d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_1DL2mapGmesh
 			elif sp_dim == 3:
 				#... L2 mapping in 3D
 				self.basis_spans_in_adquadrature_3d = nurbscore.assemble_nurbsbasis_spans_in_adquadrature_3L2map
@@ -58,7 +63,12 @@ class quadratures_in_admesh(object):
 		else:
 			if sp_dim == 1 :
 				# ... 1D reparametrization
-				self.basis_spans_in_adquadrature_1d = core.assemble_basis_spans_in_adquadrature_1DL2map
+				if len(V.spans.shape) == 1:
+					# S same grid for knots and integral
+					self.basis_spans_in_adquadrature_1d = core.assemble_basis_spans_in_adquadrature_1DL2map
+				else:
+					# Refined integration grid
+					self.basis_spans_in_adquadrature_1d = core.assemble_basis_spans_in_adquadrature_1DL2mapGmesh
 			elif sp_dim == 3:
 				#... L2 mapping in 3D
 				self.basis_spans_in_adquadrature_3d = core.assemble_basis_spans_in_adquadrature_3L2map
