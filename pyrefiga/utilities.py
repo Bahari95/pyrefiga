@@ -178,6 +178,8 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
 
     if Boundaries is None:
         Boundaries = [1,2,3,4]
+    if isinstance(Boundaries, list):
+        raise TypeError('Expect list like [1,2,3,4] for each boundary part')
     #... 
     boundary_map = {
         1: (0, slice(None)),
