@@ -263,17 +263,16 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    degree         = mp.degree # Use same degree as geometry
    quad_degree    = max(degree[0],degree[1])*2+1 # Quadrature degree
    mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
-   if mp.nelements[0]*2**nb_ne < 8 and mp.nelements[1]*2**nb_ne <8 :
-      raise ValueError('please for the reason of sufficient mesh choose nelemsnts strictly greater than 4')
-   # ... Assembling mapping
-   xmp, ymp       = mp.coefs()
-   wm1, wm2       = mp.weights()
 
    # ... Assembling mapping
-   ne               = mp.nelements[0]*4
+   xmp, ymp       = mp.coefs
+   wm1, wm2       = mp.weights
+
+   # ... Assembling mapping
+   ne               = 4
    # Create spline spaces for each direction
-   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], omega = wm1, mesh = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
-   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], omega = wm2, mesh = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
+   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], omega = wm1, mesh = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
+   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], omega = wm2, mesh = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
    Vmp             = TensorSpace(V1mp, V2mp)
 
    #... Initial mapping to StencilVector
@@ -286,10 +285,10 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    # ... Initial guess
    #----------------------
    # create the spline space for each direction
-   V1H             = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
-   V2H             = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
-   V3H             = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
-   V4H             = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+   V1H             = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
+   V2H             = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
+   V3H             = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
+   V4H             = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
    # create the tensor space for potential function
    VH11           = TensorSpace(V4H, V3H)
 
@@ -299,15 +298,14 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    x2H            = picard_solve(V1H, V2H, V3H, V4H, V1mp, V2mp, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, tol = tol)[-1]
    MG_time        = time.time()- start
    # ... For multigrid method
-   for n in range(4,nb_ne):
-      ne          = mp.nelements[0]*2**n
-      V1mg        = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
-      V2mg        = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
-      V3mg        = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
-      V4mg        = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+   for ne in range(4,nb_ne):
+      V1mg        = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
+      V2mg        = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
+      V3mg        = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
+      V4mg        = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
       # Create spline spaces for each direction
-      V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
-      V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
+      V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0, numElevate=ne), omega = wm1, quad_degree = quad_degree)
+      V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1, numElevate=ne), omega = wm2, quad_degree = quad_degree)
       # create the tensor space
       Vh11mg      = TensorSpace(V4mg, V3mg)
          
@@ -339,15 +337,15 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
 
    #----------------------
    # create the spline space for each direction
-   ne              = mp.nelements[0]*2**nb_ne
-   V1              = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
-   V2              = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
-   V3              = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1,None, numElevate=ne), quad_degree = quad_degree)
-   V4              = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0,None, numElevate=ne), quad_degree = quad_degree)
+   ne              = nb_ne
+   V1              = SplineSpace(degree=degree[0]+1, grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
+   V2              = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
+   V3              = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
+   V4              = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
 
    # Create spline spaces for each direction
-   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0,None, numElevate=ne), omega = wm1, quad_degree = quad_degree)
-   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1,None, numElevate=ne), omega = wm2, quad_degree = quad_degree)
+   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0, numElevate=ne), omega = wm1, quad_degree = quad_degree)
+   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1, numElevate=ne), omega = wm2, quad_degree = quad_degree)
    # create the tensor space
    Vh11            = TensorSpace(V4, V3)
    Vh01            = TensorSpace(V1, V3)
@@ -373,7 +371,7 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    norm             = Quality.toarray()
    l2_Quality       = norm[0]
    l2_displacement  = norm[1]
-   return mp.nelements[0]*2**nb_ne, l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vmp
+   return Vh.nelements[0], l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vmp
 
 # # ........................................................
 # ....................For generating tables

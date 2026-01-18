@@ -512,7 +512,7 @@ class StencilNitsche(object):
                 # assemble mappings for patches
                 u_mae                                  = self.admp.getStencilMapping(patch_nb)
                 # asemble new basis and spans for geometry mapping
-                spansx, spansy, basisx, basisy     = self.admp.getBoundary_basis(self._domain, patch_nb)
+                spansx, spansy, basisx, basisy         = self.admp.getBoundary_basis(self._domain, patch_nb)
                 # assemble mappings for patches _n 
                 u_maen                                 = self.admp.getStencilMapping(patch_nb_n)
                 # asemble new basis and spans for geometry mapping

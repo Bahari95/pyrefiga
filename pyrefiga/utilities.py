@@ -178,9 +178,12 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
 
     if Boundaries is None:
         Boundaries = [1,2,3,4]
-    if not isinstance(Boundaries, list) or not all(isinstance(b, int) for b in Boundaries):
+
+    #... check    
+    if not isinstance(Boundaries, (list, np.ndarray)) \
+    or not all(isinstance(int(b), int) for b in Boundaries):
         raise TypeError(
-            "Boundaries must be a list of integers like [1, 2, 3, 4]"
+            "Boundaries must be a list or array of integers like [1, 2, 3, 4] or [1,3,4] ..."
         )
 
     #... 
