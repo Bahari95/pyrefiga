@@ -74,11 +74,11 @@ from pyrefiga.utilities import ( plot_field_1d,
                                   identity_bspline_mapping,
                                   compute_eoc,
                                   build_dirichlet,
-                                  getGeometryMap,
+                                  pyref_patch,
                                   save_geometry_to_xml,
                                   pyrefInterface,
                                   load_xml,
-                                  pyrefMultpatch)
+                                  pyref_multipatch)
 
 from pyrefiga.results import ( sol_field_2d)
 
@@ -90,15 +90,19 @@ from pyrefiga.ad_mesh_tools import ( quadratures_in_admesh,
 
 from pyrefiga.fast_diag import ( Poisson)
 
-from pyrefiga.results_f90 import ( pyccel_sol_field_2d,
-                                   pyccel_sol_field_1d,
-                                    pyccel_sol_field_3d, 
-                                    least_square_Bspline,
-                                    plot_SolutionMultipatch,
-                                    plot_MeshMultipatch,
-                                    plot_AdMeshMultipatch,
-                                    plot_FunctMultipatch,
-                                    plot_JacobianMultipatch)
+from pyrefiga.results_f90 import ( sol_field_NURBS_1d,
+                                  sol_field_NURBS_2d, 
+                                  sol_field_NURBS_3d, 
+                                  pyccel_sol_field_2d,
+                                  pyccel_sol_field_1d,
+                                  pyccel_sol_field_3d, 
+                                  least_square_NURBspline,
+                                  least_square_Bspline,
+                                  plot_SolutionMultipatch,
+                                  plot_MeshMultipatch,
+                                  plot_AdMeshMultipatch,
+                                  plot_FunctMultipatch,
+                                  plot_JacobianMultipatch)
 
 from pyrefiga.api import (assemble_matrix, 
                           assemble_vector, 
@@ -108,8 +112,7 @@ from pyrefiga.api import (assemble_matrix,
                           apply_dirichlet, 
                           apply_periodic)
 
-from pyrefiga.nurbs_utilities import(sol_field_NURBS_1d,sol_field_NURBS_2d, sol_field_NURBS_3d, 
-                                      prolongate_NURBS_mapping, least_square_NURBspline,
+from pyrefiga.nurbs_utilities import(prolongate_NURBS_mapping,
                                       paraview_nurbsAdMeshMultipatch, paraview_nurbsSolutionMultipatch,
                                       paraview_TimeSolutionMultipatch,
                                       ViewGeo,least_square_2dNURBspline,collocation_2dNURBspline)

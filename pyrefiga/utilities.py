@@ -5,7 +5,7 @@ Features:
 - Plotting a B-spline solution in 1D.
 - Construction of the prolongation matrix between hierarchical spaces.
 - save_geometry_to_xml`: Saves a computed geometry mapping to a .xml file.
-- getGeometryMap`: Extracts a geometry mapping from a .xml file.
+- pyref_patch`: Extracts a geometry mapping from a .xml file.
 
 @author: Mustapha Bahari
 """
@@ -22,13 +22,15 @@ from   .spaces          import SplineSpace
 from   .spaces          import TensorSpace
 from   .results_f90     import least_square_Bspline
 from   .results_f90     import pyccel_sol_field_2d
-from   .nurbs_utilities import sol_field_NURBS_2d
-from   .nurbs_utilities import least_square_NURBspline
+from   .results_f90     import sol_field_NURBS_2d
+from   .results_f90     import least_square_NURBspline
 
 __all__ = ['plot_field_1d', 
            'prolongation_matrix',
            'save_geometry_to_xml',
-           'getGeometryMap',
+           'compute_eoc'
+           'pyref_patch',
+           'pyref_multpatch',
            'pyrefInterface',
            'load_xml']
 
@@ -237,11 +239,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                 #.. In the parametric domain
                 for i in range(len(Boundaries)):
                     x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], f_dir[Boundaries[i]-1])
-
-                # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0])
-                # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1])
-                # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2])
-                # x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[3])
             elif admap is None :
                 #-------------------------------------------------
                 #.. In the phyisacl domain without adaptive mapping
@@ -256,10 +253,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                     for i in range(len(Boundaries)):
                         x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
-                    # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0](sX[0, :], sY[ 0,:]))
-                    # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1](sX[-1,:], sY[-1,:]))
-                    # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2](sX[:, 0], sY[:, 0]))
-                    # x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[3](sX[:,-1], sY[:,-1]))
                 else:
                     #3D mapping
                     if map[3].omega[0] is None :
@@ -273,11 +266,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                     for i in range(len(Boundaries)):
                         x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]  ))
-                    # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0](sX[0, :], sY[ 0,:], sZ[ 0,:]))
-                    # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1](sX[-1,:], sY[-1,:], sZ[-1,:]))
-                    # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2](sX[:, 0], sY[:, 0], sZ[:, 0]))
-                    # x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[3](sX[:,-1], sY[:,-1], sZ[:,-1]))
-
             else :
                 #-----------------------------------------------
                 #.. In the phyisacl domain with adaptive mapping               
@@ -298,10 +286,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                     for i in range(len(Boundaries)):
                         x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
-                    # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0](sX[0, :], sY[ 0,:]))
-                    # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1](sX[-1,:], sY[-1,:]))
-                    # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2](sX[:, 0], sY[:, 0]))
-                    # x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[3](sX[:,-1], sY[:,-1]))
                 else:
                     #3D mapping
                     if map[3].omega[0] is None :
@@ -315,10 +299,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                     for i in range(len(Boundaries)):
                         x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]))
-                    # x_d[ 0 , : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[0](sX[0, :], sY[ 0,:], sZ[ 0,:]))
-                    # x_d[ -1, : ] = least_square_Bspline(V.degree[1], V.knots[1], f_dir[1](sX[-1,:], sY[-1,:], sZ[-1,:]))
-                    # x_d[ : , 0 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[2](sX[:, 0], sY[:, 0], sZ[:, 0]))
-                    # x_d[ : ,-1 ] = least_square_Bspline(V.degree[0], V.knots[0], f_dir[3](sX[:,-1], sY[:,-1], sZ[:,-1]))
         if V.dim == 3 :
             raise NotImplementedError("3D Dirichlet boundary conditions are not yet implemented. nd: Use L2 projection using fast diagonalization.")
     else :
@@ -330,10 +310,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                     x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                             V.omega[Space_map[Boundaries[i]]],
                                                                             f_dir[Boundaries[i]-1])
-                # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0])
-                # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1])
-                # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2])
-                # x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[3])
 
             elif admap is None :
                 #-------------------------------------------------
@@ -350,10 +326,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                         x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 V.omega[Space_map[Boundaries[i]]],
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
-                    # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0](sX[0, :], sY[ 0,:]))
-                    # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1](sX[-1,:], sY[-1,:]))
-                    # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2](sX[:, 0], sY[:, 0]))
-                    # x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[3](sX[:,-1], sY[:,-1]))
                 else:
                     #3D mapping
                     if map[3].omega[0] is None :
@@ -368,10 +340,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                         x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 V.omega[Space_map[Boundaries[i]]],
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]))
-                    # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0](sX[0, :], sY[ 0,:], sZ[ 0,:]))
-                    # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1](sX[-1,:], sY[-1,:], sZ[-1,:]))
-                    # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2](sX[:, 0], sY[:, 0], sZ[:, 0]))
-                    # x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[3](sX[:,-1], sY[:,-1], sZ[:,-1]))
 
             else :
                 #-----------------------------------------------
@@ -394,10 +362,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                         x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 V.omega[Space_map[Boundaries[i]]],
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
-                    # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0](sX[0, :], sY[ 0,:]))
-                    # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1](sX[-1,:], sY[-1,:]))
-                    # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2](sX[:, 0], sY[:, 0]))
-                    # x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[3](sX[:,-1], sY[:,-1]))
                 else:
                     #3D mapping
                     if map[3].omega[0] is None :
@@ -413,10 +377,6 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                                                                                 V.omega[Space_map[Boundaries[i]]],
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]))
 
-                    # x_d[ 0 , : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[0](sX[0, :], sY[ 0,:], sZ[ 0,:]))
-                    # x_d[ -1, : ] = least_square_NURBspline(V.degree[1], V.knots[1], V.omega[1], f_dir[1](sX[-1,:], sY[-1,:], sZ[-1,:]))
-                    # x_d[ : , 0 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[2](sX[:, 0], sY[:, 0], sZ[:, 0]))
-                    # x_d[ : ,-1 ] = least_square_NURBspline(V.degree[0], V.knots[0], V.omega[0], f_dir[3](sX[:,-1], sY[:,-1], sZ[:,-1]))
         if V.dim == 3 :
             raise NotImplementedError("3D Dirichlet boundary conditions are not yet implemented. nd: Use L2 projection using fast diagonalization.")
     u_d.from_array(V, x_d)
@@ -520,16 +480,16 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
 #... class patches from xml files : one patch
 # TODO doesn"t suuport multipatches 
 #========================================================================
-class getGeometryMap:
+class pyref_patch:
     """
-    getGeometryMap : extracts the coefficients table, knots table, and degree from an XML file based on a given id.
+    pyref_patch : extracts the coefficients table, knots table, and degree from an XML file based on a given id.
     Parameters
     ----------
     filename : str
         The path to the XML file containing the geometry data.
     element_id : str
         The id of the geometry element to extract.
-    nurbs_check : bool, optional
+    nurbs : bool, optional
         If True, weights will be extracted; otherwise, weights default to ones. Default is False.
     Returns
     -------
@@ -543,19 +503,19 @@ class getGeometryMap:
     - _grids : list of lists
         The grid points for each dimension. 
     """
-    def __init__(self, filename, element_id, nurbs_check = False, Dirichlet_all = True):
+    def __init__(self, filename, element_id, nurbs = False, Dirichlet_all = True):
       #print("""Initialize with the XML filename.""", filename)
       root            = ET.parse(filename).getroot()
       """Retrieve coefs table, knots table, and degree for a given id."""
       # Find the Geometry element by id
-      GeometryMap = root.find(f".//*[@id='{element_id}']")        
-      if GeometryMap is None:
+      pyref_patch = root.find(f".//*[@id='{element_id}']")        
+      if pyref_patch is None:
          raise RuntimeError(f"No element found with id {element_id}")
 
       # Extract knots data and degree
       knots_data  = []
       degree_data = []
-      for basis in GeometryMap.findall(".//Basis[@type='BSplineBasis']"):
+      for basis in pyref_patch.findall(".//Basis[@type='BSplineBasis']"):
          knot_vector = basis.find("KnotVector")
          if knot_vector is not None:
                degree_data.append(int(knot_vector.get("degree", -1)))  # Default to -1 if not found
@@ -566,7 +526,7 @@ class getGeometryMap:
       #....number of basis functions
       _nbasis           = [len(knots_data[n]) - degree_data[n]-1 for n in range(dim)]
       # Extract coefs data
-      coefs_element = GeometryMap.find(".//coefs")
+      coefs_element = pyref_patch.find(".//coefs")
       geo_dim       = int(coefs_element.attrib.get("geoDim")) if coefs_element is not None else None
       coefs_data    = None
       if coefs_element is not None:
@@ -575,9 +535,9 @@ class getGeometryMap:
                list(map(float, line.split())) for line in coefs_text.split("\n")
          ])
       # Extract weights data or default to ones
-      weights_element = GeometryMap.find(".//weights")
+      weights_element = pyref_patch.find(".//weights")
       if weights_element is not None:
-          nurbs_check  = True
+          nurbs  = True
           weights_text = weights_element.text.strip()
           weights_data = np.array([
               float(w) for line in weights_text.split("\n") for w in line.strip().split() if w
@@ -601,14 +561,14 @@ class getGeometryMap:
           assert TypeError('Only [[False/Dirichlet on x=0, True/x=1],[False/y=0, True/y=1]] as example or True/False')
       # ...
       self.root        = root
-      self.GeometryMap = GeometryMap
+      self.pyref_patch = pyref_patch
       self.knots_data  = knots_data
       self._degree     = degree_data
       self._coefs      = np.asarray([coefs_data[:,n].reshape(_nbasis) for n in range(geo_dim)])
       self._grids      = [knots_data[n][degree_data[n]:-degree_data[n]] for n in range(dim)]
       self._weights    = weights_data
       self._dim        = dim
-      self.nurbs_check = nurbs_check
+      self._nurbs      = nurbs
       self._geo_dim    = geo_dim
       self._nbasis     = _nbasis
       self._nelements  = [_nbasis[n]-degree_data[n] for n in range(dim)]
@@ -639,6 +599,12 @@ class getGeometryMap:
     def grids(self):
         return self._grids
     @property
+    def nurbs(self):
+        return self._nurbs
+    @property
+    def nb_patches(self):
+        return 1
+    @property
     def weights(self):
         Omega = self._weights.reshape(self._nbasis)
         if self.dim == 2:
@@ -650,7 +616,7 @@ class getGeometryMap:
         return [self._coefs[i].reshape(self._nbasis) for i in range( self.geo_dim)]
     #.. get tensor space
     @property
-    def getTensorSpace(self):
+    def space(self):
         if self.dim == 2:
             # ... space of a B-spline patches
             Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
@@ -665,12 +631,12 @@ class getGeometryMap:
     def clone(self, Dirichlet_all = None):
         if Dirichlet_all is None:
             Dirichlet_all = self.Dirichlet_all
-        return getGeometryMap(self.filename, self.element_id, nurbs_check = self.nurbs_check, Dirichlet_all = Dirichlet_all)
+        return pyref_patch(self.filename, self.element_id, nurbs = self.nurbs, Dirichlet_all = Dirichlet_all)
     #.. get mapping in stencil vector format
     @property
-    def getStencilMapping(self):
+    def stencil_mapping(self):
         # ... space of a B-spline patches
-        Vh  = self.getTensorSpace
+        Vh  = self.space
         #... create stencil vector for mapping
         u1  = StencilVector(Vh.vector_space)
         u2  = StencilVector(Vh.vector_space)
@@ -717,7 +683,7 @@ class getGeometryMap:
             #... mapping as arrays
             xmp, ymp         = self.coefs
             # Assemble Dirichlet boundary conditions
-            u_d = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), Boundaries  = boundaries)[1]
+            u_d = build_dirichlet(V, g, map = (xmp, ymp, self.space), Boundaries  = boundaries)[1]
             return u_d
              
         else:
@@ -772,7 +738,7 @@ class getGeometryMap:
     
     def RefineGeometryMap(self, numElevate=1):
         """
-        getGeometryMap :  Refine the geometry by elevating the DoFs numElevate times.
+        pyref_patch :  Refine the geometry by elevating the DoFs numElevate times.
         """
         assert(numElevate >= 1)
         #... refine the grid numElevate times
@@ -783,21 +749,21 @@ class getGeometryMap:
             Vh        = TensorSpace(Vh1, Vh2)# after refinement
             #... initial
             nbasis_tot = self._nbasis[0]*self._nbasis[1]
-            VH         = self.getTensorSpace
+            VH         = self.space
         else:
             Vh1        = SplineSpace(degree=self.degree[0], grid= self.Refinegrid(0, numElevate))
             Vh2        = SplineSpace(degree=self.degree[1], grid= self.Refinegrid(1, numElevate))
             Vh3        = SplineSpace(degree=self.degree[2], grid= self.Refinegrid(2, numElevate))            
             Vh         = TensorSpace(Vh1, Vh2, Vh3)# after refinement
             #... initial
-            VH         = self.getTensorSpace
+            VH         = self.space
             nbasis_tot = self._nbasis[0]*self._nbasis[1]*self._nbasis[2]
 
         # Extract coefs data
         coefs_data = []
         # Refine the coefs
         M_mp      = prolongation_matrix(VH, Vh)
-        if self.nurbs_check:
+        if self.nurbs:
             coefs_data.append( (M_mp.dot(self._weights)).reshape(Vh.nbasis))
             for i in range(self.geo_dim):
                 coefs_data.append( (M_mp.dot(self._weights*self._coefs[i].reshape(nbasis_tot))).reshape(Vh.nbasis) / coefs_data[0])
@@ -818,12 +784,195 @@ class getGeometryMap:
             return (M_mp.dot(solution.toarray())).reshape(Vh.nbasis)
         else:
             raise AssertionError("Solution must be a StencilVector")
+    # ...
+    def eval_mesh(self, mesh, i_dir):
+        '''
+        Docstring pour eval : evaluate at a given point
         
+        :param self: 
+        #:param mesh: given mesh
+        #:param i_dir: i direction (0/x,1/y,2/z)
+        '''
+        from   .  import nurbs_utilities_core as core
+        uh  = self.coefs[i_dir]
+        V   = self.space
+        if V.dim == 2:
+            w1, w2 = V.omega
+            Tu, Tv = V.knots
+            pu, pv = V.degree
+            # ...
+            nx, ny   = mesh[0].shape
+            Q        = np.zeros((nx, ny, 5))
+            Q[:,:,3] = mesh[0][:,:]
+            Q[:,:,4] = mesh[1][:,:] 
+            core.sol_field_2D_meshes(nx, ny, uh, Tu, Tv, pu, pv, w1, w2, Q)       
+            return Q[:,:,0], Q[:,:,1], Q[:,:,2]
+        elif V.dim == 3:
+            nx, ny, nz = mesh[0].shape
+            # ...
+            w1, w2, w3 = V.omega
+            Tu, Tv, Tz = V.knots
+            pu, pv, pz = V.degree
+            # ...
+            Q          = np.zeros((nx, ny, nz, 7))
+            Q[:,:,:,4] = mesh[0][:,:,:]
+            Q[:,:,:,5] = mesh[1][:,:,:]
+            Q[:,:,:,6] = mesh[2][:,:,:]
+            core.sol_field_3D_mesh(nx, ny, nz, uh, Tu, Tv, Tz, pu, pv, pz, w1, w2, w3, Q)
+            return Q[:,:,:,0], Q[:,:,:,1], Q[:,:,:,2], Q[:,:,:,3]
+        
+    def eval(self, patch_nb, mesh = None, nbpts = None):
+        '''
+        Docstring pour eval computes mapping in a given mesh
+        :param self: 
+        :param mesh: given mesh
+        :param nbpts: given nymber of meshgrid
+        '''
+        patch_nb = 1 # ...
+        from . import fast_diag_core as fs
+        V  = self.space
+        if mesh is None:
+            if V.dim == 2:
+                xs, ys = V.grid
+                if nbpts is None:
+                    nbpts = [len(V.grid[i]) for i in range(V.dim)]
+                else:
+                    if isinstance(nbpts, int):
+                        nbpts = (nbpts,nbpts)
+                    nx, ny = nbpts
+                    Tu, Tv = V.knots
+                    pu, pv = V.degree
+                    xs     = np.linspace(Tu[pu], Tu[-pu-1], nx)
+                    ys     = np.linspace(Tv[pv], Tv[-pv-1], ny)
+                # ...
+                meshx = np.zeros(nbpts)
+                meshy = np.zeros(nbpts)
+                fs.build_identity_mapping_2d(xs, ys, meshx, meshy)                         
+                return [self.eval_mesh((meshx, meshy), i)[0] for i in range(self.geo_dim)]
+            elif V.dim == 3:
+                # ...
+                xs, ys, zs = V.grid 
+                if nbpts is None:
+                    nbpts = [len(V.grid[i]) for i in range(V.dim)]
+                else:
+                    if isinstance(nbpts, int):
+                        nbpts = (nbpts,nbpts,nbpts)
+                    nx, ny, nz = nbpts
+                    Tu, Tv, Tz = V.knots
+                    pu, pv, pz = V.degree
+                    xs         = np.linspace(Tu[pu], Tu[-pu-1], nx)
+                    ys         = np.linspace(Tv[pv], Tv[-pv-1], ny)
+                    zs         = np.linspace(Tz[pz], Tz[-pz-1], nz)
+                # ...
+                meshx  = np.zeros(nbpts)
+                meshy  = np.zeros(nbpts)
+                meshz  = np.zeros(nbpts)
+                fs.build_identity_mapping_3d(xs,ys,zs, meshx, meshy, meshz)
+                return [self.eval_mesh((meshx, meshy, meshz),0)[0], 
+                        self.eval_mesh((meshx, meshy, meshz),1)[0], 
+                        self.eval_mesh((meshx, meshy, meshz),2)[0]]
+            else:
+                raise TypeError('Expect two or three dimensions')
+        else:
+            if V.dim == 2:
+                return [self.eval_mesh(mesh,i)[0] for i in range(self.geo_dim)]
+            elif V.dim == 3:
+                return [self.eval_mesh(mesh,0)[0], 
+                        self.eval_mesh(mesh,1)[0],
+                        self.eval_mesh(mesh,2)[0]]
+            else:
+                raise TypeError('Expect two or three dimensions')            
+    def gradient(self, patch_nb, mesh = None, nbpts = None):
+        '''
+        Docstring pour gradient computes gradient of the solution in a given mesh
+        :param self: 
+        :param mesh: given mesh
+        :param nbpts: given nymber of meshgrid
+        '''
+        patch_nb = 1 # only one patch
+        from . import fast_diag_core as fs
+        V  = self.space
+        if mesh is None:
+            if V.dim == 2:
+                xs, ys = V.grid
+                if nbpts is None:
+                    nbpts = [len(V.grid[i]) for i in range(V.dim)]
+                else:
+                    if isinstance(nbpts, int):
+                        nbpts = (nbpts,nbpts)
+                    nx, ny = nbpts
+                    Tu, Tv = V.knots
+                    pu, pv = V.degree
+                    xs = np.linspace(Tu[pu], Tu[-pu-1], nx)
+                    ys = np.linspace(Tv[pv], Tv[-pv-1], ny)
+                # ...
+                meshx = np.zeros(nbpts)
+                meshy = np.zeros(nbpts)
+                fs.build_identity_mapping_2d(xs, ys, meshx, meshy) 
+                if self.geo_dim == 2:                        
+                    return [[self.eval_mesh((meshx, meshy), 0)[1], 
+                            self.eval_mesh((meshx, meshy), 0)[2]], 
+                            [self.eval_mesh((meshx, meshy), 1)[1], 
+                            self.eval_mesh((meshx, meshy), 1)[2]]]
+                else:
+                    return [[self.eval_mesh((meshx, meshy), 0)[1], 
+                            self.eval_mesh((meshx, meshy), 0)[2]], 
+                            [self.eval_mesh((meshx, meshy), 1)[1], 
+                            self.eval_mesh((meshx, meshy), 1)[2]],
+                            [self.eval_mesh((meshx, meshy), 2)[1], 
+                            self.eval_mesh((meshx, meshy), 2)[2]]]
+            elif self.space.ndim == 3:
+                # ...
+                xs, ys, zs = V.grid 
+                if nbpts is None:
+                    nbpts = [len(V.grid[i]) for i in range(V.dim)] 
+                else:
+                    if isinstance(nbpts, int):
+                        nbpts = (nbpts,nbpts,nbpts)
+                    nx, ny, nz = nbpts
+                    Tu, Tv, Tz = V.knots
+                    pu, pv, pz = V.degree
+                    xs = np.linspace(Tu[pu], Tu[-pu-1], nx)
+                    ys = np.linspace(Tv[pv], Tv[-pv-1], ny)
+                    zs = np.linspace(Tz[pz], Tz[-pz-1], nz)
+                # ...
+                meshx  = np.zeros(nbpts)
+                meshy  = np.zeros(nbpts)
+                meshz  = np.zeros(nbpts)
+                fs.build_identity_mapping_3d(xs,ys,zs, meshx, meshy, meshz)
+                return [[self.eval_mesh((meshx, meshy, meshz),0)[1], 
+                        self.eval_mesh((meshx, meshy, meshz),0)[2], 
+                        self.eval_mesh((meshx, meshy, meshz),0)[3]],
+                        [self.eval_mesh((meshx, meshy, meshz),1)[1], 
+                        self.eval_mesh((meshx, meshy, meshz),1)[2], 
+                        self.eval_mesh((meshx, meshy, meshz),1)[3]],
+                        [self.eval_mesh((meshx, meshy, meshz),2)[1], 
+                        self.eval_mesh((meshx, meshy, meshz),2)[2], 
+                        self.eval_mesh((meshx, meshy, meshz),2)[3]]]
+            else:
+                raise TypeError('Expect two or three dimensions')
+        else:
+            if V.dim == 2:
+                return [[self.eval_mesh(mesh,0)[1],self.eval_mesh(mesh,0)[2]],
+                       [self.eval_mesh(mesh,1)[1],self.eval_mesh(mesh,1)[2]]]
+            elif self.space.ndim == 3:
+                return [[self.eval_mesh(mesh,0)[1], 
+                        self.eval_mesh(mesh,0)[2],
+                        self.eval_mesh(mesh,0)[3]],
+                        [self.eval_mesh(mesh,1)[1], 
+                        self.eval_mesh(mesh,1)[2],
+                        self.eval_mesh(mesh,1)[3]],
+                        [self.eval_mesh(mesh,2)[1], 
+                        self.eval_mesh(mesh,2)[2],
+                        self.eval_mesh(mesh,2)[3]]]
+            else:
+                raise TypeError('Expect two or three dimensions')
+
 #========================================================================
 #... construct connectivity between patches: 
 # TODO doesn't support different oriontation
 #========================================================================
-class pyrefMultpatch(object):
+class pyref_multipatch(object):
     """
     Detect connectivity between patches.
     Returns the list of interfaces and Dirichlet BCs to be applied on each patch.
@@ -839,11 +988,11 @@ class pyrefMultpatch(object):
         [False, True] : Dirichlet BC on the right edge
     The input are the control points of all patches.
     """
-    def __init__(self, geometryname, id_list, nurbs_check = True, Dirichlet_all = True):
+    def __init__(self, geometryname, id_list, nurbs = True, Dirichlet_all = True):
         #.. TODO FIND ID automatically from the XML file
         mp        = []
         for i in id_list:
-            mp.append( getGeometryMap(geometryname, i, nurbs_check = nurbs_check) )
+            mp.append( pyref_patch(geometryname, i, nurbs = nurbs) )
         self._dim     = mp[0].dim
         self._geo_dim = mp[0].geo_dim
         #... edge id mapping
@@ -889,7 +1038,7 @@ class pyrefMultpatch(object):
         self.id_list          = id_list
         self.patches          = mp
         self.idmapping        = idmapping
-        self.nurbs_check      = nurbs_check
+        self.nurbs            = nurbs
         # ...
         self._degree          = mp[0].degree
         self._knots           = mp[0].knots
@@ -899,7 +1048,7 @@ class pyrefMultpatch(object):
         # self.patch_connection = patch_connection
     @property
     def NURBS(self):
-        return self.nurbs_check
+        return self.nurbs
     @property
     def dim(self):
         return self._dim
@@ -940,7 +1089,7 @@ class pyrefMultpatch(object):
         return self.geometryname
     #.. get tensor space
     @property
-    def getTensorSpace(self):
+    def space(self):
         # ... space of a B-spline patches
         Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
         Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
@@ -948,8 +1097,34 @@ class pyrefMultpatch(object):
     @property
     def setFalseDirichlet(self):
         self.dirichlet = np.zeros((self.num_patches, self._dim, 2), dtype = bool)+False
+    # ...
+    def eval(self, patch_nb, mesh=None, nbpts=None):
+        '''
+        Docstring pour eval
+        
+        :param self: Description
+        :param patch_nb: patch number
+        :param mesh: collection of meshgrid poins 
+        :param nbpts: number of meshgrid points in each direction
+        '''
+        patch = self.patches[patch_nb-1]
+        assert isinstance(patch, pyref_patch)
+        return patch.eval(patch_nb, mesh=mesh, nbpts=nbpts)
+    # ...
+    def gradient(self, patch_nb, mesh=None, nbpts=None):
+        '''
+        Docstring pour gradient 
+        
+        :param self: Description
+        :param patch_nb: patch number
+        :param mesh: collection of meshgrid poins 
+        :param nbpts: number of meshgrid points in each direction
+        '''
+        patch = self.patches[patch_nb-1]
+        assert isinstance(patch, pyref_patch)
+        return patch.gradient(patch_nb, mesh=mesh, nbpts=nbpts)    
     def clone(self, Dirichlet_all = True):
-        return pyrefMultpatch(self.geometryname, self.id_list, nurbs_check = self.nurbs_check, Dirichlet_all = Dirichlet_all)
+        return pyref_multipatch(self.geometryname, self.id_list, nurbs = self.nurbs, Dirichlet_all = Dirichlet_all)
     #.. get coefs
     def getcoefs(self, num_patch=1):
         return self.patches[num_patch-1].coefs
@@ -978,9 +1153,9 @@ class pyrefMultpatch(object):
             raise TypeError('Expect only TensorSpace')
 
     #.. get mapping in stencil vector format
-    def getStencilMapping(self, num_patch=1):
+    def stencil_mapping(self, num_patch=1):
         # ... space of a B-spline patches
-        Vh  = self.getTensorSpace
+        Vh  = self.space
         #... create stencil vector for mapping
         u1  = StencilVector(Vh.vector_space)
         u2  = StencilVector(Vh.vector_space)
@@ -1050,7 +1225,7 @@ class pyrefMultpatch(object):
                 #... mapping as arrays
                 xmp, ymp         = self.getcoefs(patch_nb)
                 # Assemble Dirichlet boundary conditions
-                u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.getTensorSpace), Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
+                u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.space), Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
                 u_d.append(u_d1)
             return u_d
         else:
@@ -1065,10 +1240,10 @@ class pyrefMultpatch(object):
         for i in range(self.num_patches):
             print(f" Patch {i+1} : {self.dirichlet[i]}")
     def __repr__(self):
-        return f"pyrefMultpatch(num_patches={self.num_patches}, interfaces={self.interfaces}, dirichlet={self.dirichlet})"
+        return f"pyref_multipatch(num_patches={self.num_patches}, interfaces={self.interfaces}, dirichlet={self.dirichlet})"
     
     def __str__(self):
-        return f"pyrefMultpatch with {self.num_patches} patches"
+        return f"pyref_multipatch with {self.num_patches} patches"
     def __len__(self):
         return self.num_patches
     def __getitem__(self, index):

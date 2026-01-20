@@ -12,7 +12,7 @@ from   pyrefiga                         import TensorSpace
 from   pyrefiga                         import StencilMatrix
 from   pyrefiga                         import StencilVector
 from   pyrefiga                         import StencilNitsche
-from   pyrefiga                         import pyrefMultpatch
+from   pyrefiga                         import pyref_multipatch
 from   pyrefiga                         import load_xml
 from   pyrefiga                         import compute_eoc
 # Import Poisson assembly tools for uniform mesh
@@ -60,7 +60,7 @@ args = parser.parse_args()
 #------------------------------------------------------------------------------
 def projection_solve(V, pyrefMP):
 
-    assert isinstance( pyrefMP, pyrefMultpatch)
+    assert isinstance( pyrefMP, pyref_multipatch)
     assert isinstance( V,  TensorSpace)
 
     #... space FE&Mapping
@@ -70,7 +70,7 @@ def projection_solve(V, pyrefMP):
     # Assemble stiffness matrix
     for patch_nb in range(1, pyrefMP.nb_patches+1):
         #... mapping in Stencil format
-        u11_mph, u12_mph = pyrefMP.getStencilMapping(patch_nb)
+        u11_mph, u12_mph = pyrefMP.stencil_mapping(patch_nb)
         # Assemble Dirichlet boundary conditions
         #...
         stiffness  = StencilMatrix(V.vector_space, V.vector_space)
@@ -78,37 +78,36 @@ def projection_solve(V, pyrefMP):
         stiffness  = apply_dirichlet(V, stiffness, dirichlet = False)
         # print("shape in ", patch_nb, "is", stiffness.shape)
         #...
-        Ni.appendBlock(stiffness, patch_nb)
+        Ni.append_block(stiffness, patch_nb)
         # Assemble right-hand side vector
         rhs        = StencilVector(V.vector_space)
         rhs        = assemble_rhs_un( VT, fields=[u11_mph, u12_mph], out= rhs)
         rhs        = apply_dirichlet(V, rhs, dirichlet = False)
         # print("shape in ", patch_nb, "is", rhs.shape)
         # ...
-        Ni.assembleNitsche_Dirichlet(rhs, patch_nb, False)
+        Ni.assemble_nitsche_dirichlet(rhs, patch_nb, False)
         # ...
     #=============================================
     # # # Assemble Nitsche's off diagonal matrices
     #=============================================
-    M       = Ni.NitscheMerge()
-    b       = Ni.NitscheMergeRHS()
+    M       = Ni.nitsche_merge()
+    b       = Ni.nitsche_merge_rhs()
     # print("after merge", b.shape, b)
     x, inf  = sla.cg(M, b, rtol=1e-30)
-    x       = Ni.NitscheextractSol(x)
     l2_norm = 0.
     H1_norm = 0.
     x_sol   = []
     u_sol   = []
     # ... Extract solution
     for patch_nb in range(1,pyrefMP.nb_patches+1):
-        u1              = StencilVector(V.vector_space)
+        # ... extract solution
+        u1              = Ni.extract_sol(x, patch_nb)
         # ... to array
-        x1              = x[Ni._block_index[patch_nb-1]:Ni._block_index[patch_nb]].reshape(V.nbasis)
-        u1.from_array(V, x1)
+        x1              = u1.toarray().reshape(V.nbasis)
         x_sol.append(x1)
         u_sol.append(u1)
         #... mapping in Stencil format
-        u11_mph, u12_mph = pyrefMP.getStencilMapping(patch_nb)
+        u11_mph, u12_mph = pyrefMP.stencil_mapping(patch_nb)
         # Compute L2 and H1 errors
         Norm      = StencilVector(V.vector_space)
         Norm      = assemble_norm_un(VT, fields=[u11_mph, u12_mph, u1], out= Norm).toarray()
@@ -162,7 +161,7 @@ print("Dirichlet boundary conditions", g)
 #------------------------------------------------------------------------------
 # Extract geometry mapping
 #------------------------------------------------------------------------------
-pyrefMP           = pyrefMultpatch(geometry,idmp, Dirichlet_all=False)
+pyrefMP           = pyref_multipatch(geometry,idmp, Dirichlet_all=False)
 degree[0]        += pyrefMP.degree[0]
 degree[1]        += pyrefMP.degree[1]
 nb_ne             = refGrid #16  # number of elements after refinement
@@ -230,7 +229,7 @@ if args.plot :
     functions = [
         {"name": "Exact solution", "expression": g[0]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP.getAllcoefs('x'), pyrefMP.getAllcoefs('y'), Vg = pyrefMP.getTensorSpace,  solution = solutions, functions = functions)
+    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP,  solution = solutions, functions = functions)
     import subprocess
 
     # Load the multipatch VTM

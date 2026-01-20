@@ -5,6 +5,7 @@ These tools are primarily used for r-refinement algorithms involving adaptive B-
 Author: M. BAHARI
 """
 from   .linalg           import StencilVector
+from   .spaces           import TensorSpace
 from   numpy             import zeros
 from   numpy             import float64
 from   .                 import ad_mesh_core as core
@@ -24,13 +25,12 @@ class quadratures_in_admesh(object):
 		output is spans and basis of the same elements and weights as for V (we don't refine initial mapping)
 		'''
 		# ...
+		assert isinstance(V, TensorSpace)
+		assert isinstance(W, TensorSpace)
+
 		sp_dim      = W.dim
 
-		nurbs_space = True # ... if the parameterization is given by nurbs
-		if W.omega is None or all(x is None for x in W.omega):
-			nurbs_space = False			
-
-		if nurbs_space:
+		if W.nurbs:# ... if the parameterization is given by nurbs
 			if sp_dim == 1 :
 				# ... 1D reparametrization
 				if len(V.spans.shape) == 1:
@@ -104,7 +104,7 @@ class quadratures_in_admesh(object):
 					V.basis,
 					V.weights,
 					W.knots]
-			if nurbs_space:
+			if W.nurbs:
 				args += [W.omega]
 			#...
 			p1       = W.degree
@@ -126,7 +126,7 @@ class quadratures_in_admesh(object):
 			args += list(V.basis)
 			args += list(V.weights)
 			args += list(W.knots)
-			if nurbs_space:
+			if W.nurbs:
 				args += list(W.omega)	
 			#...
 			p1, p2, p3   = W.degree
@@ -152,7 +152,7 @@ class quadratures_in_admesh(object):
 			args += list(V.basis)
 			args += list(V.weights[:2])
 			args += list(W.knots)
-			if nurbs_space :
+			if W.nurbs:
 				args += list(W.omega)
 			#...
 			p1, p2       = W.degree
@@ -168,7 +168,7 @@ class quadratures_in_admesh(object):
 			self.ns_vec  = (nx, ny, k1, k2)	
 		self.nders       = nders
 		self.sp_dim	     = sp_dim
-		self.nurbs_space = nurbs_space
+		self.nurbs       = W.nurbs
 
 	def ad_Gradmap_quadratures(self, u_mae):
 		'''

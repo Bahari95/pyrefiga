@@ -19,7 +19,7 @@ Container describing a one-dimensional B-spline or NURBS function space together
 precomputed data required for numerical integration and assembly.
 Parameters
 - degree (int): Polynomial degree of the B-spline basis.
-- nelements (int, optional): Number of (parametric) elements on the grid. Either nelements or grid must be provided.
+- nelements (int, optional): Number of (parametric) elements on the integral grid. Either nelements or grid must be provided. nelements = len(mesh)
 - grid (array-like, optional): Increasing sequence of grid (knot-span) breakpoints. If provided, nelements is inferred.
 - nderiv (int, optional): Highest derivative order to evaluate for basis functions (0 => values only). Default: 1.
 - periodic (bool, optional): If True, constructs a periodic spline space by appropriate knot handling. Default: False.
@@ -31,7 +31,7 @@ Attributes (selected)
 - knots (ndarray): Full knot vector used to define the B-spline basis.
 - spans (ndarray): Array of span indices for each element/or quadrature point (shape depends on shared mesh flag).
 - grid (ndarray): The breakpoints (coarse grid) used to define element boundaries (not necessarily the integration mesh).
-- mesh (ndarray): The integration mesh used to create quadrature points (may differ from grid when adaptive integration is needed).
+- mesh (ndarray): The integration mesh used to create quadrature points (may differ from grid when adaptive integration is needed in this case nelements = len(mesh) !=len(grid)).
 - degree (int): Polynomial degree.
 - nelements (int): Number of integration elements associated with mesh.
 - nbasis (int): Number of basis functions (size of the discrete function space).
@@ -77,7 +77,7 @@ from .quadratures import gauss_legendre
 from .linalg      import StencilVectorSpace
 from .            import nurbs_core as  core
 
-from numpy import linspace, zeros, unique
+from numpy import linspace, zeros, unique, ones
 
 __all__ = ['SplineSpace', 'TensorSpace']
 
@@ -96,7 +96,7 @@ class SplineSpace(object):
         ------------------------------------------
         Parameters:
         - degree (int): Degree of the B-spline basis functions.
-        - nelements (int, optional): Number of elements in the grid. If not provided, 'grid' must be specified.
+        - nelements (int, optional): Number of elements in the grid. If not provided, 'grid' must be specified. Important: nelements = len(mesh)>= len(grid)
         - grid (array-like, optional): Grid points defining the B-spline space. If not provided, 'nelements' must be specified.
         - nderiv (int, optional): Number of derivatives to compute for the B-spline basis functions. Default is 1.
         - periodic (bool, optional): If True, creates a periodic B-spline space. Default is False.
@@ -148,6 +148,8 @@ class SplineSpace(object):
                 points, weights = quadrature_grid( mesh, u, w )
                 basis, spans = basis_ders_on_quad_grid( knots, degree, points, nderiv,
                                             normalization=normalization, mesh = True)
+            omega = ones(nbasis)
+            nurbs = False
         else:
             if mesh is None :
                 mesh            = unique(grid)
@@ -168,6 +170,7 @@ class SplineSpace(object):
                 basis = zeros((nelements, degree+1, nderiv+1, points.shape[1]))
                 spans = zeros((nelements,points.shape[1]), dtype=int )
                 core.nurbs_ders_on_shared_quad_grid(nelements, degree, spans, basis, weights, points, knots, omega, nderiv)
+            nurbs = True
         self._periodic  = periodic
         self._knots     = knots
         self._spans     = spans
@@ -181,6 +184,7 @@ class SplineSpace(object):
         self._basis     = basis
         self._omega     = omega
         self._nderiv    = nderiv
+        self._nurbs     = nurbs
 
         self._vector_space = StencilVectorSpace([nbasis], [degree], [periodic])
 
@@ -241,6 +245,9 @@ class SplineSpace(object):
     @property
     def dim(self):
         return 1
+    @property
+    def nurbs(self):
+        return self._nurbs
 # =================================================================================================
 class TensorSpace(object):
     def __init__( self, *args ):
@@ -248,6 +255,8 @@ class TensorSpace(object):
         assert all( isinstance( s, SplineSpace ) for s in args )
         self._spaces = tuple(args)
 
+        self._nurbs = all(not V.nurbs for V in self.spaces)
+        # ...
         nbasis   = [V.nbasis   for V in self.spaces]
         degree   = [V.degree   for V in self.spaces]
         periodic = [V.periodic for V in self.spaces]
@@ -312,7 +321,9 @@ class TensorSpace(object):
     @property
     def dim(self):
         return sum([V.dim for V in self.spaces])
-
+    @property
+    def nurbs(self):
+        return self._nurbs
 # =================================================================================================
 def test_1d():
     V = SplineSpace(degree=3, nelements=16)

@@ -15,8 +15,8 @@ from   pyrefiga                    import StencilVector
 from   pyrefiga                    import pyccel_sol_field_2d
 from   pyrefiga                    import sol_field_NURBS_2d
 from   pyrefiga                    import paraview_nurbsSolutionMultipatch
-from   pyrefiga                    import getGeometryMap
-from   pyrefiga                    import load_xml
+from   pyrefiga                    import pyref_patch
+from   pyrefiga                    import load_xml, compute_eoc
 
 # Import Poisson assembly tools for uniform mesh
 from gallery.gallery_section_06    import assemble_matrix_un_ex01
@@ -125,7 +125,7 @@ print("Dirichlet boundary conditions", g)
 #------------------------------------------------------------------
 geometry         = load_xml(geometry)  # Load geometry from pyrefiga
 # ... Assembling mapping
-mp               = getGeometryMap(geometry,id_mp)
+mp               = pyref_patch(geometry,id_mp)
 degree[0]        += mp.degree[0]
 degree[1]        += mp.degree[1]
 mp.nurbs_check   = True # Activate NURBS if geometry uses NURBS
@@ -133,9 +133,9 @@ nb_ne            = refGrid # number of elements after refinement
 quad_degree      = max(degree[0],degree[1]) # Quadrature degree
 
 # Create spline spaces for each direction for mapping
-Vmp             = mp.getTensorSpace
+Vmp             = mp.space
 # ...
-u11_mp, u12_mp  = mp.getStencilMapping
+u11_mp, u12_mp  = mp.stencil_mapping
 
 i_save = 0
 for ne in range(refGrid,refGrid+RefinNumber+1):
@@ -182,19 +182,23 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
 # Print error results in LaTeX table format
 #------------------------------------------------------------------------------
 print("Degree $p =",degree,"\n")
-print("cells & $L^2$-Err & $H^1$-Err & cpu-time")
+print("cells & $L^2$-Err & eoc & $H^1$-Err & eoc & cpu-time")
 print("----------------------------------------")
+erocl2 = compute_eoc(table[:, 4])
+eroch1 = compute_eoc(table[:, 5])
 for i in range(0,RefinNumber+1):
     # extract values first
     rows, cols = int(table[i, 2]), int(table[i, 3])
     val1 = np.format_float_scientific(table[i, 4], unique=False, precision=2)
-    val2 = np.format_float_scientific(table[i, 5], unique=False, precision=6)
-    val3 = np.format_float_scientific(table[i, 4], unique=False, precision=2)  # if intentional repeat
-
+    val2 = np.format_float_scientific(table[i, 5], unique=False, precision=2)
+    val3 = np.format_float_scientific(table[i, 6], unique=False, precision=2)  # if intentional repeat
+    val4 = np.format_float_scientific(erocl2[i], unique=False, precision=2)
+    val5 = np.format_float_scientific(eroch1[i], unique=False, precision=2)
     # use f-string
-    print(f"{rows}X{cols} & {val1} & {val2} & {val3}")
 
+    print(f"{rows}X{cols} & {val1} & {val4} & {val2} & {val5} & {val3}")
 print('\n')
+
 
 #------------------------------------------------------------------------------
 # Export solution for visualization
@@ -217,7 +221,7 @@ if args.plot :
             {"name": "numerical_solution", "data": [un]},
             {"name": "Error", "data": [np.absolute(un-Sol_un)]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, Vh, [mp.coefs[0]], [mp.coefs[1]], Vg = Vmp, functions = functions, precomputed= precomputed,filename = 'figs/poisson_un_2dexample')
+    paraview_nurbsSolutionMultipatch(nbpts, Vh, mp, functions = functions, precomputed= precomputed,filename = 'figs/poisson_un_2dexample')
     import subprocess
 
     # Load the multipatch VTM

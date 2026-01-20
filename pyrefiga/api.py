@@ -7,7 +7,7 @@ from .linalg import StencilMatrix
 from .linalg import StencilVector
 from .spaces import TensorSpace
 
-__all__ = ['assemble_matrix', 'assemble_vector', 'assemble_scalar', 'compile_kernel', 'apply_dirichlet', 'apply_periodic']
+__all__ = ['assemble_matrix', 'assemble_vector', 'assemble_scalar', 'compile_kernel', 'StencilNitsche', 'apply_dirichlet', 'apply_periodic']
 
 #==============================================================================
 def assemble_matrix(core, V, fields=None, knots = None, value = None, out=None):
@@ -202,7 +202,7 @@ def compile_kernel(core, arity, pyccel=True):
 from scipy.sparse import coo_matrix
 from .            import nitsche_core   as  core
 from .            import adnitsche_core as  adcore
-from .utilities   import pyrefMultpatch
+from .utilities   import pyref_multipatch
 
 #==============================================================================
 class StencilNitsche(object):
@@ -217,7 +217,7 @@ class StencilNitsche(object):
         The function space containing basis and dimension information.
     W : TensorSpace containes spaces for FE and mapping
         The function space containing basis and dimension information.
-    pyrefMP : pyrefMultpatch
+    pyrefMP : pyref_multipatch
         The multipatch geometry information.
     u_d: list of StensilVector 
         Containes Dirichlet projection in V
@@ -234,7 +234,7 @@ class StencilNitsche(object):
     def __init__(self, V, W, pyrefMP, u_d = None, ad_mapping = None):
         assert isinstance( V, TensorSpace)
         assert isinstance( W, TensorSpace)
-        assert isinstance( pyrefMP, pyrefMultpatch)
+        assert isinstance( pyrefMP, pyref_multipatch)
 
         nb_patches     = pyrefMP.nb_patches
         # -------
@@ -245,7 +245,7 @@ class StencilNitsche(object):
         self._ndim       = V.dim
         self._domain     = V
         self._Alldomain  = W
-        self._mpdomain   = pyrefMP.getTensorSpace
+        self._mpdomain   = pyrefMP.space
         self._nb_patches = nb_patches  # number of patches
         self._type       = V.vector_space.dtype
         self._nbs        = V.vector_space.npts
@@ -318,7 +318,15 @@ class StencilNitsche(object):
     #---------------------------------------------
     # representative_dof -> list of equivalent dofs
     #---------------------------------------------
-    def to_mergeDOFs(self):
+    def to_merge_dofs(self):
+        '''
+        Compute representative DOF -> set(equivalent DOFs) and mappings.
+
+        Builds:
+          - self.new_id: mapping old_dof -> new_dof
+          - self.old_id: mapping new_dof -> set(old_dofs)
+          - self._newdim: new global dimension (n,n)
+        '''
         equiv      = {}     # rep -> set(dofs)
         dof_to_rep = {}     # dof -> rep
         for interface in self.mp.getInterfaces():
@@ -428,12 +436,12 @@ class StencilNitsche(object):
     def tosparse( self ):
         return self.stencilNitsche
     #...
-    def NitscheMerge(self):
+    def nitsche_merge(self):
         ''''
-        NitscheMerge: merge DoFs of the same interface
+        nitsche_merge: merge DoFs of the same interface
         '''
         #... Compute relationship between old and new DoFs
-        self.to_mergeDOFs()
+        self.to_merge_dofs()
         rows, cols, data = [], [], []
 
         for i, j, v in zip(self.stencilNitsche.tocoo().row,
@@ -453,9 +461,9 @@ class StencilNitsche(object):
 
         return stencilMergNitsche
     #... merg rhs
-    def NitscheMergeRHS(self):
+    def nitsche_merge_rhs(self):
         '''
-        NitscheMergeRHS:  merge rhs DoFs of the same interface
+        nitsche_merge_rhs:  merge rhs DoFs of the same interface
         '''
         rhsMerged = np.zeros(self._newdim[0], dtype=self._type)
 
@@ -465,19 +473,26 @@ class StencilNitsche(object):
 
         return rhsMerged
     #... Extract solution
-    def NitscheextractSol(self, sol_Dof):
+    def extract_sol(self, sol_Dof, patch_nb = 0):
         '''
-        NitscheextractSol:  Extract Solution DoFs from master/slave DoFs
+        extract_sol:  Extract Solution DoFs from master/slave DoFs
+
+        :param patch_nb: is patch number start from 1
         '''
         SolExtracted = np.zeros(self._Nitshedim[0], dtype=self._type)
         for new_dof, olds in self.old_id.items():
             for d in olds:
                 SolExtracted[d] = sol_Dof[new_dof]   # Extract contributions
-        return SolExtracted
+        if patch_nb == 0:
+            return SolExtracted
+        else:
+            x_tmp = SolExtracted[self._block_index[patch_nb-1]:self._block_index[patch_nb]]
+            u_sol = apply_dirichlet(self._domain, x_tmp, dirichlet = self.mp.getDirPatch(patch_nb), update= self.u_d[patch_nb-1])
+            return u_sol
     #...
-    def addNitscheoffDiag(self):
+    def add_nitsche_off_diag(self):
         '''
-        Docstring pour addNitscheoffDiag
+        Docstring pour add_nitsche_off_diag
 
         # :param Vh: FE space & multipatch space
         '''
@@ -491,17 +506,17 @@ class StencilNitsche(object):
                 # ... get interface mappings
                 interface_like = interface[2][0]
                 # assemble mappings for patches
-                u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
-                u21_mph, u22_mph = self.mp.getStencilMapping(patch_nb_n)
+                u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
+                u21_mph, u22_mph = self.mp.stencil_mapping(patch_nb_n)
                 #... assemble off diagonal matrix
                 stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
                 self.assemble_nitsche2dUnderDiag(self._Alldomain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, 
                                                 value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interface_like, self.Kappa, self.normS], 
                                                 out = stiffnessoffdiag)
                 #... correct coo matrix
-                stiffnessoffdiag = self.collect_offdiagStencilMatrix(stiffnessoffdiag, interface)
-                self.appendBlock(stiffnessoffdiag, patch_nb_n, patch_nb)
-                self.appendBlock(stiffnessoffdiag.T, patch_nb, patch_nb_n)
+                stiffnessoffdiag = self.collect_offdiag_stencil_matrix(stiffnessoffdiag, interface)
+                self.append_block(stiffnessoffdiag, patch_nb_n, patch_nb)
+                self.append_block(stiffnessoffdiag.T, patch_nb, patch_nb_n)
         else:
             for interface in self.mp.getInterfaces():
                 # ... get interface and patch numbers
@@ -510,32 +525,32 @@ class StencilNitsche(object):
                 # ... get interface mappings
                 interface_like = interface[2][0]
                 # assemble mappings for patches
-                u_mae                                  = self.admp.getStencilMapping(patch_nb)
+                u_mae                                  = self.admp.stencil_mapping(patch_nb)
                 # asemble new basis and spans for geometry mapping
                 spansx, spansy, basisx, basisy         = self.admp.getBoundary_basis(self._domain, patch_nb)
                 # assemble mappings for patches _n 
-                u_maen                                 = self.admp.getStencilMapping(patch_nb_n)
+                u_maen                                 = self.admp.stencil_mapping(patch_nb_n)
                 # asemble new basis and spans for geometry mapping
                 spansx_n, spansy_n, basisx_n, basisy_n = self.admp.getBoundary_basis(self._domain, patch_nb_n)
                 # assemble mappings for patches
-                u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
-                u21_mph, u22_mph = self.mp.getStencilMapping(patch_nb_n)
+                u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
+                u21_mph, u22_mph = self.mp.stencil_mapping(patch_nb_n)
                 #... assemble off diagonal matrix
                 stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
                 self.assemble_nitsche2dUnderDiag(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph , u_maen[0], u_maen[1], u21_mph, u22_mph], knots=True, 
                                                 value=[spansx, spansy, basisx, basisy, spansx_n, spansy_n, basisx_n, basisy_n, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interface_like, self.Kappa, self.normS], 
                                                 out = stiffnessoffdiag)
                 #... correct coo matrix
-                stiffnessoffdiag = self.collect_offdiagStencilMatrix(stiffnessoffdiag, interface)
+                stiffnessoffdiag = self.collect_offdiag_stencil_matrix(stiffnessoffdiag, interface)
                 assert not np.isnan(stiffnessoffdiag.data).any(), "OFF diag Sparse matrix contains NaNs"
-                self.appendBlock(stiffnessoffdiag, patch_nb_n, patch_nb)
-                self.appendBlock(stiffnessoffdiag.T, patch_nb, patch_nb_n)
+                self.append_block(stiffnessoffdiag, patch_nb_n, patch_nb)
+                self.append_block(stiffnessoffdiag.T, patch_nb, patch_nb_n)
         #...
 
     # #...
-    def applyNitsche(self, stiffness, patch_nb):
+    def apply_nitsche(self, stiffness, patch_nb):
         '''
-        Docstring pour applyNitsche for diagonal matrices
+        Docstring pour apply_nitsche for diagonal matrices
         
         :param self: Description
         :param stiffness: stifness matrix 
@@ -545,18 +560,18 @@ class StencilNitsche(object):
             raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nb_patches}")
         if self.admp is None:
             # assemble mappings for patches
-            u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
+            u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
             #... get interfaces for a given patch
             interfaces_like = self.mp.getInterfacePatch(patch_nb)
             # ... assemble diagonal matrix
             self.assemble_nitsche2dDiag(self._Alldomain, fields=[u11_mph, u12_mph], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)
         else:
             # assemble mappings for patches
-            u_mae                          = self.admp.getStencilMapping(patch_nb)
+            u_mae                          = self.admp.stencil_mapping(patch_nb)
             # asemble new basis and spans for geometry mapping
             spansx, spansy, basisx, basisy = self.admp.getBoundary_basis(self._domain, patch_nb)
             # assemble mappings for patches
-            u11_mph, u12_mph     = self.mp.getStencilMapping(patch_nb)
+            u11_mph, u12_mph     = self.mp.stencil_mapping(patch_nb)
             #... get interfaces for a given patch
             interfaces_like      = self.mp.getInterfacePatch(patch_nb)
             # ... assemble diagonal matrix
@@ -567,9 +582,9 @@ class StencilNitsche(object):
     #--------------------------------------
     # ... assemble global Nitsche's matrix
     #--------------------------------------
-    def assembleNitsche(self):
+    def assemble_nitsche(self):
         '''
-        Docstring pour assembleNitsche
+        Docstring pour assemble_nitsche
         assemble global Nitsche matrix in uniform mesh
 
         :param self: Description
@@ -579,14 +594,14 @@ class StencilNitsche(object):
             # ... initial diag stiffness matrix
             stiffness  = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
             # ... assemble 
-            self.applyNitsche(stiffness, patch_nb)
+            self.apply_nitsche(stiffness, patch_nb)
             # ... apply dirichlet
             stiffness  = apply_dirichlet(self._domain, stiffness, dirichlet = self.mp.getDirPatch(patch_nb))
             assert not np.isnan(stiffness.data).any(), "Sparse matrix contains NaNs"
             # ... assemble it into globel matrix
-            self.appendBlock(stiffness, patch_nb)
+            self.append_block(stiffness, patch_nb)
             # ...
-        self.addNitscheoffDiag()
+        self.add_nitsche_off_diag()
         #... scaling
         # D = self.scalingNistcheVector()
         # A  = self.stencilNitsche.tocoo(copy=False)
@@ -596,9 +611,9 @@ class StencilNitsche(object):
     #-------------------------------------------------
     # assemble Nitsche's Dirichlet contribution
     #-------------------------------------------------
-    def assembleNitsche_Dirichlet(self, rhs, patch_nb, Nitsche_dir = True):
+    def assemble_nitsche_dirichlet(self, rhs, patch_nb, Nitsche_dir = True):
         '''
-        Docstring for assembleNitsche_Dirichlet: assemble rhs vector
+        Docstring for assemble_nitsche_dirichlet: assemble rhs vector
         
         :param self: Description
         :param u_d: stencile vector
@@ -609,7 +624,7 @@ class StencilNitsche(object):
         if self.admp is None:
             if Nitsche_dir:
                 # assemble mappings for patches
-                u11_mph, u12_mph = self.mp.getStencilMapping(patch_nb)
+                u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
                 #... get interfaces for a given patch
                 interfaces_like = self.mp.getInterfacePatch(patch_nb)
                 # ...
@@ -623,11 +638,11 @@ class StencilNitsche(object):
         else:
             if Nitsche_dir:
                 # assemble mappings for patches
-                u_mae                                      = self.admp.getStencilMapping(patch_nb)
+                u_mae                                      = self.admp.stencil_mapping(patch_nb)
                 # asemble new basis and spans for geometry mapping
                 spansx, spansy, basisx, basisy = self.admp.getBoundary_basis(self._domain, patch_nb)
                 # assemble mappings for patches
-                u11_mph, u12_mph                           =  self.mp.getStencilMapping(patch_nb)
+                u11_mph, u12_mph                           =  self.mp.stencil_mapping(patch_nb)
                 #... get interfaces for a given patch
                 interfaces_like                            = self.mp.getInterfacePatch(patch_nb)
                 # ...
@@ -642,9 +657,9 @@ class StencilNitsche(object):
         # ...
         return
     #...
-    def addNitscheoffDiag_SameSpace(self, u11_mph, u12_mph, u21_mph, u22_mph, interface):
+    def add_nitsche_off_diag_same_space(self, u11_mph, u12_mph, u21_mph, u22_mph, interface):
         '''
-        Docstring pour addNitscheoffDiag
+        Docstring pour add_nitsche_off_diag
 
         # :param Vh: FE space & multipatch space
         :param u11_mph: mapping component
@@ -666,13 +681,13 @@ class StencilNitsche(object):
                                             value=[self._domain.omega[0],self._domain.omega[1], interface_like, self.Kappa, self.normS], 
                                             out = stiffnessoffdiag)
         #... correct coo matrix
-        stiffnessoffdiag = self.collect_offdiagStencilMatrix(stiffnessoffdiag, interface)
-        self.appendBlock(stiffnessoffdiag, patch_nb_n, patch_nb)
-        self.appendBlock(stiffnessoffdiag.T, patch_nb, patch_nb_n)
+        stiffnessoffdiag = self.collect_offdiag_stencil_matrix(stiffnessoffdiag, interface)
+        self.append_block(stiffnessoffdiag, patch_nb_n, patch_nb)
+        self.append_block(stiffnessoffdiag.T, patch_nb, patch_nb_n)
     # #...
-    def applyNitsche_SameSpace(self, stiffness, u11_mph, u12_mph, patch_nb):
+    def apply_nitsche_same_space(self, stiffness, u11_mph, u12_mph, patch_nb):
         '''
-        Docstring pour applyNitsche for diagonal matrices
+        Docstring pour apply_nitsche for diagonal matrices
         
         :param self: Description
         :param stiffness: stifness matrix 
@@ -690,9 +705,9 @@ class StencilNitsche(object):
     #====================================
     #... collect off diag NItsch matrices
     #====================================
-    def collect_offdiagStencilMatrix(self, stiffnessoffdiag, interface):
+    def collect_offdiag_stencil_matrix(self, stiffnessoffdiag, interface):
         '''
-        Docstring for collect_offdiagStencilMatrix 
+        Docstring for collect_offdiag_stencil_matrix 
         [i,j, i-p:i+p, j-p,j+p] to [i,j, n-i-p:n-i+p, j-p,j+p]
         
         :param stiffnessoffdiag: matrix off diagonal
@@ -768,7 +783,7 @@ class StencilNitsche(object):
     #--------------------------------------
     # append block COO matrix
     #--------------------------------------
-    def appendBlock(self, B, patch_nb, patch_nb_n = None):
+    def append_block(self, B, patch_nb, patch_nb_n = None):
         '''
         assemble block matrices B in global Nitsche's matrix
         

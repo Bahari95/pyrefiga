@@ -12,7 +12,7 @@ from   pyrefiga                         import TensorSpace
 from   pyrefiga                         import StencilMatrix
 from   pyrefiga                         import StencilVector
 from   pyrefiga                         import StencilNitsche
-from   pyrefiga                         import pyrefMultpatch
+from   pyrefiga                         import pyref_multipatch
 from   pyrefiga                         import build_dirichlet
 from   pyrefiga                         import load_xml
 from   pyrefiga                         import compute_eoc
@@ -61,18 +61,18 @@ args = parser.parse_args()
 #------------------------------------------------------------------------------
 def poisson_solve(V, pyrefMP, u_d):
 
-    assert isinstance( pyrefMP, pyrefMultpatch)
+    assert isinstance( pyrefMP, pyref_multipatch)
     assert isinstance( V,  TensorSpace)
     #... space FE&Mapping
     VT            = pyrefMP.getspace(V) 
     #... Nitsche's class
     Ni            = StencilNitsche(V, VT, pyrefMP, u_d)
     # ... Assemble Nitsche's global matrix
-    Ni.assembleNitsche()
+    Ni.assemble_nitsche()
     # Assemble stiffness matrix
     for patch_nb in range(1, pyrefMP.nb_patches+1):
         #... mapping in Stencil format
-        u11_mph, u12_mph = pyrefMP.getStencilMapping(patch_nb)
+        u11_mph, u12_mph = pyrefMP.stencil_mapping(patch_nb)
         # Assemble Dirichlet boundary conditions
         u_d1 = u_d[patch_nb-1]
         #...
@@ -81,36 +81,36 @@ def poisson_solve(V, pyrefMP, u_d):
         stiffness  = apply_dirichlet(V, stiffness, dirichlet = pyrefMP.getDirPatch(patch_nb))
         # print("shape in ", patch_nb, "is", stiffness.shape)
         #...
-        Ni.appendBlock(stiffness, patch_nb)
+        Ni.append_block(stiffness, patch_nb)
         # Assemble right-hand side vector
         rhs        = StencilVector(V.vector_space)
         rhs        = assemble_rhs_un( VT, fields=[u11_mph, u12_mph, u_d1], out= rhs)
         rhs        = apply_dirichlet(V, rhs, dirichlet = pyrefMP.getDirPatch(patch_nb))
         # print("shape in ", patch_nb, "is", rhs.shape)
         # ...
-        Ni.assembleNitsche_Dirichlet(rhs, patch_nb)
+        Ni.assemble_nitsche_dirichlet(rhs, patch_nb)
         # ...
     #=============================================
     # # # Assemble Nitsche's off diagonal matrices
     #=============================================
-    M       = Ni.NitscheMerge()
-    b       = Ni.NitscheMergeRHS()
+    M       = Ni.nitsche_merge()
+    b       = Ni.nitsche_merge_rhs()
     # print("after merge", b.shape, b)
     x, inf  = sla.cg(M, b, rtol=1e-30)
-    x       = Ni.NitscheextractSol(x)
     l2_norm = 0.
     H1_norm = 0.
     x_sol   = []
     u_sol   = []
     # ... Extract solution
     for patch_nb in range(1,pyrefMP.nb_patches+1):
-        u1              = apply_dirichlet(V, x[Ni._block_index[patch_nb-1]:Ni._block_index[patch_nb]], dirichlet = pyrefMP.getDirPatch(patch_nb), update= u_d[patch_nb-1])#StencilVector(V.vector_space)
+        # ... extract solution
+        u1              = Ni.extract_sol(x, patch_nb)
         # ... to array
         x1              = u1.toarray().reshape(V.nbasis)
         x_sol.append(x1)
         u_sol.append(u1)
         #... mapping in Stencil format
-        u11_mph, u12_mph = pyrefMP.getStencilMapping(patch_nb)
+        u11_mph, u12_mph = pyrefMP.stencil_mapping(patch_nb)
         # Compute L2 and H1 errors
         Norm      = StencilVector(V.vector_space)
         Norm      = assemble_norm_un(VT, fields=[u11_mph, u12_mph, u1], out= Norm).toarray()
@@ -164,7 +164,7 @@ print("Dirichlet boundary conditions", g)
 #------------------------------------------------------------------------------
 # Extract geometry mapping
 #------------------------------------------------------------------------------
-pyrefMP           = pyrefMultpatch(geometry,idmp)# .. First patch 
+pyrefMP           = pyref_multipatch(geometry,idmp)# .. First patch 
 degree[0]        += pyrefMP.degree[0]
 degree[1]        += pyrefMP.degree[1]
 nb_ne             = refGrid #16  # number of elements after refinement
@@ -187,7 +187,7 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     # Create spline spaces for refined mesh
     V1  = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
     V2  = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
-
+    # ...
     Vh  = TensorSpace(V1, V2)
 
     u_d = pyrefMP.getDirichlet(Vh, g)
@@ -235,7 +235,7 @@ if args.plot :
     functions = [
         {"name": "Exact solution", "expression": g[0]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP.getAllcoefs('x'), pyrefMP.getAllcoefs('y'), Vg = pyrefMP.getTensorSpace,  solution = solutions, functions = functions)
+    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP,  solution = solutions, functions = functions)
     import subprocess
 
     # Load the multipatch VTM
