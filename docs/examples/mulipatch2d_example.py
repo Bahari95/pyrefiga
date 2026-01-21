@@ -128,7 +128,7 @@ def poisson_solve(V, pyrefMP, u_d):
 nbpts       = args.nbpts # FOR PLOT
 RefinNumber = args.h    # Number of global mesh refinements
 refGrid     = args.i    # Initial mesh size
-degree      = [args.e, args.e] #Not yet TODO
+degree      = [args.e, args.e] 
 if args.last:
     refGrid     = RefinNumber  # Initial mesh size
     RefinNumber = 0
@@ -185,8 +185,8 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
 
     # Refine geometry mapping
     # Create spline spaces for refined mesh
-    V1  = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
-    V2  = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
+    V1  = SplineSpace(degree=degree[0], grid = pyrefMP.Refinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
+    V2  = SplineSpace(degree=degree[1], grid = pyrefMP.Refinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
     # ...
     Vh  = TensorSpace(V1, V2)
 

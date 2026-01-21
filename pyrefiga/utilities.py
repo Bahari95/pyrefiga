@@ -588,7 +588,7 @@ class pyref_patch:
         return self._geo_dim
     @property
     def knots(self):
-        return self.knots_data
+        return [np.asarray(self.knots_data[i]) for i in range(self.dim)]
     @property
     def degree(self):
         return self._degree
@@ -637,15 +637,30 @@ class pyref_patch:
     def stencil_mapping(self):
         # ... space of a B-spline patches
         Vh  = self.space
-        #... create stencil vector for mapping
-        u1  = StencilVector(Vh.vector_space)
-        u2  = StencilVector(Vh.vector_space)
-        #... get coefs
-        xmp, ymp = self.coefs
-        #... fill the stencil vector
-        u1.from_array(Vh, xmp)
-        u2.from_array(Vh, ymp)        
-        return u1, u2
+        if self.geo_dim == 2:
+            #... create stencil vector for mapping
+            u1  = StencilVector(Vh.vector_space)
+            u2  = StencilVector(Vh.vector_space)
+            #... get coefs
+            xmp, ymp = self.coefs
+            #... fill the stencil vector
+            u1.from_array(Vh, xmp)
+            u2.from_array(Vh, ymp)        
+            return u1, u2
+        elif self.geo_dim == 3:
+            #... create stencil vector for mapping
+            u1  = StencilVector(Vh.vector_space)
+            u2  = StencilVector(Vh.vector_space)
+            u3  = StencilVector(Vh.vector_space)
+            #... get coefs
+            xmp, ymp, zmp = self.coefs
+            #... fill the stencil vector
+            u1.from_array(Vh, xmp)
+            u2.from_array(Vh, ymp)        
+            u3.from_array(Vh, zmp)        
+            return u1, u2, u3
+        else:
+            raise TypeError('dimension mismatch')
     #.. get spline space on uniform mesh
     def getspace(self, V):
         '''
@@ -795,11 +810,10 @@ class pyref_patch:
         '''
         from   .  import nurbs_utilities_core as core
         uh  = self.coefs[i_dir]
-        V   = self.space
-        if V.dim == 2:
-            w1, w2 = V.omega
-            Tu, Tv = V.knots
-            pu, pv = V.degree
+        if self.dim == 2:
+            w1, w2 = self.weights
+            Tu, Tv = self.knots
+            pu, pv = self.degree
             # ...
             nx, ny   = mesh[0].shape
             Q        = np.zeros((nx, ny, 5))
@@ -807,12 +821,12 @@ class pyref_patch:
             Q[:,:,4] = mesh[1][:,:] 
             core.sol_field_2D_meshes(nx, ny, uh, Tu, Tv, pu, pv, w1, w2, Q)       
             return Q[:,:,0], Q[:,:,1], Q[:,:,2]
-        elif V.dim == 3:
+        elif self.dim == 3:
             nx, ny, nz = mesh[0].shape
             # ...
-            w1, w2, w3 = V.omega
-            Tu, Tv, Tz = V.knots
-            pu, pv, pz = V.degree
+            w1, w2, w3 = self.weights
+            Tu, Tv, Tz = self.knots
+            pu, pv, pz = self.degree
             # ...
             Q          = np.zeros((nx, ny, nz, 7))
             Q[:,:,:,4] = mesh[0][:,:,:]
@@ -829,18 +843,17 @@ class pyref_patch:
         :param nbpts: given nymber of meshgrid
         '''
         from . import fast_diag_core as fs
-        V  = self.space
         if mesh is None:
-            if V.dim == 2:
-                xs, ys = V.grid
+            if self.dim == 2:
+                xs, ys = self.grids
                 if nbpts is None:
-                    nbpts = [len(V.grid[i]) for i in range(V.dim)]
+                    nbpts = [len(self.grids[i]) for i in range(self.dim)]
                 else:
                     if isinstance(nbpts, int):
                         nbpts = (nbpts,nbpts)
                     nx, ny = nbpts
-                    Tu, Tv = V.knots
-                    pu, pv = V.degree
+                    Tu, Tv = self.knots
+                    pu, pv = self.degree
                     xs     = np.linspace(Tu[pu], Tu[-pu-1], nx)
                     ys     = np.linspace(Tv[pv], Tv[-pv-1], ny)
                 # ...
@@ -848,17 +861,17 @@ class pyref_patch:
                 meshy = np.zeros(nbpts)
                 fs.build_identity_mapping_2d(xs, ys, meshx, meshy)                         
                 return [self.eval_mesh((meshx, meshy), i)[0] for i in range(self.geo_dim)]
-            elif V.dim == 3:
+            elif self.dim == 3:
                 # ...
-                xs, ys, zs = V.grid 
+                xs, ys, zs = self.grids 
                 if nbpts is None:
-                    nbpts = [len(V.grid[i]) for i in range(V.dim)]
+                    nbpts = [len(self.grids[i]) for i in range(self.dim)]
                 else:
                     if isinstance(nbpts, int):
                         nbpts = (nbpts,nbpts,nbpts)
                     nx, ny, nz = nbpts
-                    Tu, Tv, Tz = V.knots
-                    pu, pv, pz = V.degree
+                    Tu, Tv, Tz = self.knots
+                    pu, pv, pz = self.degree
                     xs         = np.linspace(Tu[pu], Tu[-pu-1], nx)
                     ys         = np.linspace(Tv[pv], Tv[-pv-1], ny)
                     zs         = np.linspace(Tz[pz], Tz[-pz-1], nz)
@@ -873,42 +886,40 @@ class pyref_patch:
             else:
                 raise TypeError('Expect two or three dimensions')
         else:
-            if V.dim == 2:
+            if self.dim == 2:
                 return [self.eval_mesh(mesh,i)[0] for i in range(self.geo_dim)]
-            elif V.dim == 3:
+            elif self.dim == 3:
                 return [self.eval_mesh(mesh,0)[0], 
                         self.eval_mesh(mesh,1)[0],
                         self.eval_mesh(mesh,2)[0]]
             else:
                 raise TypeError('Expect two or three dimensions')            
-    def gradient(self, patch_nb, mesh = None, nbpts = None):
+    def gradient(self, patch_nb =1, mesh = None, nbpts = None):
         '''
         Docstring pour gradient computes gradient of the solution in a given mesh
         :param self: 
         :param mesh: given mesh
         :param nbpts: given nymber of meshgrid
         '''
-        patch_nb = 1 # only one patch
         from . import fast_diag_core as fs
-        V  = self.space
         if mesh is None:
-            if V.dim == 2:
-                xs, ys = V.grid
+            if self.dim == 2:
+                xs, ys = self.grids
                 if nbpts is None:
-                    nbpts = [len(V.grid[i]) for i in range(V.dim)]
+                    nbpts = [len(self.grids[i]) for i in range(self.dim)]
                 else:
                     if isinstance(nbpts, int):
                         nbpts = (nbpts,nbpts)
                     nx, ny = nbpts
-                    Tu, Tv = V.knots
-                    pu, pv = V.degree
+                    Tu, Tv = self.knots
+                    pu, pv = self.degree
                     xs = np.linspace(Tu[pu], Tu[-pu-1], nx)
                     ys = np.linspace(Tv[pv], Tv[-pv-1], ny)
                 # ...
                 meshx = np.zeros(nbpts)
                 meshy = np.zeros(nbpts)
                 fs.build_identity_mapping_2d(xs, ys, meshx, meshy) 
-                if self.geo_dim == 2:                        
+                if self.geo_dim == 2:          
                     return [[self.eval_mesh((meshx, meshy), 0)[1], 
                             self.eval_mesh((meshx, meshy), 0)[2]], 
                             [self.eval_mesh((meshx, meshy), 1)[1], 
@@ -920,17 +931,17 @@ class pyref_patch:
                             self.eval_mesh((meshx, meshy), 1)[2]],
                             [self.eval_mesh((meshx, meshy), 2)[1], 
                             self.eval_mesh((meshx, meshy), 2)[2]]]
-            elif self.space.ndim == 3:
+            elif self.dim == 3:
                 # ...
-                xs, ys, zs = V.grid 
+                xs, ys, zs = self.grids 
                 if nbpts is None:
-                    nbpts = [len(V.grid[i]) for i in range(V.dim)] 
+                    nbpts = [len(self.grids[i]) for i in range(self.dim)] 
                 else:
                     if isinstance(nbpts, int):
                         nbpts = (nbpts,nbpts,nbpts)
                     nx, ny, nz = nbpts
-                    Tu, Tv, Tz = V.knots
-                    pu, pv, pz = V.degree
+                    Tu, Tv, Tz = self.knots
+                    pu, pv, pz = self.degree
                     xs = np.linspace(Tu[pu], Tu[-pu-1], nx)
                     ys = np.linspace(Tv[pv], Tv[-pv-1], ny)
                     zs = np.linspace(Tz[pz], Tz[-pz-1], nz)
@@ -951,10 +962,14 @@ class pyref_patch:
             else:
                 raise TypeError('Expect two or three dimensions')
         else:
-            if V.dim == 2:
+            if self.dim == 2 and self.geo_dim == 2:
                 return [[self.eval_mesh(mesh,0)[1],self.eval_mesh(mesh,0)[2]],
                        [self.eval_mesh(mesh,1)[1],self.eval_mesh(mesh,1)[2]]]
-            elif self.space.ndim == 3:
+            if self.dim == 2 and self.geo_dim == 3:
+                return [[self.eval_mesh(mesh,0)[1],self.eval_mesh(mesh,0)[2]],
+                       [self.eval_mesh(mesh,1)[1],self.eval_mesh(mesh,1)[2]],
+                       [self.eval_mesh(mesh,2)[1],self.eval_mesh(mesh,2)[2]]]
+            elif self.dim == 3:
                 return [[self.eval_mesh(mesh,0)[1], 
                         self.eval_mesh(mesh,0)[2],
                         self.eval_mesh(mesh,0)[3]],
@@ -976,11 +991,31 @@ class pyref_multipatch(object):
     Detect connectivity between patches.
     Returns the list of interfaces and Dirichlet BCs to be applied on each patch.
     The convention for the patches is as follows:
+#            2D CASE                        3D CASE
+#    Edge 1, {(u,v) : u = 0}        Face 1, {(u,v,w) : u = 0}
+#    Edge 2, {(u,v) : u = 1}        Face 2, {(u,v,w) : u = 1}
+#    Edge 3, {(u,v) : v = 0}        Face 3, {(u,v,w) : v = 0}
+#    Edge 4, {(u,v) : v = 1}        Face 4, {(u,v,w) : v = 1}
+#                                   Face 5, {(u,v,w) : w = 0}
+#                                   Face 6, {(u,v,w) : w = 1}
                                                  ___4___
                                                 |       |
                                               1 |       | 2
                                                 |_______|
                                                     3
+                                                z     ______
+                                                |    / 6   /|
+                                                |   /     / |
+                                                |  /_____/  |  
+                                                | |   1 |   |
+                                                | |     | 4 |
+                                               3| |_____|___|
+                                                |/      |  /
+                                                /   5   | / 
+                                               /        |/
+                                              x---------y
+                                                  2
+
     The interface is defined as the common edge between two patches.
     The Dirichlet BCs are defined as follows:
         [True, False] : Dirichlet BC on the left edge
@@ -1002,33 +1037,34 @@ class pyref_multipatch(object):
             4: (1, 1)
         }
         #... number of patches
-        num_patches      = len(mp)
+        num_patches         = len(mp)
         #... list of interfaces (patch1, patch2, [edge_patch1, edge_patch2])
-        interfaces       = []
+        interfaces          = []
         #... list of patches connection (interface, pach next)
         # patch_connection = {} TODO L shape
         #... First we assume all boundaries are Dirichlet
-        dirichlet        = np.zeros((num_patches, self._dim, 2), dtype = bool)+Dirichlet_all
+        dirichlet           = np.zeros((num_patches, self._dim, 2), dtype = bool)+Dirichlet_all
         # ...
         patch_has_interface = [False] * num_patches
         #... loop over all patches
-        for i in range(num_patches):
-            for j in range(i+1, num_patches):
-                xmp, ymp     = mp[i].coefs
-                xmp1, ymp1   = mp[j].coefs
-                #... test if they share an interface
-                interface_obj = pyrefInterface(xmp, ymp, xmp1, ymp1)
-                if interface_obj.interface is False :
-                    continue
-                # ...
-                interfaces.append( (i+1, j+1, interface_obj.interface) )
-                #... set the Dirichlet BCs False for the interface edges
-                dirichlet[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
-                dirichlet[j,idmapping[interface_obj.interface[1]][0],idmapping[interface_obj.interface[1]][1]] = False
-                #...
-                patch_has_interface[i] = True
-                patch_has_interface[j] = True
-        assert all(patch_has_interface), "Invalid geometry: at least one patch has no interface"
+        if self.dim == 2: # 3D TODO 
+            for i in range(num_patches):
+                for j in range(i+1, num_patches):
+                    #... test if they share an interface
+                    interface_obj = pyrefInterface(mp[i], mp[j])
+                    if interface_obj.interface is False :
+                        continue
+                    # ...
+                    interfaces.append( (i+1, j+1, interface_obj.interface) )
+                    #... set the Dirichlet BCs False for the interface edges
+                    dirichlet[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
+                    dirichlet[j,idmapping[interface_obj.interface[1]][0],idmapping[interface_obj.interface[1]][1]] = False
+                    #...
+                    patch_has_interface[i] = True
+                    patch_has_interface[j] = True
+        # ...
+        assert num_patches <= 1 or all(patch_has_interface), \
+            "Invalid geometry: at least one patch has no interface"
         # ...
         self.num_patches      = num_patches
         self.interfaces       = interfaces
@@ -1044,6 +1080,7 @@ class pyref_multipatch(object):
         self._grids           = mp[0].grids
         self._weights         = mp[0].weights
         self.Ninterfaces      = len(self.interfaces) 
+        self._space           = mp[0].space
         # self.patch_connection = patch_connection
     @property
     def NURBS(self):
@@ -1089,10 +1126,7 @@ class pyref_multipatch(object):
     #.. get tensor space
     @property
     def space(self):
-        # ... space of a B-spline patches
-        Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0])
-        Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
-        return TensorSpace(Vmp1, Vmp2)
+        return self._space
     @property
     def setFalseDirichlet(self):
         self.dirichlet = np.zeros((self.num_patches, self._dim, 2), dtype = bool)+False
@@ -1131,7 +1165,8 @@ class pyref_multipatch(object):
     def getAllcoefs(self, direct='x'):
         map_xy = {
             'x':0,
-            'y':1 
+            'y':1, 
+            'z':2
         }
         return [self.patches[np].coefs[map_xy[direct]] for np in range(self.num_patches)]
             
@@ -1144,33 +1179,23 @@ class pyref_multipatch(object):
         :param V: TensorSpace
         '''
         if isinstance(V, TensorSpace):
-            # ... space of a B-spline patches on uniform mesh
-            Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= V.nderiv[0], mesh= V.mesh[0], quad_degree= V.weights[0].shape[1]-1)
-            Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= V.nderiv[1], mesh= V.mesh[1], quad_degree= V.weights[1].shape[1]-1)
-            return TensorSpace(V.spaces[0], V.spaces[1], Vmp1, Vmp2)
+            return self.patches[0].getspace(V)
         else :
             raise TypeError('Expect only TensorSpace')
 
     #.. get mapping in stencil vector format
     def stencil_mapping(self, num_patch=1):
         # ... space of a B-spline patches
-        Vh  = self.space
-        #... create stencil vector for mapping
-        u1  = StencilVector(Vh.vector_space)
-        u2  = StencilVector(Vh.vector_space)
-        #... get coefs
-        xmp, ymp = self.getcoefs(num_patch)
-        #... fill the stencil vector
-        u1.from_array(Vh, xmp)
-        u2.from_array(Vh, ymp)        
-        return u1, u2 
-    
+        if num_patch > 0:
+            return self.patches[num_patch-1].stencil_mapping
+        else:
+            raise TypeError('three dimension is not yet updated')
     #.. get refined geometry map
     def getRefineGeometryMap(self, num_patch=1, numElevate=1):
         return self.patches[num_patch-1].RefineGeometryMap(numElevate=numElevate)
     
-    #.. get refined grid
-    def getRefinegrid(self, j_direct=0, numElevate=1):
+    #.. refined grid
+    def Refinegrid(self, j_direct=0, numElevate=1):
         return self.patches[0].Refinegrid(j_direct, numElevate=numElevate)
 
     #.. get interfaces
@@ -1272,41 +1297,88 @@ class pyrefInterface(object):
     Detect interface between two patches.
     Returns the list of interfaces and Dirichlet BCs to be applied on each patch.
     The convention for the patches is as follows:
+#            2D CASE                        3D CASE
+#    Edge 1, {(u,v) : u = 0}        Face 1, {(u,v,w) : u = 0}
+#    Edge 2, {(u,v) : u = 1}        Face 2, {(u,v,w) : u = 1}
+#    Edge 3, {(u,v) : v = 0}        Face 3, {(u,v,w) : v = 0}
+#    Edge 4, {(u,v) : v = 1}        Face 4, {(u,v,w) : v = 1}
+#                                   Face 5, {(u,v,w) : w = 0}
+#                                   Face 6, {(u,v,w) : w = 1}
                                                  ___4___
                                                 |       |
                                               1 |       | 2
                                                 |_______|
                                                     3
+                                                z     ______
+                                                |    / 6   /|
+                                                |   /     / |
+                                                |  /_____/  |  
+                                                | |   1 |   |
+                                                | |     | 4 |
+                                               3| |_____|___|
+                                                |/      |  /
+                                                /   5   | / 
+                                               /        |/
+                                              x---------y
+                                                  2
+
     The interface is defined as the common edge between two patches.
     The Dirichlet BCs are defined as follows:
         [True, False] : Dirichlet BC on the left edge
         [False, True] : Dirichlet BC on the right edge
     The input are the control points of the two patches.
     """
-    def __init__(self, xmp, ymp, xmp1, ymp1):
-        
-        #...
-        self.interface   = False
-        self.dirichlet_1 = False
-        self.dirichlet_2 = False
-        if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-12 :
-            self.interface   = [2,1]
-            self.dirichlet_1 = [[True, False],[True, True]]
-            self.dirichlet_2 = [[False, True],[True, True]]
-        elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-12 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-12 :
-            self.interface   = [1,2]
-            self.dirichlet_1 = [[False, True], [True, True]]
-            self.dirichlet_2 = [[True, False], [True, True]]
-        elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-12 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-12 :
-            self.interface   = [3,4]
-            self.dirichlet_1 = [[True, True], [False, True]]
-            self.dirichlet_2 = [[True, True], [True, False]]
-        elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-12 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-12 :
-            self.interface   = [4,3]
-            self.dirichlet_1 = [[True, True], [True, False]]
-            self.dirichlet_2 = [[True, True], [False, True]]
-        # else:
-        #     raise ValueError("Invalid interface configuration")
+    def __init__(self, mp, mp_next):
+        assert isinstance(mp, pyref_patch)
+        assert isinstance(mp_next, pyref_patch)
+        if mp.geo_dim == mp_next.geo_dim == 2 and mp.dim == mp_next.dim == 2:
+            xmp, ymp     = mp.coefs
+            xmp1, ymp1   = mp_next.coefs
+            #...
+            self.interface   = False
+            self.dirichlet_1 = False
+            self.dirichlet_2 = False
+            if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-15 :
+                self.interface   = [2,1]
+                self.dirichlet_1 = [[True, False],[True, True]]
+                self.dirichlet_2 = [[False, True],[True, True]]
+            elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-12 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-15 :
+                self.interface   = [1,2]
+                self.dirichlet_1 = [[False, True], [True, True]]
+                self.dirichlet_2 = [[True, False], [True, True]]
+            elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-12 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-15 :
+                self.interface   = [3,4]
+                self.dirichlet_1 = [[True, True], [False, True]]
+                self.dirichlet_2 = [[True, True], [True, False]]
+            elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-12 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-15 :
+                self.interface   = [4,3]
+                self.dirichlet_1 = [[True, True], [True, False]]
+                self.dirichlet_2 = [[True, True], [False, True]]
+        elif mp.geo_dim == mp_next.geo_dim == 3 and mp.dim == mp_next.dim == 2:
+            xmp, ymp, zmp    = mp.coefs
+            xmp1, ymp1, zmp1 = mp_next.coefs
+            #...
+            self.interface   = False
+            self.dirichlet_1 = False
+            self.dirichlet_2 = False
+            if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-15 and np.max(np.absolute(zmp[-1,:] - zmp1[0,:])) <= 1e-15 :
+                self.interface   = [2,1]
+                self.dirichlet_1 = [[True, False],[True, True]]
+                self.dirichlet_2 = [[False, True],[True, True]]
+            elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-12 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-15 and np.max(np.absolute(zmp[0,:] - zmp1[-1,:])) <= 1e-15 :
+                self.interface   = [1,2]
+                self.dirichlet_1 = [[False, True], [True, True]]
+                self.dirichlet_2 = [[True, False], [True, True]]
+            elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-12 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-15  and np.max(np.absolute(zmp[:,0] - zmp1[:,-1])) <= 1e-15 :
+                self.interface   = [3,4]
+                self.dirichlet_1 = [[True, True], [False, True]]
+                self.dirichlet_2 = [[True, True], [True, False]]
+            elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-12 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-15 and np.max(np.absolute(zmp[:,-1] - zmp1[:,0])) <= 1e-15 :
+                self.interface   = [4,3]
+                self.dirichlet_1 = [[True, True], [True, False]]
+                self.dirichlet_2 = [[True, True], [False, True]]
+        else:
+            print('todo')
     def interface(self):
         return self.interface
     def dirichlet_1(self):

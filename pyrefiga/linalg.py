@@ -175,7 +175,13 @@ class StencilVector( object ):
     @property
     def pads(self):
         return self._space.pads
-
+    # ...
+    @property
+    def tensor(self):
+        """Tensor of arrays"""
+        idx = tuple( slice(p,-p) for p in self.pads )
+        return self._data[idx].flatten().reshape(self._space.npts)
+    
     def from_array( self, V, x ):
         # TODO improve
         if V.dim == 1:
@@ -203,7 +209,6 @@ class StencilVector( object ):
         """ return the local array without the padding"""
         idx = tuple( slice(p,-p) for p in self.pads )
         return self._data[idx].flatten()
-
     # ...
     def __getitem__(self, key):
         index = self._getindex( key )

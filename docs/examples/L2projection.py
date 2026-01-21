@@ -182,8 +182,8 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
 
     # Refine geometry mapping
     # Create spline spaces for refined mesh
-    V1  = SplineSpace(degree=degree[0], grid = pyrefMP.getRefinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
-    V2  = SplineSpace(degree=degree[1], grid = pyrefMP.getRefinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
+    V1  = SplineSpace(degree=degree[0], grid = pyrefMP.Refinegrid(0, numElevate=nb_ne), quad_degree = quad_degree)
+    V2  = SplineSpace(degree=degree[1], grid = pyrefMP.Refinegrid(1, numElevate=nb_ne), quad_degree = quad_degree)
     Vh  = TensorSpace(V1, V2)
     print('#spaces')
     # Solve Poisson equation on refined mesh
