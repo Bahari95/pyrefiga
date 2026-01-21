@@ -659,9 +659,9 @@ def make_knots(breaks, degree, periodic, multiplicity=1):
     unique, counts = np.unique(breaks, return_counts=True)
     effective_mult = counts * multiplicity
 
-    if np.max(effective_mult) > p + 1:
+    if np.max(effective_mult) > p:
         raise ValueError(
-            "Effective knot multiplicity exceeds degree + 1"
+            "Effective knot multiplicity exceeds degree"
         )
 
     # -----------------------------
