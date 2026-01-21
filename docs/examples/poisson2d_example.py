@@ -13,7 +13,6 @@ from   pyrefiga                    import TensorSpace
 from   pyrefiga                    import StencilMatrix
 from   pyrefiga                    import StencilVector
 from   pyrefiga                    import pyccel_sol_field_2d
-from   pyrefiga                    import sol_field_NURBS_2d
 from   pyrefiga                    import paraview_nurbsSolutionMultipatch
 from   pyrefiga                    import pyref_patch
 from   pyrefiga                    import load_xml, compute_eoc
@@ -128,7 +127,6 @@ geometry         = load_xml(geometry)  # Load geometry from pyrefiga
 mp               = pyref_patch(geometry,id_mp)
 degree[0]        += mp.degree[0]
 degree[1]        += mp.degree[1]
-mp.nurbs_check   = True # Activate NURBS if geometry uses NURBS
 nb_ne            = refGrid # number of elements after refinement
 quad_degree      = max(degree[0],degree[1]) # Quadrature degree
 
@@ -161,7 +159,7 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     #-----------------------------------------------------------
     # Assemble Dirichlet boundary conditions
     #-----------------------------------------------------------
-    u_d             = mp.getDirichlet(Vh, g)
+    u_d             = mp.assemble_dirichlet(Vh, g)
     print('#')
 
     #-----------------------------------------------------------
@@ -208,8 +206,7 @@ if args.plot :
     #---Solution in uniform mesh
     un = pyccel_sol_field_2d((nbpts,nbpts),  xuh , Vh.knots, Vh.degree)[0]
     #---Compute a mapping
-    x = sol_field_NURBS_2d((nbpts,nbpts),  mp.coefs[0], Vmp.omega, Vmp.knots, Vmp.degree)[0]
-    y = sol_field_NURBS_2d((nbpts,nbpts),  mp.coefs[1], Vmp.omega, Vmp.knots, Vmp.degree)[0]
+    x, y = mp.eval(nbpts=(nbpts,nbpts))
     # ...
     Sol_un = eval(g[0])
 

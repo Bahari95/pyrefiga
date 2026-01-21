@@ -5,6 +5,7 @@ These tools are primarily used for r-refinement algorithms involving adaptive B-
 Author: M. BAHARI
 """
 from   .linalg           import StencilVector
+from   .spaces           import SplineSpace
 from   .spaces           import TensorSpace
 from   numpy             import zeros
 from   numpy             import float64
@@ -25,9 +26,10 @@ class quadratures_in_admesh(object):
 		output is spans and basis of the same elements and weights as for V (we don't refine initial mapping)
 		'''
 		# ...
-		assert isinstance(V, TensorSpace)
-		assert isinstance(W, TensorSpace)
-
+		assert isinstance(V, (TensorSpace, SplineSpace)), \
+		"Expect TensorSpace or SplineSpace for adaptive mapping space V"
+		assert isinstance(W, (TensorSpace, SplineSpace)), \
+		"Expect TensorSpace or SplineSpace for Geometry Initial mapping space W"
 		sp_dim      = W.dim
 
 		if W.nurbs:# ... if the parameterization is given by nurbs

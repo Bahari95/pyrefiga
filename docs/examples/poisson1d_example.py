@@ -101,9 +101,9 @@ for degree in range(3,9):
 	for nb in range( 4,nb_max):
 		nelements = 2**nb
 		# create the spline space for each direction
-		V1   = SplineSpace(degree=degree, nelements= nelements, nderiv = 2)
+		V1   = SplineSpace(degree=degree, nelements= nelements, multiplicity = degree, nderiv = 2)
 
-		print('#---IN-UNIFORM--MESH')
+		print('#---IN-UNIFORM--MESH,', V1.knots)
 		u_pH, xuh, l2_norm, H1_norm = poisson_solve(V1)
 		print('degree = {}-----> L^2-error ={} -----> H^1-error = {}'.format(degree, l2_norm, H1_norm))
 		error_L2.append(l2_norm)

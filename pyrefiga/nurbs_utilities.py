@@ -167,11 +167,11 @@ def collocation_2dNURBspline(Vh, sol, xmp = None, adxmp = None):
       sx, sy  = np.meshgrid(u_k, v_l)
       if adxmp is not None:
          #---Compute a image by initial mapping
-         sx   = sol_field_NURBS_2d((None, None), adxmp[0], Vh.omega, Vh.knots, Vh.degree, meshes=(sx, sy))[0]
-         sy   = sol_field_NURBS_2d((None, None), adxmp[1], Vh.omega, Vh.knots, Vh.degree, meshes=(sx, sy))[0]
+         sx   = sol_field_NURBS_2d((None, None), adxmp[0], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
+         sy   = sol_field_NURBS_2d((None, None), adxmp[1], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
       #---Compute a image by initial mapping
-      sx      = sol_field_NURBS_2d((None, None), xmp[0], Vh.omega, Vh.knots, Vh.degree, meshes=(sx, sy))[0]
-      sy      = sol_field_NURBS_2d((None, None), xmp[1], Vh.omega, Vh.knots, Vh.degree, meshes=(sx, sy))[0]
+      sx      = sol_field_NURBS_2d((None, None), xmp[0], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
+      sy      = sol_field_NURBS_2d((None, None), xmp[1], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
       Q[:]    =  sol(sx, sy).reshape(n_u*n_v)[:]
     
 
@@ -307,8 +307,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
                sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
                #---Compute a image by initial mapping
-               x, y  = pyrefGeometry.eval(i+1, meshes=(sx, sy))
-               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, meshes=(sx, sy))
+               x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
                #...Compute analytic
                if Analytic is not None:
                   A = Analytic[i]
@@ -339,8 +339,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
                sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
                #---Compute a image by initial mapping
-               x, y  = pyrefGeometry.eval(i+1, meshes=(sx, sy))
-               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, meshes=(sx, sy))
+               x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
                #...Compute analytic
                if Analytic is not None:
                   A = Analytic[i]
@@ -376,8 +376,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
                sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
                #---Compute a image by initial mapping
-               x, y  = pyrefGeometry.eval(i+1, meshes=(sx, sy))
-               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, meshes=(sx, sy))
+               x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
                #...Compute analytic
                if Analytic is not None:
                   A = Analytic[i]
@@ -412,8 +412,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
                sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
                #---Compute a image by initial mapping
-               x, y  = pyrefGeometry.eval(i+1, meshes=(sx, sy))
-               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, meshes=(sx, sy))
+               x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
                #...Compute analytic
                if Analytic is not None:
                   A = Analytic[i]
@@ -454,8 +454,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                   sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
                   sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
                   #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, meshes=(sx, sy))
-                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, meshes=(sx, sy))
+                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
                   #...Compute dirivatives
                   xu = sxx*F1x + syx*F1y
                   yu = sxx*F2x + syx*F2y
@@ -504,8 +504,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                   sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
                   sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
                   #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, meshes=(sx, sy))
-                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, meshes=(sx, sy))
+                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
                   #...Compute dirivatives
                   xu = sxx*F1x + syx*F1y
                   yu = sxx*F2x + syx*F2y
@@ -561,8 +561,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                   sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
                   sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
                   #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, meshes=(sx, sy))
-                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, meshes=(sx, sy))
+                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
                   #...Compute dirivatives
                   xu = sxx*F1x + syx*F1y
                   yu = sxx*F2x + syx*F2y
@@ -617,8 +617,8 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                   sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
                   sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
                   #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, meshes=(sx, sy))
-                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, meshes=(sx, sy))
+                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
                   #...Compute dirivatives
                   xu = sxx*F1x + syx*F1y
                   yu = sxx*F2x + syx*F2y
@@ -679,7 +679,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                   sy, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:4]
                   sz, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0:4]
                   #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, meshes=(sx, sy, sz))
+                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
                   #...Compute a Jacobian in  i direction
                   Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
                   # .... 
@@ -704,7 +704,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                   sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0]
                   sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0]
                   #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, meshes=(sx, sy, sz))
+                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -732,7 +732,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                   sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0]
                   sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0]
                   #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, meshes=(sx, sy, sz))
+                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 
@@ -758,7 +758,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                   sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0]
                   sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0]
                   #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, meshes=(sx, sy, sz))
+                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
                   # .... 
                   points = np.stack((x, y, z), axis=-1)
 

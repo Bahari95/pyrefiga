@@ -83,7 +83,7 @@ __all__ = ['SplineSpace', 'TensorSpace']
 
 # =================================================================================================
 class SplineSpace(object):
-    def __init__(self, degree, nelements=None, grid=None, nderiv=1,
+    def __init__(self, degree, nelements=None, grid=None, nderiv=1, multiplicity = 1,
                  periodic=False, normalization=False, omega = None, mesh = None, quad_degree = None):
         
         '''
@@ -118,7 +118,7 @@ class SplineSpace(object):
         if mesh is not None:
             assert len(mesh) >= len(unique(grid)), "mesh must have at least as many points as grid"
 
-        knots     = make_knots(grid, degree, periodic=periodic)
+        knots     = make_knots(grid, degree, periodic=periodic, multiplicity = multiplicity)
 
         nbasis    = len(knots) - degree - 1
         

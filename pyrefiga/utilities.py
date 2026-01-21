@@ -278,24 +278,24 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                 if len(map) == 3:
                     #planar mapping
                     if map[2].omega[0] is None :
-                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
-                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree, mesh = (Xmae, Ymae))[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree, mesh = (Xmae, Ymae))[0]
                     else :
-                        sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
-                        sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                        sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, mesh = (Xmae, Ymae))[0]
+                        sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, mesh = (Xmae, Ymae))[0]
                     for i in range(len(Boundaries)):
                         x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]]))
                 else:
                     #3D mapping
                     if map[3].omega[0] is None :
-                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                        sZ           = pyccel_sol_field_2d(n_dir,  map[2] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
+                        sZ           = pyccel_sol_field_2d(n_dir,  map[2] , map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
                     else :
-                        sX           = sol_field_NURBS_2d( None, map[0], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                        sY           = sol_field_NURBS_2d( None, map[1], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                        sZ           = sol_field_NURBS_2d( None, map[2], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sX           = sol_field_NURBS_2d( None, map[0], map[3].omega, map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
+                        sY           = sol_field_NURBS_2d( None, map[1], map[3].omega, map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
+                        sZ           = sol_field_NURBS_2d( None, map[2], map[3].omega, map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
                     for i in range(len(Boundaries)):
                         x_d[boundary_map[Boundaries[i]]] = least_square_Bspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 f_dir[Boundaries[i]-1](sX[boundary_map[Boundaries[i]]], sY[boundary_map[Boundaries[i]]], sZ[boundary_map[Boundaries[i]]]))
@@ -352,11 +352,11 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                     Ymae         = sol_field_NURBS_2d(n_dir,  admap[1] , admap[3].omega, admap[3].knots, admap[3].degree)[0]
                 if len(map) == 3:
                     if map[2].omega[0] is None :
-                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree, meshes=(Xmae, Ymae))[0]
-                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree, meshes=(Xmae, Ymae))[0]
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[2].knots, map[2].degree, mesh=(Xmae, Ymae))[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[2].knots, map[2].degree, mesh=(Xmae, Ymae))[0]
                     else :
-                        sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
-                        sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, meshes = (Xmae, Ymae))[0]
+                        sX           = sol_field_NURBS_2d( None, map[0], map[2].omega, map[2].knots, map[2].degree, mesh = (Xmae, Ymae))[0]
+                        sY           = sol_field_NURBS_2d( None, map[1], map[2].omega, map[2].knots, map[2].degree, mesh = (Xmae, Ymae))[0]
 
                     for i in range(len(Boundaries)):
                         x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
@@ -365,13 +365,13 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
                 else:
                     #3D mapping
                     if map[3].omega[0] is None :
-                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                        sZ           = pyccel_sol_field_2d(n_dir,  map[2] , map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sX           = pyccel_sol_field_2d(n_dir,  map[0] , map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
+                        sY           = pyccel_sol_field_2d(n_dir,  map[1] , map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
+                        sZ           = pyccel_sol_field_2d(n_dir,  map[2] , map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
                     else :
-                        sX           = sol_field_NURBS_2d( None, map[0], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                        sY           = sol_field_NURBS_2d( None, map[1], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
-                        sZ           = sol_field_NURBS_2d( None, map[2], map[3].omega, map[3].knots, map[3].degree, meshes = (Xmae, Ymae))[0]
+                        sX           = sol_field_NURBS_2d( None, map[0], map[3].omega, map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
+                        sY           = sol_field_NURBS_2d( None, map[1], map[3].omega, map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
+                        sZ           = sol_field_NURBS_2d( None, map[2], map[3].omega, map[3].knots, map[3].degree, mesh = (Xmae, Ymae))[0]
                     for i in range(len(Boundaries)):
                         x_d[boundary_map[Boundaries[i]]] = least_square_NURBspline(V.degree[Space_map[Boundaries[i]]], V.knots[Space_map[Boundaries[i]]], 
                                                                                 V.omega[Space_map[Boundaries[i]]],
@@ -503,7 +503,7 @@ class pyref_patch:
     - _grids : list of lists
         The grid points for each dimension. 
     """
-    def __init__(self, filename, element_id, nurbs = False, Dirichlet_all = True):
+    def __init__(self, filename, element_id, nurbs = True, Dirichlet_all = True):
       #print("""Initialize with the XML filename.""", filename)
       root            = ET.parse(filename).getroot()
       """Retrieve coefs table, knots table, and degree for a given id."""
@@ -668,9 +668,9 @@ class pyref_patch:
             Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= V.nderiv[1], mesh= V.mesh[1], quad_degree= V.weights[1].shape[1]-1)
             Vmp3 = SplineSpace(degree=self.degree[2], grid = self.grids[2], omega = self.weights[2], nderiv= V.nderiv[2], mesh= V.mesh[2], quad_degree= V.weights[2].shape[1]-1)
             return TensorSpace(V.spaces[0], V.spaces[1], V.spaces[2], Vmp1, Vmp2, Vmp3)
-    def getDirichlet(self, V, g, boundaries = None):
+    def assemble_dirichlet(self, V, g, boundaries = None):
         '''
-        Docstring pour getDirichlet
+        Docstring pour assemble_dirichlet
             computes StencilVector Dirichlet Solution zero inside the domaine
         :param self: Description
         :param V: Description
@@ -821,14 +821,13 @@ class pyref_patch:
             core.sol_field_3D_mesh(nx, ny, nz, uh, Tu, Tv, Tz, pu, pv, pz, w1, w2, w3, Q)
             return Q[:,:,:,0], Q[:,:,:,1], Q[:,:,:,2], Q[:,:,:,3]
         
-    def eval(self, patch_nb, mesh = None, nbpts = None):
+    def eval(self, patch_nb = 1, mesh = None, nbpts = None):
         '''
         Docstring pour eval computes mapping in a given mesh
         :param self: 
         :param mesh: given mesh
         :param nbpts: given nymber of meshgrid
         '''
-        patch_nb = 1 # ...
         from . import fast_diag_core as fs
         V  = self.space
         if mesh is None:
@@ -1178,9 +1177,6 @@ class pyref_multipatch(object):
     def getInterfaces(self):
         return self.interfaces
     
-    #.. get dirichlet BCs
-    def getdirichlet(self):
-        return self.dirichlet    
     #.. get dirichlet BCs for a given patch
     def getDirPatch(self, num_patch):
         return self.dirichlet[num_patch-1]
@@ -1210,9 +1206,9 @@ class pyref_multipatch(object):
         # print(f"Patch {num_patch} Dirichlet boundaries : {boundary_dirichlet}")
         return np.asarray(boundary_dirichlet)
     
-    def getDirichlet(self, V, g):
+    def assemble_dirichlet(self, V, g):
         '''
-        Docstring pour getDirichlet
+        Docstring pour assemble_dirichlet
             computes StencilVector Dirichlet Solution zero inside the domaine
         :param self: Description
         :param V: Description

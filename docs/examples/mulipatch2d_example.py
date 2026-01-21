@@ -190,7 +190,7 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     # ...
     Vh  = TensorSpace(V1, V2)
 
-    u_d = pyrefMP.getDirichlet(Vh, g)
+    u_d = pyrefMP.assemble_dirichlet(Vh, g)
     print('#spaces')
     # Solve Poisson equation on refined mesh
     start = time.time()

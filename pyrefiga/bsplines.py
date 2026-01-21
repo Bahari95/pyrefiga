@@ -585,54 +585,112 @@ def elements_spans( knots, degree ):
 
     return spans
 
-#===============================================================================
-def make_knots( breaks, degree, periodic ):
-    """
-    Create spline knots from breakpoints, with appropriate boundary conditions.
-    Let p be spline degree. If domain is periodic, knot sequence is extended
-    by periodicity so that first p basis functions are identical to last p.
-    Otherwise, knot sequence is clamped (i.e. endpoints are repeated p times).
+import numpy as np
 
+#===============================================================================
+# new version by M. BAHARI
+def make_knots(breaks, degree, periodic, multiplicity=1):
+    """
+    Create spline knots from breakpoints, with multiplicity-aware construction.
+
+    #     # Type checking Old version
+    #     assert isinstance( degree  , int  )
+    #     assert isinstance( periodic, bool )
+
+    #     # Consistency checks
+    #     # assert len(breaks) > 1
+    #     # assert all( np.diff(breaks) > 0 )
+    #     assert degree > 0
+    #     if periodic:
+    #         assert len(breaks) > degree
+
+    #     p = degree
+    #     T = np.zeros( len(breaks)+2*p )
+    #     T[p:-p] = breaks
+
+    #     if periodic:
+    #         period = breaks[-1]-breaks[0]
+    #         T[0:p] = [xi-period for xi in breaks[-p-1:-1 ]]
+    #         T[-p:] = [xi+period for xi in breaks[   1:p+1]]
+    #     else:
+    #         T[0:p] = breaks[ 0]
+    #         T[-p:] = breaks[-1]
     Parameters
     ----------
     breaks : array_like
-        Coordinates of breakpoints (= cell edges); given in increasing order and
-        with no duplicates.
+        Coordinates of breakpoints (duplicates allowed).
 
     degree : int
-        Spline degree (= polynomial degree within each interval).
+        Spline degree.
 
     periodic : bool
         True if domain is periodic, False otherwise.
 
+    multiplicity : int
+        Interior knot multiplicity (1 ≤ multiplicity ≤ degree + 1).
+
     Result
     ------
-    T : numpy.ndarray (1D)
+    T : numpy.ndarray
         Coordinates of spline knots.
-
     """
+    # -----------------------------
     # Type checking
-    assert isinstance( degree  , int  )
-    assert isinstance( periodic, bool )
+    # -----------------------------
+    assert isinstance(degree, int) and degree >= 0
+    assert isinstance(periodic, bool)
+    assert isinstance(multiplicity, int)
+    assert 1 <= multiplicity <= degree + 1
 
-    # Consistency checks
-    # assert len(breaks) > 1
-    # assert all( np.diff(breaks) > 0 )
-    assert degree > 0
+    # -----------------------------
+    # Convert breaks
+    # -----------------------------
+    breaks = np.ascontiguousarray(breaks, dtype=float)
+    assert len(breaks) > 1
+
     if periodic:
         assert len(breaks) > degree
 
     p = degree
-    T = np.zeros( len(breaks)+2*p )
-    T[p:-p] = breaks
 
+    # -----------------------------
+    # Multiplicity-aware validation
+    # -----------------------------
+    unique, counts = np.unique(breaks, return_counts=True)
+    effective_mult = counts * multiplicity
+
+    if np.max(effective_mult) > p + 1:
+        raise ValueError(
+            "Effective knot multiplicity exceeds degree + 1"
+        )
+
+    # -----------------------------
+    # Build knot vector
+    # -----------------------------
     if periodic:
-        period = breaks[-1]-breaks[0]
-        T[0:p] = [xi-period for xi in breaks[-p-1:-1 ]]
-        T[-p:] = [xi+period for xi in breaks[   1:p+1]]
+        # periodic knots: no clamping
+        T = np.zeros(len(breaks) + 2 * p)
+        T[p:-p] = breaks
+
+        period = breaks[-1] - breaks[0]
+        T[:p] = breaks[-p-1:-1] - period
+        T[-p:] = breaks[1:p+1] + period
+
     else:
-        T[0:p] = breaks[ 0]
-        T[-p:] = breaks[-1]
+        # open (clamped) knot vector
+        n_interior = len(breaks[1:-1])
+        size = 2 * (p + 1) + multiplicity * n_interior
+        T = np.zeros(size)
+
+        idx = 0
+        T[idx:idx + p + 1] = breaks[0]
+        idx += p + 1
+
+        for xi in breaks[1:-1]:
+            T[idx:idx + multiplicity] = xi
+            idx += multiplicity
+
+        T[idx:idx + p + 1] = breaks[-1]
 
     return T
 

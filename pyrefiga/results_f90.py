@@ -11,7 +11,7 @@ from   .               import nurbs_utilities_core as nurbs_core
 from numpy import zeros, linspace, meshgrid
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Computes Solution and its gradien In one dimension
-def sol_field_NURBS_1d(knots, omega, uh, Npoints = None, meshes = None, bound_val = None):
+def sol_field_NURBS_1d(knots, omega, uh, Npoints = None, mesh = None, bound_val = None):
    """
    Computes the solution and its gradient in one dimension.
    """
@@ -19,11 +19,11 @@ def sol_field_NURBS_1d(knots, omega, uh, Npoints = None, meshes = None, bound_va
    nu = uh.shape[0]
    pu = len(Tu) - nu -1
    
-   if meshes is None:
+   if mesh is None:
 
       if Npoints is None:
          nx     = nu-pu+1
-         meshes = Tu[pu:-pu] 
+         mesh = Tu[pu:-pu] 
       else :
          '''
          x0_v  : min val in x direction
@@ -38,16 +38,16 @@ def sol_field_NURBS_1d(knots, omega, uh, Npoints = None, meshes = None, bound_va
             x0_v = Tu[pu]
             x1_v = Tu[-pu-1]
          # ...
-         meshes  = linspace(x0_v, x1_v, nx)
+         mesh  = linspace(x0_v, x1_v, nx)
    # ...
-   nx       = meshes.shape[0]
+   nx       = mesh.shape[0]
    Q        = zeros((nx, 3))
-   Q[:,2]   = meshes[:]
+   Q[:,2]   = mesh[:]
    nurbs_core.sol_field_1D_meshes(nx, uh, Tu, pu, omega, Q)
    return Q[:,0], Q[:,1]
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Computes Solution and its gradien In two dimension
-def sol_field_NURBS_2d( Npoints, uh, omega, knots, degree, meshes = None, bound_val = None):
+def sol_field_NURBS_2d( Npoints, uh, omega, knots, degree, mesh = None, bound_val = None):
     '''
     Using computed control points uh we compute solution
     in new discretisation by Npoints
@@ -60,7 +60,7 @@ def sol_field_NURBS_2d( Npoints, uh, omega, knots, degree, meshes = None, bound_
     nu = len(Tu) - pu - 1
     nv = len(Tv) - pv - 1    
     
-    if meshes is None:
+    if mesh is None:
 
         if Npoints is None:
 
@@ -103,16 +103,16 @@ def sol_field_NURBS_2d( Npoints, uh, omega, knots, degree, meshes = None, bound_
     else :
        w1, w2 = omega
        # ...
-       nx, ny   = meshes[0].shape
+       nx, ny   = mesh[0].shape
        Q        = zeros((nx, ny, 5))
-       Q[:,:,3] = meshes[0][:,:]
-       Q[:,:,4] = meshes[1][:,:] 
+       Q[:,:,3] = mesh[0][:,:]
+       Q[:,:,4] = mesh[1][:,:] 
        nurbs_core.sol_field_2D_meshes(nx, ny, uh, Tu, Tv, pu, pv, w1, w2, Q)       
        return Q[:,:,0], Q[:,:,1], Q[:,:,2]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Computes Solution and its gradien In three dimension
-def sol_field_NURBS_3d(Npoints,  uh, omega, knots, degree, meshes = None):
+def sol_field_NURBS_3d(Npoints,  uh, omega, knots, degree, mesh = None):
     '''
     Compute solution in new discretisation by Npoints using  control points uh
     '''
@@ -123,7 +123,7 @@ def sol_field_NURBS_3d(Npoints,  uh, omega, knots, degree, meshes = None):
     nu = len(Tu) - pu - 1
     nv = len(Tv) - pv - 1    
     nz = len(Tz) - pz - 1    
-    if meshes is None:
+    if mesh is None:
        if Npoints is None:
 
             nx = nu-pu+1
@@ -155,14 +155,14 @@ def sol_field_NURBS_3d(Npoints,  uh, omega, knots, degree, meshes = None):
        w1, w2, w3 = omega
        # ...
        Q          = zeros((nx, ny, nz, 7))
-       Q[:,:,:,4] = meshes[0][:,:,:]
-       Q[:,:,:,5] = meshes[1][:,:,:]
-       Q[:,:,:,6] = meshes[2][:,:,:]
+       Q[:,:,:,4] = mesh[0][:,:,:]
+       Q[:,:,:,5] = mesh[1][:,:,:]
+       Q[:,:,:,6] = mesh[2][:,:,:]
        nurbs_core.sol_field_3D_mesh(nx, ny, nz, uh, Tu, Tv, Tz, pu, pv, pz, w1, w2, w3, Q)
        return Q[:,:,:,0], Q[:,:,:,1], Q[:,:,:,2], Q[:,:,:,3]    
     
 # Computes Solution and its gradien In one dimension
-def pyccel_sol_field_1d(knots, uh, Npoints = None, meshes = None, bound_val = None):
+def pyccel_sol_field_1d(knots, uh, Npoints = None, mesh = None, bound_val = None):
    """
    Computes the solution and its gradient in one dimension.
    """
@@ -170,11 +170,11 @@ def pyccel_sol_field_1d(knots, uh, Npoints = None, meshes = None, bound_val = No
    nu = uh.shape[0]
    pu = len(Tu) - nu -1
    
-   if meshes is None:
+   if mesh is None:
 
       if Npoints is None:
          nx     = nu-pu+1
-         meshes = Tu[pu:-pu] 
+         mesh = Tu[pu:-pu] 
       else :
          '''
          x0_v  : min val in x direction
@@ -189,17 +189,17 @@ def pyccel_sol_field_1d(knots, uh, Npoints = None, meshes = None, bound_val = No
             x0_v = Tu[pu]
             x1_v = Tu[-pu-1]
          # ...
-         meshes  = linspace(x0_v, x1_v, nx)
+         mesh  = linspace(x0_v, x1_v, nx)
    # ...
-   nx       = meshes.shape[0]
+   nx       = mesh.shape[0]
    Q        = zeros((nx, 3))
-   Q[:,2]   = meshes[:]
+   Q[:,2]   = mesh[:]
    core.sol_field_1D_meshes(nx, uh, Tu, pu, Q)
    return Q[:,0], Q[:,1]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Computes Solution and its gradien In two dimension
-def pyccel_sol_field_2d( Npoints, uh, knots, degree, meshes = None, bound_val = None):
+def pyccel_sol_field_2d( Npoints, uh, knots, degree, mesh = None, bound_val = None):
     '''
     Using computed control points uh we compute solution
     in new discretisation by Npoints
@@ -212,7 +212,7 @@ def pyccel_sol_field_2d( Npoints, uh, knots, degree, meshes = None, bound_val = 
     nu = len(Tu) - pu - 1
     nv = len(Tv) - pv - 1    
     
-    if meshes is None:
+    if mesh is None:
 
       if Npoints is None:
 
@@ -253,16 +253,16 @@ def pyccel_sol_field_2d( Npoints, uh, knots, degree, meshes = None, bound_val = 
       return Q[:,:,0], Q[:,:,1], Q[:,:,2], X.T, Y.T
     else :
        # ...
-       nx, ny   = meshes[0].shape
+       nx, ny   = mesh[0].shape
        Q        = zeros((nx, ny, 5))
-       Q[:,:,3] = meshes[0][:,:]
-       Q[:,:,4] = meshes[1][:,:] 
+       Q[:,:,3] = mesh[0][:,:]
+       Q[:,:,4] = mesh[1][:,:] 
        core.sol_field_2D_meshes(nx, ny, uh, Tu, Tv, pu, pv, Q)       
        return Q[:,:,0], Q[:,:,1], Q[:,:,2]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Computes Solution and its gradien In three dimension
-def pyccel_sol_field_3d(Npoints,  uh , knots, degree, meshes = None):
+def pyccel_sol_field_3d(Npoints,  uh , knots, degree, mesh = None):
     '''
     Using computed control points uh we compute solution
     in new discretisation by Npoints    
@@ -274,7 +274,7 @@ def pyccel_sol_field_3d(Npoints,  uh , knots, degree, meshes = None):
     nu = len(Tu) - pu - 1
     nv = len(Tv) - pv - 1    
     nz = len(Tz) - pz - 1    
-    if meshes is None:
+    if mesh is None:
        if Npoints is None:
 
             nx = nu-pu+1
@@ -302,9 +302,9 @@ def pyccel_sol_field_3d(Npoints,  uh , knots, degree, meshes = None):
        nx, ny, nz = Npoints
        # ...
        Q          = zeros((nx, ny, nz, 7))
-       Q[:,:,:,4] = meshes[0][:,:,:]
-       Q[:,:,:,5] = meshes[1][:,:,:]
-       Q[:,:,:,6] = meshes[2][:,:,:]
+       Q[:,:,:,4] = mesh[0][:,:,:]
+       Q[:,:,:,5] = mesh[1][:,:,:]
+       Q[:,:,:,6] = mesh[2][:,:,:]
        core.sol_field_3D_mesh(nx, ny, nz, uh, Tu, Tv, Tz, pu, pv, pz, Q)
        return Q[:,:,:,0], Q[:,:,:,1], Q[:,:,:,2], Q[:,:,:,3]
 
@@ -666,8 +666,8 @@ def plot_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, cp = True, savefig = Non
       sx = pyccel_sol_field_2d((nbpts, nbpts), xad[i], V[i].knots, V[i].degree)[0]
       sy = pyccel_sol_field_2d((nbpts, nbpts), yad[i], V[i].knots, V[i].degree)[0]
       #---Compute a mesh
-      F1.append(pyccel_sol_field_2d((None, None), xmp[i], V[i].knots, V[i].degree, meshes=(sx, sy))[0])
-      F2.append(pyccel_sol_field_2d((None, None), ymp[i], V[i].knots, V[i].degree, meshes=(sx, sy))[0])
+      F1.append(pyccel_sol_field_2d((None, None), xmp[i], V[i].knots, V[i].degree, mesh=(sx, sy))[0])
+      F2.append(pyccel_sol_field_2d((None, None), ymp[i], V[i].knots, V[i].degree, mesh=(sx, sy))[0])
 
    # --- Create Figure ---
    fig =plt.figure() 
