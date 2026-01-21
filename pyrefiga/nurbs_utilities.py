@@ -295,7 +295,9 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
          Vrefx = adspace[0]
          Vrefy = adspace[1]      
          Vrefz = adspace[2]      
-
+   if Analytic is not None and V.dim != 2:
+      raise TypeError('Not implemented')
+   
    os.makedirs("figs", exist_ok=True)
    multiblock = pv.MultiBlock()
    #F3 = [] 
@@ -787,7 +789,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, functions = None, precomputed = None, filename = "figs/multipatch_solution", plot = True): 
+def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, functions = None, precomputed = None, Analytic = None, filename = "figs/multipatch_solution", plot = True): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -828,6 +830,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
          {"name": "velocity", "data": yuh},   # e.g., velocity field control points
          # Add more solution fields as needed
       ]
+   Analytic = [
+   {"name": "Anlytic", "x": '(1.+sx*np.cos(2.*np.pi*sy))**0.5', "y": 'sx*np.sin(2.*np.pi*sy)*0.5'}
+   ]
    Returns
    -------
    None
@@ -841,6 +846,9 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
    #...
    assert isinstance(V, TensorSpace)
 
+   if Analytic is not None and V.dim != 2:
+         raise TypeError('Not implemented')
+
    os.makedirs("figs", exist_ok=True)
    multiblock = pv.MultiBlock()
    if pyrefGeometry.geo_dim == 2:
@@ -852,6 +860,10 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
                [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
+               #...Compute analytic
+               if Analytic is not None:
+                  A = Analytic[i]
+                  x, y = eval(A["x"]), eval(A["y"])
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
@@ -875,6 +887,10 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
                [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
+               #...Compute analytic
+               if Analytic is not None:
+                  A = Analytic[i]
+                  x, y = eval(A["x"]), eval(A["y"])
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
@@ -905,6 +921,10 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
                [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
+               #...Compute analytic
+               if Analytic is not None:
+                  A = Analytic[i]
+                  x, y = eval(A["x"]), eval(A["y"])
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
@@ -931,6 +951,10 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
                [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
                #...Compute a Jacobian
                Jf = F1x*F2y - F1y*F2x
+               #...Compute analytic
+               if Analytic is not None:
+                  A = Analytic[i]
+                  x, y = eval(A["x"]), eval(A["y"])
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
@@ -1175,26 +1199,17 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
    multiblock.save(filename+".vtm")
    print(f"Saved all patches with solution to {filename}.vtm")
 
-def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True):
+def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True, Analytic = None):
    """
    Example on how one can use nurbs mapping and prolongate it in fine grid
    """
 
-   from   pyrefiga                    import SplineSpace
-   from   pyrefiga                    import TensorSpace   
-
-   print('#---: ', geometry)
-   if isinstance(Nump, int):
-      mp  = pyref_patch(geometry,0,nurbs=True)
-   else:
-      mp  = pyref_multipatch(geometry, Nump)
+   print('#---: ', geometry, Nump)
+   mp  = pyref_multipatch(geometry, Nump)
    print("geom dim = ",mp.geo_dim)
   
    # ... save a solution as .vtm for paraview
-   if functions is None :
-      paraview_nurbsSolutionMultipatch(nbpts, mp.space, mp)
-   else:
-      paraview_nurbsSolutionMultipatch(nbpts, mp.space, mp, functions = functions)      
+   paraview_nurbsSolutionMultipatch(nbpts, mp.space, mp, functions = functions, Analytic=Analytic)      
    #------------------------------------------------------------------------------
    # Show or close plots depending on argument
    if plot :
