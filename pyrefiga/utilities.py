@@ -1047,21 +1047,20 @@ class pyref_multipatch(object):
         # ...
         patch_has_interface = [False] * num_patches
         #... loop over all patches
-        if self.dim == 2: # 3D TODO 
-            for i in range(num_patches):
-                for j in range(i+1, num_patches):
-                    #... test if they share an interface
-                    interface_obj = pyrefInterface(mp[i], mp[j])
-                    if interface_obj.interface is False :
-                        continue
-                    # ...
-                    interfaces.append( (i+1, j+1, interface_obj.interface) )
-                    #... set the Dirichlet BCs False for the interface edges
-                    dirichlet[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
-                    dirichlet[j,idmapping[interface_obj.interface[1]][0],idmapping[interface_obj.interface[1]][1]] = False
-                    #...
-                    patch_has_interface[i] = True
-                    patch_has_interface[j] = True
+        for i in range(num_patches):
+            for j in range(i+1, num_patches):
+                #... test if they share an interface
+                interface_obj = pyrefInterface(mp[i], mp[j])
+                if interface_obj.interface is False :
+                    continue
+                # ...
+                interfaces.append( (i+1, j+1, interface_obj.interface) )
+                #... set the Dirichlet BCs False for the interface edges
+                dirichlet[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
+                dirichlet[j,idmapping[interface_obj.interface[1]][0],idmapping[interface_obj.interface[1]][1]] = False
+                #...
+                patch_has_interface[i] = True
+                patch_has_interface[j] = True
         # ...
         assert num_patches <= 1 or all(patch_has_interface), \
             "Invalid geometry: at least one patch has no interface"
@@ -1189,7 +1188,7 @@ class pyref_multipatch(object):
         if num_patch > 0:
             return self.patches[num_patch-1].stencil_mapping
         else:
-            raise TypeError('three dimension is not yet updated')
+            raise TypeError('three dimension is not yet updatedn or maybe num_patch = 1 not 0')
     #.. get refined geometry map
     def getRefineGeometryMap(self, num_patch=1, numElevate=1):
         return self.patches[num_patch-1].RefineGeometryMap(numElevate=numElevate)
@@ -1338,19 +1337,19 @@ class pyrefInterface(object):
             self.interface   = False
             self.dirichlet_1 = False
             self.dirichlet_2 = False
-            if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-15 :
+            if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])+np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-15 :
                 self.interface   = [2,1]
                 self.dirichlet_1 = [[True, False],[True, True]]
                 self.dirichlet_2 = [[False, True],[True, True]]
-            elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-12 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-15 :
+            elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])+np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-15 :
                 self.interface   = [1,2]
                 self.dirichlet_1 = [[False, True], [True, True]]
                 self.dirichlet_2 = [[True, False], [True, True]]
-            elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-12 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-15 :
+            elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])+np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-15 :
                 self.interface   = [3,4]
                 self.dirichlet_1 = [[True, True], [False, True]]
                 self.dirichlet_2 = [[True, True], [True, False]]
-            elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-12 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-15 :
+            elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])+np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-15 :
                 self.interface   = [4,3]
                 self.dirichlet_1 = [[True, True], [True, False]]
                 self.dirichlet_2 = [[True, True], [False, True]]
@@ -1361,24 +1360,56 @@ class pyrefInterface(object):
             self.interface   = False
             self.dirichlet_1 = False
             self.dirichlet_2 = False
-            if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])) <= 1e-12 and np.max(np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-15 and np.max(np.absolute(zmp[-1,:] - zmp1[0,:])) <= 1e-15 :
+            if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])+np.absolute(ymp[-1,:] - ymp1[0,:])+np.absolute(zmp[-1,:] - zmp1[0,:])) <= 1e-15 :
                 self.interface   = [2,1]
                 self.dirichlet_1 = [[True, False],[True, True]]
                 self.dirichlet_2 = [[False, True],[True, True]]
-            elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])) <= 1e-12 and np.max(np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-15 and np.max(np.absolute(zmp[0,:] - zmp1[-1,:])) <= 1e-15 :
+            elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])+np.absolute(ymp[0,:] - ymp1[-1,:])+np.absolute(zmp[0,:] - zmp1[-1,:])) <= 1e-15 :
                 self.interface   = [1,2]
                 self.dirichlet_1 = [[False, True], [True, True]]
                 self.dirichlet_2 = [[True, False], [True, True]]
-            elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])) <= 1e-12 and np.max(np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-15  and np.max(np.absolute(zmp[:,0] - zmp1[:,-1])) <= 1e-15 :
+            elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])+np.absolute(ymp[:,0] - ymp1[:,-1])+np.absolute(zmp[:,0] - zmp1[:,-1])) <= 1e-15 :
                 self.interface   = [3,4]
                 self.dirichlet_1 = [[True, True], [False, True]]
                 self.dirichlet_2 = [[True, True], [True, False]]
-            elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])) <= 1e-12 and np.max(np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-15 and np.max(np.absolute(zmp[:,-1] - zmp1[:,0])) <= 1e-15 :
+            elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])+np.absolute(ymp[:,-1] - ymp1[:,0])+np.absolute(zmp[:,-1] - zmp1[:,0])) <= 1e-15 :
                 self.interface   = [4,3]
                 self.dirichlet_1 = [[True, True], [True, False]]
                 self.dirichlet_2 = [[True, True], [False, True]]
+        elif mp.geo_dim == mp_next.geo_dim == 3 and mp.dim == mp_next.dim == 3:
+            xmp, ymp, zmp    = mp.coefs
+            xmp1, ymp1, zmp1 = mp_next.coefs
+            #...
+            self.interface   = False
+            self.dirichlet_1 = False
+            self.dirichlet_2 = False
+            if np.max(np.absolute(xmp[-1,:,:] - xmp1[0,:,:])+np.absolute(ymp[-1,:,:] - ymp1[0,:,:])+np.absolute(zmp[-1,:,:] - zmp1[0,:,:])) <= 1e-15 :
+                self.interface   = [2,1]
+                self.dirichlet_1 = [[True, False],[True, True],[True, True]]
+                self.dirichlet_2 = [[False, True],[True, True],[True, True]]
+            elif np.max(np.absolute(xmp[0,:,:] - xmp1[-1,:,:])+np.absolute(ymp[0,:,:] - ymp1[-1,:,:])+np.absolute(zmp[0,:,:] - zmp1[-1,:,:])) <= 1e-15 :
+                self.interface   = [1,2]
+                self.dirichlet_1 = [[False, True], [True, True],[True, True]]
+                self.dirichlet_2 = [[True, False], [True, True],[True, True]]
+            elif np.max(np.absolute(xmp[:,0,:] - xmp1[:,-1,:])+np.absolute(ymp[:,0,:] - ymp1[:,-1,:])+np.absolute(zmp[:,0,:] - zmp1[:,-1,:])) <= 1e-15 :
+                self.interface   = [3,4]
+                self.dirichlet_1 = [[True, True], [False, True],[True, True]]
+                self.dirichlet_2 = [[True, True], [True, False],[True, True]]
+            elif np.max(np.absolute(xmp[:,-1,:] - xmp1[:,0,:])+np.absolute(ymp[:,-1,:] - ymp1[:,0,:])+np.absolute(zmp[:,-1,:] - zmp1[:,0,:])) <= 1e-15 :
+                self.interface   = [4,3]
+                self.dirichlet_1 = [[True, True], [True, False],[True, True]]
+                self.dirichlet_2 = [[True, True], [False, True],[True, True]]
+            elif np.max(np.absolute(xmp[:,:,0] - xmp1[:,:,-1])+np.absolute(ymp[:,:,0] - ymp1[:,:,-1])+np.absolute(zmp[:,:,0] - zmp1[:,:,-1])) <= 1e-15 :
+                self.interface   = [5,6]
+                self.dirichlet_1 = [[True, True],[True, True], [False, True]]
+                self.dirichlet_2 = [[True, True],[True, True], [True, False]]
+            elif np.max(np.absolute(xmp[:,:,-1] - xmp1[:,:,0])+np.absolute(ymp[:,:,-1] - ymp1[:,:,0])+np.absolute(zmp[:,:,-1] - zmp1[:,:,0])) <= 1e-15 :
+                self.interface   = [6,5]
+                self.dirichlet_1 = [[True, True],[True, True], [True, False]]
+                self.dirichlet_2 = [[True, True],[True, True], [False, True]]
         else:
-            print('todo')
+            raise TypeError('only two or three dimensions')
+
     def interface(self):
         return self.interface
     def dirichlet_1(self):
