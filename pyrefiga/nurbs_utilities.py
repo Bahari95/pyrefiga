@@ -302,487 +302,146 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
    multiblock = pv.MultiBlock()
    #F3 = [] 
    if pyrefGeometry.geo_dim == 2:
-      if solution is None:
-         if functions is None:
-            for i in range(numPaches):
-               #... computes adaptive meshV.omega, 
-               sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-               sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
-               #---Compute a image by initial mapping
-               x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
-               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
-               #...Compute analytic
-               if Analytic is not None:
-                  A = Analytic[i]
-                  x = eval(A["x"])
-                  y = eval(A["y"])
-               #...Compute a Jacobian
-               #Jf = (F1x*F2y - F1y*F2x)
-               Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
-               #...
-               z = np.zeros_like(x)
-               points = np.stack((x, y, z), axis=-1)
+      for i in range(numPaches):
+         #... computes adaptive mesh
+         sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
+         sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
+         #---Compute a image by initial mapping
+         x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+         [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
+         #...Compute analytic
+         if Analytic is not None:
+            A = Analytic[i]
+            x = eval(A["x"])
+            y = eval(A["y"])
+         #...Compute a Jacobian
+         #Jf = (F1x*F2y - F1y*F2x)
+         Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
+         #...
+         z = np.zeros_like(x)
+         points = np.stack((x, y, z), axis=-1)
 
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
+         nx, ny = x.shape
+         grid = pv.StructuredGrid()
+         grid.points = points.reshape(-1, 3)
+         grid.dimensions = [nx, ny, 1]
 
-               # Flatten the solution and attach as a scalar field
-               grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # Flatten the solution and attach as a scalar field
+         grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # ... image bu analytic function
+         if functions is not None:
+            for Funct in functions:
+               fnc = eval(Funct["expression"])
+               grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
+         if solution is not None :
+            for sol in solution:
+               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+               grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
 
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-         else:
-            for i in range(numPaches):
-               #... computes adaptive mesh
-               sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-               sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
-               #---Compute a image by initial mapping
-               x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
-               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
-               #...Compute analytic
-               if Analytic is not None:
-                  A = Analytic[i]
-                  x = eval(A["x"])
-                  y = eval(A["y"])
-               #Jf = (F1x*F2y - F1y*F2x)
-               Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
-               #...
-               z = np.zeros_like(x)
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               grid["Jacobain"]          = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-               # ... image bu analytic function
-               for Funct in functions:
-                  fnc = eval(Funct["expression"])
-                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-
-      else:
-         if functions is None:
-            for i in range(numPaches):
-               #... computes adaptive mesh
-               sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-               sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
-               #---Compute a image by initial mapping
-               x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
-               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
-               #...Compute analytic
-               if Analytic is not None:
-                  A = Analytic[i]
-                  x = eval(A["x"])
-                  y = eval(A["y"])
-               #...Compute a Jacobian
-               #Jf = (F1x*F2y - F1y*F2x)
-               Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
-               #...
-               z = np.zeros_like(x)
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-               # .... 
-               for sol in solution:
-                  U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-         else:
-            for i in range(numPaches):
-               #... computes adaptive mesh
-               sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-               sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
-               #---Compute a image by initial mapping
-               x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
-               [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
-               #...Compute analytic
-               if Analytic is not None:
-                  A = Analytic[i]
-                  x = eval(A["x"])
-                  y = eval(A["y"])
-               #...Compute a Jacobian
-               #Jf = (F1x*F2y - F1y*F2x)
-               Jf = (sxx*syy-sxy*syx)*(F1x*F2y - F1y*F2x)
-               #...
-               z = np.zeros_like(x)
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-               # ... image bu analytic function
-               for Funct in functions:
-                  fnc = eval(Funct["expression"])
-                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-               for sol in solution:
-                  U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
+         if precomputed is not None :
+            for sol in precomputed:
+               grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
+         multiblock[f"patch_{i}"] = grid
    else:
       if pyrefGeometry.dim == 2 : # 2D adaptive mesh in 3D mapping
-         if solution is None:
-            if functions is None:
-               for i in range(numPaches):
-                  #... computes adaptive mesh
-                  sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-                  sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
-                  #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
-                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
-                  #...Compute dirivatives
-                  xu = sxx*F1x + syx*F1y
-                  yu = sxx*F2x + syx*F2y
-                  zu = sxx*F3x + syx*F3y
-                  xv = sxy*F1x + syy*F1y
-                  yv = sxy*F2x + syy*F2y
-                  zv = sxy*F3x + syy*F3y
-                  #
-                  r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
-                  r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
-                  n   = np.cross(r_u, r_v)
-                  n  /= np.linalg.norm(n, axis=-1, keepdims=True)
-                  pts = np.stack((x, y, z), axis=-1)   # (nx, ny, 3)
-                  center = pts.reshape(-1,3).mean(axis=0)
-                  vec = pts - center                   # (nx, ny, 3)
-                  dot = np.sum(n * vec, axis=-1)      # (nx, ny)
-                  flip = dot < 0
-                  n[flip] *= -1
-                  #n[...,0] = x
-                  #n[...,1] = y
-                  #n[...,2] = z
-                  # --- Light direction (unit vector) ---
-                  l = np.array([0.2, 0.6, 1.0])
-                  l /= np.linalg.norm(l)
+            for i in range(numPaches):
+               #... computes adaptive mesh
+               sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
+               sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
+               #---Compute a image by initial mapping
+               x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+               [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
+               #...Compute dirivatives
+               xu = sxx*F1x + syx*F1y
+               yu = sxx*F2x + syx*F2y
+               zu = sxx*F3x + syx*F3y
+               xv = sxy*F1x + syy*F1y
+               yv = sxy*F2x + syy*F2y
+               zv = sxy*F3x + syy*F3y
+               #
+               r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
+               r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
+               n   = np.cross(r_u, r_v)
+               n  /= np.linalg.norm(n, axis=-1, keepdims=True)
+               pts = np.stack((x, y, z), axis=-1)   # (nx, ny, 3)
+               center = pts.reshape(-1,3).mean(axis=0)
+               vec = pts - center                   # (nx, ny, 3)
+               dot = np.sum(n * vec, axis=-1)      # (nx, ny)
+               flip = dot < 0
+               n[flip] *= -1
+               #n[...,0] = x
+               #n[...,1] = y
+               #n[...,2] = z
+               # --- Light direction (unit vector) ---
+               l = np.array([0.2, 0.6, 1.0])
+               l /= np.linalg.norm(l)
 
-                  # --- Brightness field ---
-                  I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
-                  # .... 
-                  points = np.stack((x, y, z), axis=-1)
+               # --- Brightness field ---
+               I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
+               # .... 
+               points = np.stack((x, y, z), axis=-1)
 
-                  nx, ny = x.shape
-                  grid = pv.StructuredGrid()
-                  grid.points = points.reshape(-1, 3)
-                  grid.dimensions = [nx, ny, 1]
-
-                  # Flatten the solution and attach as a scalar field
-                  grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  if precomputed is not None :
-                     for sol in precomputed:
-                        grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-                  multiblock[f"patch_{i}"] = grid
-            else:
-               for i in range(numPaches):
-                  #... computes adaptive mesh
-                  sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-                  sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
-                  #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
-                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
-                  #...Compute dirivatives
-                  xu = sxx*F1x + syx*F1y
-                  yu = sxx*F2x + syx*F2y
-                  zu = sxx*F3x + syx*F3y
-                  xv = sxy*F1x + syy*F1y
-                  yv = sxy*F2x + syy*F2y
-                  zv = sxy*F3x + syy*F3y
-                  #
-                  r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
-                  r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
-                  n   = np.cross(r_u, r_v)
-                  n  /= np.linalg.norm(n, axis=-1, keepdims=True)
-                  pts = np.stack((x, y, z), axis=-1)   # (nx, ny, 3)
-                  center = pts.reshape(-1,3).mean(axis=0)
-                  vec = pts - center                   # (nx, ny, 3)
-                  dot = np.sum(n * vec, axis=-1)      # (nx, ny)
-                  flip = dot < 0
-                  n[flip] *= -1
-                  #n[...,0] = x
-                  #n[...,1] = y
-                  #n[...,2] = z
-                  # --- Light direction (unit vector) ---
-                  l = np.array([0.2, 0.6, 1.0])
-                  l /= np.linalg.norm(l)
-
-                  # --- Brightness field ---
-                  I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
-                  # .... 
-                  points = np.stack((x, y, z), axis=-1)
-
-                  nx, ny = x.shape
-                  grid = pv.StructuredGrid()
-                  grid.points = points.reshape(-1, 3)
-                  grid.dimensions = [nx, ny, 1]
-
-                  # Flatten the solution and attach as a scalar field
-                  grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  # ... image bu analytic function
+               nx, ny = x.shape
+               grid = pv.StructuredGrid()
+               grid.points = points.reshape(-1, 3)
+               grid.dimensions = [nx, ny, 1]
+               # ------------------------------------------------------
+               # Flatten the solution and attach as a scalar field
+               grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
+               
+               # ... image bu analytic function
+               if functions is not None:
                   for Funct in functions:
                      fnc = eval(Funct["expression"])
                      grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  if precomputed is not None :
-                     for sol in precomputed:
-                        grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-                  multiblock[f"patch_{i}"] = grid
-
-         else:
-            if functions is None:
-               for i in range(numPaches):
-                  #... computes adaptive mesh
-                  sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-                  sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
-                  #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
-                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
-                  #...Compute dirivatives
-                  xu = sxx*F1x + syx*F1y
-                  yu = sxx*F2x + syx*F2y
-                  zu = sxx*F3x + syx*F3y
-                  xv = sxy*F1x + syy*F1y
-                  yv = sxy*F2x + syy*F2y
-                  zv = sxy*F3x + syy*F3y
-                  #
-                  r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
-                  r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
-                  n   = np.cross(r_u, r_v)
-                  n  /= np.linalg.norm(n, axis=-1, keepdims=True)
-                  pts = np.stack((x, y, z), axis=-1)   # (nx, ny, 3)
-                  center = pts.reshape(-1,3).mean(axis=0)
-                  vec = pts - center                   # (nx, ny, 3)
-                  dot = np.sum(n * vec, axis=-1)      # (nx, ny)
-                  flip = dot < 0
-                  n[flip] *= -1
-                  #n[...,0] = x
-                  #n[...,1] = y
-                  #n[...,2] = z
-                  # --- Light direction (unit vector) ---
-                  l = np.array([0.2, 0.6, 1.0])
-                  l /= np.linalg.norm(l)
-
-                  # --- Brightness field ---
-                  I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
-
-                  # .... 
-                  points = np.stack((x, y, z), axis=-1)
-
-                  nx, ny = x.shape
-                  grid = pv.StructuredGrid()
-                  grid.points = points.reshape(-1, 3)
-                  grid.dimensions = [nx, ny, 1]
-                  # ------------------------------------------------------
-                  # Flatten the solution and attach as a scalar field
-                  grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  # .... 
-                  for sol in solution:
-                     U          = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                     grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  if precomputed is not None :
-                     for sol in precomputed:
-                        grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-                  multiblock[f"patch_{i}"] = grid
-            else:
-               for i in range(numPaches):
-                  #... computes adaptive mesh
-                  sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-                  sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
-                  #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
-                  [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
-                  #...Compute dirivatives
-                  xu = sxx*F1x + syx*F1y
-                  yu = sxx*F2x + syx*F2y
-                  zu = sxx*F3x + syx*F3y
-                  xv = sxy*F1x + syy*F1y
-                  yv = sxy*F2x + syy*F2y
-                  zv = sxy*F3x + syy*F3y
-                  #
-                  r_u = np.stack((xu, yu, zu), axis=-1)  # shape: (200, 200, 3)
-                  r_v = np.stack((xv, yv, zv), axis=-1)  # shape: (200, 200, 3)
-                  n   = np.cross(r_u, r_v)
-                  n  /= np.linalg.norm(n, axis=-1, keepdims=True)
-                  pts = np.stack((x, y, z), axis=-1)   # (nx, ny, 3)
-                  center = pts.reshape(-1,3).mean(axis=0)
-                  vec = pts - center                   # (nx, ny, 3)
-                  dot = np.sum(n * vec, axis=-1)      # (nx, ny)
-                  flip = dot < 0
-                  n[flip] *= -1
-                  #n[...,0] = x
-                  #n[...,1] = y
-                  #n[...,2] = z
-                  # --- Light direction (unit vector) ---
-                  l = np.array([0.2, 0.6, 1.0])
-                  l /= np.linalg.norm(l)
-
-                  # --- Brightness field ---
-                  I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
-                  # .... 
-                  points = np.stack((x, y, z), axis=-1)
-
-                  nx, ny = x.shape
-                  grid = pv.StructuredGrid()
-                  grid.points = points.reshape(-1, 3)
-                  grid.dimensions = [nx, ny, 1]
-                  # ------------------------------------------------------
-                  # Flatten the solution and attach as a scalar field
-                  grid["isophotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
-                  
-                  # ... image bu analytic function
-                  for Funct in functions:
-                     fnc = eval(Funct["expression"])
-                     grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-                  # .... 
+               # .... 
+               if solution is not None :
                   for sol in solution:
                      U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
                      grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  if precomputed is not None :
-                     for sol in precomputed:
-                        grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-                  multiblock[f"patch_{i}"] = grid
+               # .... 
+               if precomputed is not None :
+                  for sol in precomputed:
+                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
+               multiblock[f"patch_{i}"] = grid
       else: #... zad
-         if solution is None:
-            if functions is None:
-               for i in range(numPaches):
-                  #... computes adaptive mesh
-                  sx, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:4]
-                  sy, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:4]
-                  sz, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0:4]
-                  #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
-                  #...Compute a Jacobian in  i direction
-                  Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
-                  # .... 
-                  points = np.stack((x, y, z), axis=-1)
+         for i in range(numPaches):
+            #... computes adaptive mesh
+            sx, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:4]
+            sy, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:4]
+            sz, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0:4]
+            #---Compute a image by initial mapping
+            x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
+            #...Compute a Jacobian in  i direction
+            Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
+            # .... 
+            points = np.stack((x, y, z), axis=-1)
 
-                  nx, ny, nz = x.shape
-                  grid = pv.StructuredGrid()
-                  grid.points = points.reshape(-1, 3)
-                  grid.dimensions = [nx, ny, nz]
+            nx, ny, nz = x.shape
+            grid = pv.StructuredGrid()
+            grid.points = points.reshape(-1, 3)
+            grid.dimensions = [nx, ny, nz]
 
-                  # Flatten the solution and attach as a scalar field
-                  grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+            # Flatten the solution and attach as a scalar field
+            grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
 
-                  if precomputed is not None :
-                     for sol in precomputed:
-                        grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-                  multiblock[f"patch_{i}"] = grid
-            else:
-               for i in range(numPaches):
-                  #... computes adaptive mesh
-                  sx          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0]
-                  sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0]
-                  sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0]
-                  #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
-                  # .... 
-                  points = np.stack((x, y, z), axis=-1)
+            # Flatten the solution and attach as a scalar field
+            # ... image bu analytic function
+            if functions is not None:
+               for Funct in functions:
+                  fnc = eval(Funct["expression"])
+                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
+            # .... 
+            if solution is not None:
+               for sol in solution:
+                  U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
+            # .... 
+            if precomputed is not None :
+               for sol in precomputed:
+                  grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
+            multiblock[f"patch_{i}"] = grid
 
-                  nx, ny, nz = x.shape
-                  grid = pv.StructuredGrid()
-                  grid.points = points.reshape(-1, 3)
-                  grid.dimensions = [nx, ny, nz]
-
-                  # Flatten the solution and attach as a scalar field
-                  # ... image bu analytic function
-                  for Funct in functions:
-                     fnc = eval(Funct["expression"])
-                     grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  if precomputed is not None :
-                     for sol in precomputed:
-                        grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-                  multiblock[f"patch_{i}"] = grid
-
-         else:
-            if functions is None:
-               for i in range(numPaches):
-                  #... computes adaptive mesh
-                  sx          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0]
-                  sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0]
-                  sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0]
-                  #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
-                  # .... 
-                  points = np.stack((x, y, z), axis=-1)
-
-                  nx, ny, nz = x.shape
-                  grid = pv.StructuredGrid()
-                  grid.points = points.reshape(-1, 3)
-                  grid.dimensions = [nx, ny, nz]
-
-                  # Flatten the solution and attach as a scalar field
-                  # .... 
-                  for sol in solution:
-                     U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                     grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-                  multiblock[f"patch_{i}"] = grid
-            else:
-               for i in range(numPaches):
-                  #... computes adaptive mesh
-                  sx          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0]
-                  sy          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0]
-                  sz          = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0]
-                  #---Compute a image by initial mapping
-                  x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
-                  # .... 
-                  points = np.stack((x, y, z), axis=-1)
-
-                  nx, ny, nz = x.shape
-                  grid = pv.StructuredGrid()
-                  grid.points = points.reshape(-1, 3)
-                  grid.dimensions = [nx, ny, nz]
-
-                  # Flatten the solution and attach as a scalar field
-                  # ... image bu analytic function
-                  for Funct in functions:
-                     fnc = eval(Funct["expression"])
-                     grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-                  # .... 
-                  for sol in solution:
-                     U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                     grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                  if precomputed is not None :
-                     for sol in precomputed:
-                        grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-                  multiblock[f"patch_{i}"] = grid         
    # Save multiblock dataset
    multiblock.save(filename+".vtm")
    print(f"Saved all patches with solution to {filename}.vtm")
@@ -852,348 +511,124 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
    os.makedirs("figs", exist_ok=True)
    multiblock = pv.MultiBlock()
    if pyrefGeometry.geo_dim == 2:
-      if solution is None:
-         if functions is None:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               #...Compute a Jacobian
-               Jf = F1x*F2y - F1y*F2x
-               #...Compute analytic
-               if Analytic is not None:
-                  A = Analytic[i]
-                  x, y = eval(A["x"]), eval(A["y"])
-               #...
-               z = np.zeros_like(x)
-               points = np.stack((x, y, z), axis=-1)
+      for i in range(numPaches):
+         #---Compute a physical domain
+         x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
+         [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
+         #...Compute a Jacobian
+         Jf = F1x*F2y - F1y*F2x
+         #...Compute analytic
+         if Analytic is not None:
+            A = Analytic[i]
+            x, y = eval(A["x"]), eval(A["y"])
+         #...
+         z = np.zeros_like(x)
+         points = np.stack((x, y, z), axis=-1)
 
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
+         nx, ny = x.shape
+         grid = pv.StructuredGrid()
+         grid.points = points.reshape(-1, 3)
+         grid.dimensions = [nx, ny, 1]
 
-               # Flatten the solution and attach as a scalar field
-               grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # Flatten the solution and attach as a scalar field
+         grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # ... image bu analytic function
+         if functions is not None :
+            for Funct in functions:
+               fnc = eval(Funct["expression"])
+               grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
+         if solution is not None :
+            for sol in solution:
+               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+               grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
 
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-         else:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               #...Compute a Jacobian
-               Jf = F1x*F2y - F1y*F2x
-               #...Compute analytic
-               if Analytic is not None:
-                  A = Analytic[i]
-                  x, y = eval(A["x"]), eval(A["y"])
-               #...
-               z = np.zeros_like(x)
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               # ... image bu analytic function
-               for Funct in functions:
-                  fnc = eval(Funct["expression"])
-                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-
-      else:
-         if functions is None:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               #...Compute a Jacobian
-               Jf = F1x*F2y - F1y*F2x
-               #...Compute analytic
-               if Analytic is not None:
-                  A = Analytic[i]
-                  x, y = eval(A["x"]), eval(A["y"])
-               #...
-               z = np.zeros_like(x)
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-               for sol in solution:
-                  U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-         else:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               #...Compute a Jacobian
-               Jf = F1x*F2y - F1y*F2x
-               #...Compute analytic
-               if Analytic is not None:
-                  A = Analytic[i]
-                  x, y = eval(A["x"]), eval(A["y"])
-               #...
-               z = np.zeros_like(x)
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-               # ... image bu analytic function
-               for Funct in functions:
-                  fnc = eval(Funct["expression"])
-                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               for sol in solution:
-                  U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
+         if precomputed is not None :
+            for sol in precomputed:
+               grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
+         multiblock[f"patch_{i}"] = grid
    elif pyrefGeometry.dim == 3: #.. z is not none 3D case
-      if solution is None:
-         if functions is None:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts, nbpts))
-               [[uxx, uxy, uxz],[uyx, uyy, uyz],[uzx, uzy, uzz]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts, nbpts))
-               #...Compute a Jacobian
-               Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
-               # .... 
-               points = np.stack((x, y, z), axis=-1)
+      for i in range(numPaches):
+         #---Compute a physical domain
+         x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts, nbpts))
+         [[uxx, uxy, uxz],[uyx, uyy, uyz],[uzx, uzy, uzz]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts, nbpts))
+         #...Compute a Jacobian
+         Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
+         # .... 
+         points = np.stack((x, y, z), axis=-1)
 
-               nx, ny, nz = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, nz]
+         nx, ny, nz = x.shape
+         grid = pv.StructuredGrid()
+         grid.points = points.reshape(-1, 3)
+         grid.dimensions = [nx, ny, nz]
 
-               # Flatten the solution and attach as a scalar field
-               grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # Flatten the solution and attach as a scalar field
+         grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
 
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-         else:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts, nbpts))
-               # [[uxx, uxy, uxz],[uyx, uyy, uyz],[uzx, uzy, uzz]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               # .... 
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny, nz = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, nz]
-
-               # Flatten the solution and attach as a scalar field
-               # ... image bu analytic function
-               for Funct in functions:
-                  fnc = eval(Funct["expression"])
-                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-
-      else:
-         if functions is None:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts, nbpts))
-               # [[uxx, uxy, uxz],[uyx, uyy, uyz],[uzx, uzy, uzz]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               # .... 
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny, nz = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, nz]
-
-               # Flatten the solution and attach as a scalar field
-               # .... 
-               for sol in solution:
-                  U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-         else:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts, nbpts))
-               # [[uxx, uxy, uxz],[uyx, uyy, uyz],[uzx, uzy, uzz]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               # .... 
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny, nz = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, nz]
-
-               # Flatten the solution and attach as a scalar field
-               # ... image bu analytic function
-               for Funct in functions:
-                  fnc = eval(Funct["expression"])
-                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-               # .... 
-               for sol in solution:
-                  U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
+         # Flatten the solution and attach as a scalar field
+         # ... image bu analytic function
+         if functions is not None :
+            for Funct in functions:
+               fnc = eval(Funct["expression"])
+               grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # .... 
+         if solution is not None :
+            for sol in solution:
+               U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+               grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # .... 
+         if precomputed is not None :
+            for sol in precomputed:
+               grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
+         multiblock[f"patch_{i}"] = grid
    else: #.. z is not none
-      if solution is None:
-         if functions is None:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               #...Compute a Jacobian
-               Jf = F1x*F2y - F1y*F2x
-               #...
-               points = np.stack((x, y, z), axis=-1)
+      for i in range(numPaches):
+         #---Compute a physical domain
+         x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
+         [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
+         #...
+         r_u = np.stack((F1x, F2x, F3x), axis=-1)  # shape: (200, 200, 3)
+         r_v = np.stack((F1y, F2y, F3y), axis=-1)  # shape: (200, 200, 3)
+         n   = np.cross(r_u, r_v)
+         n  /= np.linalg.norm(n, axis=-1, keepdims=True)
+         pts = np.stack((x, y, z), axis=-1)   # (nx, ny, 3)
+         center = pts.reshape(-1,3).mean(axis=0)
+         vec = pts - center                   # (nx, ny, 3)
+         dot = np.sum(n * vec, axis=-1)      # (nx, ny)
+         flip = dot < 0
+         n[flip] *= -1
+         # --- Light direction (unit vector) ---
+         l = np.array([0.2, 0.6, 1.0])
+         l /= np.linalg.norm(l)
 
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
+         # --- Brightness field ---
+         I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
 
-               # Flatten the solution and attach as a scalar field
-               grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # ....
+         points = np.stack((x, y, z), axis=-1)
 
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-         else:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               #...
-               r_u = np.stack((F1x, F2x, F3x), axis=-1)  # shape: (200, 200, 3)
-               r_v = np.stack((F1y, F2y, F3y), axis=-1)  # shape: (200, 200, 3)
-               n   = np.cross(r_u, r_v)
-               n  /= np.linalg.norm(n, axis=-1, keepdims=True)
-               pts = np.stack((x, y, z), axis=-1)   # (nx, ny, 3)
-               center = pts.reshape(-1,3).mean(axis=0)
-               vec = pts - center                   # (nx, ny, 3)
-               dot = np.sum(n * vec, axis=-1)      # (nx, ny)
-               flip = dot < 0
-               n[flip] *= -1
-               # --- Light direction (unit vector) ---
-               l = np.array([0.2, 0.6, 1.0])
-               l /= np.linalg.norm(l)
+         nx, ny = x.shape
+         grid = pv.StructuredGrid()
+         grid.points = points.reshape(-1, 3)
+         grid.dimensions = [nx, ny, 1]
 
-               # --- Brightness field ---
-               I = n[...,0]*l[0] + n[...,1]*l[1] + n[...,2]*l[2]
+         # Flatten the solution and attach as a scalar field
+         grid["isphotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
 
-               print(n.shape, x.shape)
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               grid["isphotes"] = I.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               # ... image bu analytic function
-               for Funct in functions:
-                  fnc = eval(Funct["expression"])
-                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-
-      else:
-         if functions is None:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               # [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               #...
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               for sol in solution:
-                  U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-               if precomputed is not None :
-                     for sol in precomputed:
-                        grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
-         else:
-            for i in range(numPaches):
-               #---Compute a physical domain
-               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               # [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
-               #...
-               points = np.stack((x, y, z), axis=-1)
-
-               nx, ny = x.shape
-               grid = pv.StructuredGrid()
-               grid.points = points.reshape(-1, 3)
-               grid.dimensions = [nx, ny, 1]
-
-               # Flatten the solution and attach as a scalar field
-               # ... image bu analytic function
-               for Funct in functions:
-                  fnc = eval(Funct["expression"])
-                  grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-               for sol in solution:
-                  U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
-                  grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-               if precomputed is not None :
-                  for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
-               multiblock[f"patch_{i}"] = grid
+         # ... image bu analytic function
+         if functions is not None :
+            for Funct in functions:
+               fnc = eval(Funct["expression"])
+               grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # ...
+         if solution is not None :
+            for sol in solution:
+               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+               grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
+         # ...
+         if precomputed is not None :
+            for sol in precomputed:
+               grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
+         multiblock[f"patch_{i}"] = grid
    
    # Save multiblock dataset
    multiblock.save(filename+".vtm")
@@ -1220,7 +655,7 @@ def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True, Analytic = 
 
 
 #--------------------------------------------------------------------------------------------------------------------
-# ... Time post-processes
+# ... Time post-processes TODO
 #--------------------------------------------------------------------------------------------------------------------
 def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, Vg = None, LStime = None, solution = None, functions = None, precomputed = None, filename = "figs/multipatch_solution", output_pvd_path="figs/solution.pvd"): 
    """
