@@ -628,10 +628,6 @@ class pyref_patch:
             Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1])
             Vmp3 = SplineSpace(degree=self.degree[2], grid = self.grids[2], omega = self.weights[2])
             return TensorSpace(Vmp1, Vmp2, Vmp3)        
-    def clone(self, Dirichlet_all = None):
-        if Dirichlet_all is None:
-            Dirichlet_all = self.Dirichlet_all
-        return pyref_patch(self.filename, self.element_id, nurbs = self.nurbs, Dirichlet_all = Dirichlet_all)
     #.. get mapping in stencil vector format
     @property
     def stencil_mapping(self):
@@ -661,6 +657,10 @@ class pyref_patch:
             return u1, u2, u3
         else:
             raise TypeError('dimension mismatch')
+    def clone(self, Dirichlet_all = None):
+        if Dirichlet_all is None:
+            Dirichlet_all = self.Dirichlet_all
+        return pyref_patch(self.filename, self.element_id, nurbs = self.nurbs, Dirichlet_all = Dirichlet_all)
     #.. get spline space on uniform mesh
     def getspace(self, V):
         '''
@@ -670,13 +670,16 @@ class pyref_patch:
         :param self: Description
         :param V: TensorSpace from finite element
         '''
+        assert isinstance(V, TensorSpace), "Expecting TensorSpace"
+
         if self._weights is None:
             raise TypeError('Geometry is not NURBs please use same basis as for FE')
+
         if self.dim == 2:
             # ... space of a B-spline patches on uniform mesh
             Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= V.nderiv[0], mesh= V.mesh[0], quad_degree= V.weights[0].shape[1]-1)
             Vmp2 = SplineSpace(degree=self.degree[1], grid = self.grids[1], omega = self.weights[1], nderiv= V.nderiv[1], mesh= V.mesh[1], quad_degree= V.weights[1].shape[1]-1)
-            return TensorSpace(V.spaces[0], V.spaces[1], Vmp1, Vmp2)
+            return TensorSpace(V.spaces[0], V.spaces[1], Vmp1, Vmp2) if V.dim == 2 else TensorSpace(V.spaces[0], V.spaces[1], V.spaces[2], V.spaces[3], Vmp1, Vmp2)
         else:
             # ... space of a B-spline patches on uniform mesh
             Vmp1 = SplineSpace(degree=self.degree[0], grid = self.grids[0], omega = self.weights[0], nderiv= V.nderiv[0], mesh= V.mesh[0], quad_degree= V.weights[0].shape[1]-1)

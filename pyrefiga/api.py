@@ -72,15 +72,15 @@ def assemble_matrix(core, V, fields=None, knots = None, value = None, out=None):
     return out
 
 #==============================================================================
-def assemble_vector(core, V, fields=None, knots = None, value = None, out=None):
+def assemble_vector(core, V, fields=None, knots = False, value = None, out=None):
     if out is None:
         out = StencilVector(V.vector_space)
 
     # ...
     args = []
-    if knots is None :
+    if not knots:
        if isinstance(V, TensorSpace):
-           int_par = 2 if not (V.dim % 3 == 0 and (V.dim != 6 or V.omega[3] is not None)) else 3
+           int_par = 2 if not (V.dim % 3 == 0 and (V.dim != 6 or V.spaces[3].nurbs)) else 3
            args += list(V.nelements[:int_par])
            args += list(V.degree)
            args += list(V.spans)   

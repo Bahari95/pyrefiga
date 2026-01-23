@@ -24,7 +24,7 @@ from   pyrefiga                    import assemble_stiffness1D
 from   pyrefiga                    import assemble_mass1D      
 from   pyrefiga                    import assemble_matrix_ex01
 # ...   load a geometry from xml file 
-from   pyrefiga                    import getGeometryMap
+from   pyrefiga                    import pyref_patch
 from   pyrefiga                    import load_xml
 
 #..
@@ -70,19 +70,21 @@ args = parser.parse_args()
 
 #==============================================================================
 #.......Poisson ALGORITHM
-def picard_solve(V1, V2, V3, V4, V1mp, V2mp, u11_mpH = None, u12_mpH = None, times = None, x_2 = None, tol = None):
+def picard_solve(V1, V2, V3, V4, mp, times = None, x_2 = None, tol = None):
        niter      = 30   #
        if tol is None :
           tol     = 1e-8  # 
-
+       assert isinstance(mp, pyref_patch)
+       
+       # .. stencil mapping
+       u11_mpH, u12_mpH = mp.stencil_mapping
        # create the tensor space
-       W   = TensorSpace(V1mp, V2mp)
+       W   = mp.space
        V11 = TensorSpace(V4, V3)
        V01 = TensorSpace(V1, V3)
        V10 = TensorSpace(V4, V2)
        Vmae= TensorSpace(V1, V2, V3, V4)
-       V   = TensorSpace(V1, V2, V3, V4, V1mp, V2mp)
-
+       V   = mp.getspace(Vmae)
        # .. computes basis and sopans in adapted quadrature
        Quad_adm   = quadratures_in_admesh(Vmae, W, nders = 0)
 
@@ -251,35 +253,20 @@ def picard_solve(V1, V2, V3, V4, V1mp, V2mp, u11_mpH = None, u12_mpH = None, tim
 # ....................Using Two or Multi grid method for soving MAE
 # #..................................................................
 
-def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map = 0, check =None) :
+def  Monge_ampere_equation(nb_ne, mp, times = None, check =None) :
 
 
-   geometry       = load_xml(geometry)  # Load geometry
+   assert isinstance(mp, pyref_patch)
+
    if times is None :
       times           = 0.
    #...=====================
    # ... Assembling mapping
-   mp             = getGeometryMap(geometry,id_map)
    degree         = mp.degree # Use same degree as geometry
    quad_degree    = max(degree[0],degree[1])*2+1 # Quadrature degree
-   mp.nurbs_check = True # Activate NURBS if geometry uses NURBS
-
-   # ... Assembling mapping
-   xmp, ymp       = mp.coefs
-   wm1, wm2       = mp.weights
 
    # ... Assembling mapping
    ne               = 4
-   # Create spline spaces for each direction
-   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], omega = wm1, mesh = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
-   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], omega = wm2, mesh = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
-   Vmp             = TensorSpace(V1mp, V2mp)
-
-   #... Initial mapping to StencilVector
-   u11_mp         = StencilVector(Vmp.vector_space)
-   u12_mp         = StencilVector(Vmp.vector_space)
-   u11_mp.from_array(Vmp, xmp)
-   u12_mp.from_array(Vmp, ymp)
 
    #----------------------
    # ... Initial guess
@@ -290,12 +277,15 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    V3H             = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
    V4H             = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
    # create the tensor space for potential function
-   VH11           = TensorSpace(V4H, V3H)
+   VH11            = TensorSpace(V4H, V3H)
+
+   #... stencil mapping
+   u11_mp, u12_mp = mp.stencil_mapping
 
    #... in coarse grid
    tol            = 1e-5
    start          = time.time()
-   x2H            = picard_solve(V1H, V2H, V3H, V4H, V1mp, V2mp, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, tol = tol)[-1]
+   x2H            = picard_solve(V1H, V2H, V3H, V4H, mp, times = times, tol = tol)[-1]
    MG_time        = time.time()- start
    # ... For multigrid method
    for ne in range(4,nb_ne):
@@ -303,12 +293,9 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
       V2mg        = SplineSpace(degree=degree[1]+1, grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
       V3mg        = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
       V4mg        = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
-      # Create spline spaces for each direction
-      V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0, numElevate=ne), omega = wm1, quad_degree = quad_degree)
-      V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1, numElevate=ne), omega = wm2, quad_degree = quad_degree)
       # create the tensor space
       Vh11mg      = TensorSpace(V4mg, V3mg)
-         
+      
       #.. Prologation by knots insertion matrix
       M           = prolongation_matrix(VH11, Vh11mg)
       x2H         = M.dot(x2H)
@@ -317,7 +304,7 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
       # ... in new grid
       #tol       *= 1e-1
       start       = time.time()
-      x2H         = picard_solve(V1mg, V2mg, V3mg, V4mg,  V1mp, V2mp, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, x_2 = x2H, tol= tol)[-1]
+      x2H         = picard_solve(V1mg, V2mg, V3mg, V4mg, mp, times = times, x_2 = x2H, tol= tol)[-1]
       MG_time    += time.time()- start
       # .. update grids
       V1H         = V1mg
@@ -343,9 +330,6 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
    V3              = SplineSpace(degree=degree[1],   grid = mp.Refinegrid(1, numElevate=ne), quad_degree = quad_degree)
    V4              = SplineSpace(degree=degree[0],   grid = mp.Refinegrid(0, numElevate=ne), quad_degree = quad_degree)
 
-   # Create spline spaces for each direction
-   V1mp            = SplineSpace(degree=degree[0], grid = mp.grids[0], mesh = mp.Refinegrid(0, numElevate=ne), omega = wm1, quad_degree = quad_degree)
-   V2mp            = SplineSpace(degree=degree[1], grid = mp.grids[1], mesh = mp.Refinegrid(1, numElevate=ne), omega = wm2, quad_degree = quad_degree)
    # create the tensor space
    Vh11            = TensorSpace(V4, V3)
    Vh01            = TensorSpace(V1, V3)
@@ -358,20 +342,20 @@ def  Monge_ampere_equation(nb_ne, geometry = 'circle.xml', times = None, id_map 
 
    # ... in fine grid
    start            = time.time()
-   u11_pH, u12_pH, x11uh, x12uh, iter_N, l2_residualh = picard_solve(V1, V2, V3, V4, V1mp, V2mp, u11_mpH = u11_mp, u12_mpH = u12_mp, times = times, x_2 = x2H)[:-1]
+   u11_pH, u12_pH, x11uh, x12uh, iter_N, l2_residualh = picard_solve(V1, V2, V3, V4, mp, times = times, x_2 = x2H)[:-1]
    MG_time         += time.time()- start
    # ...
    # .. computes basis and sopans in adapted quadrature
-   Quad_adm         = quadratures_in_admesh(Vh, Vmp)
+   Quad_adm         = quadratures_in_admesh(Vh, mp.space)
    spans_ad1, spans_ad2, basis_ad1, basis_ad2 = Quad_adm.ad_quadratures(u11_pH, u12_pH)
    Quality          = StencilVector(Vh11.vector_space)
    # ...          
-   Vh              = TensorSpace(V1, V2, V3, V4, V1mp, V2mp)
+   Vh               = mp.getspace(Vh)
    Quality          = assemble_Quality(Vh, fields=[u11_pH, u12_pH, u11_mp, u12_mp], value = [times, spans_ad1, spans_ad2, basis_ad1, basis_ad2],  out = Quality)
    norm             = Quality.toarray()
    l2_Quality       = norm[0]
    l2_displacement  = norm[1]
-   return Vh.nelements[0], l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vmp
+   return Vh.nelements[0], l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10
 
 # # ........................................................
 # ....................For generating tables
@@ -392,6 +376,8 @@ id_map   = 122
 #geometry = 'butterfly.xml'
 # id_map   = 0
 
+geometry       = load_xml(geometry)  # Load geometry
+mp             = pyref_patch(geometry,id_map)
 # ... new discretization for plot
 nbpts           = args.nbpts
 print("	\\begin{tabular}{r c c c c c}")
@@ -400,18 +386,16 @@ print("		$\#$cells & Err & CPU-time (s) & Qual &$\min~\\text{Jac}(\PsiPsi)$ &$\m
 print("		\hline")
 for nb_ne in range(5,6):
 
-   nelements, l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10, xmp, ymp, Vhmp = Monge_ampere_equation(nb_ne, geometry= geometry, id_map = id_map)
+   nelements, l2_Quality, MG_time, l2_displacement, x11uh , Vh01, x12uh , Vh10 = Monge_ampere_equation(nb_ne, mp)
 
    #---Compute a solution
    sx, uxx, uxy, X, Y = pyccel_sol_field_2d((nbpts,nbpts),  x11uh , Vh01.knots, Vh01.degree)
    sy, uyx, uyy       = pyccel_sol_field_2d((nbpts,nbpts),  x12uh , Vh10.knots, Vh10.degree)[0:3]
 
    #---Compute a mapping
-   F1 = sol_field_NURBS_2d((nbpts,nbpts),  xmp , Vhmp.omega, Vhmp.knots, Vhmp.degree)[0]
-   F2 = sol_field_NURBS_2d((nbpts,nbpts),  ymp , Vhmp.omega, Vhmp.knots, Vhmp.degree)[0]
+   F1, F2 = mp.eval(nbpts = (nbpts, nbpts))
    # ... in adaped mesh
-   ux = sol_field_NURBS_2d( None,  xmp , Vhmp.omega, Vhmp.knots, Vhmp.degree, meshes = (sx, sy))[0]
-   uy = sol_field_NURBS_2d( None,  ymp , Vhmp.omega, Vhmp.knots, Vhmp.degree, meshes = (sx, sy))[0]
+   ux, uy = mp.eval(mesh = (sx, sy))
    # ... Jacobian function of Optimal mapping
    det = uxx*uyy-uxy*uyx
    # ...
@@ -465,7 +449,7 @@ functions = [
         {"name": "density", "expression": rho[0]},
 ]
 
-paraview_nurbsAdMeshMultipatch(nbpts, Vhmp, [xmp], [ymp], [x11uh], [x12uh], adspace =[Vh01,Vh10], functions = functions, filename = 'figs/admesh_2dexample')
+paraview_nurbsAdMeshMultipatch(nbpts, Vh01, mp, [x11uh], [x12uh], adspace =[Vh01,Vh10], functions = functions, filename = 'figs/admesh_2dexample')
 #------------------------------------------------------------------------------
 # Show or close plots depending on argument
 if args.plot :
