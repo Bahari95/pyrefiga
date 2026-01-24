@@ -634,7 +634,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
    multiblock.save(filename+".vtm")
    print(f"Saved all patches with solution to {filename}.vtm")
 
-def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True, Analytic = None):
+def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True, Analytic = None, filename="figs/multipatch_geometry"):
    """
    Example on how one can use nurbs mapping and prolongate it in fine grid
    """
@@ -642,16 +642,15 @@ def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True, Analytic = 
    print('#---: ', geometry, Nump)
    mp  = pyref_multipatch(geometry, Nump)
    print("geom dim = ",mp.geo_dim)
-  
    # ... save a solution as .vtm for paraview
-   paraview_nurbsSolutionMultipatch(nbpts, mp.space, mp, functions = functions, Analytic=Analytic)      
+   paraview_nurbsSolutionMultipatch(nbpts, mp.space, mp, functions = functions, Analytic=Analytic, filename=filename)      
    #------------------------------------------------------------------------------
    # Show or close plots depending on argument
    if plot :
       import subprocess
 
       # Load the multipatch VTM
-      subprocess.run(["paraview", "figs/multipatch_solution.vtm"])
+      subprocess.run(["paraview", filename+".vtm"])
 
 
 #--------------------------------------------------------------------------------------------------------------------

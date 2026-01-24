@@ -158,6 +158,7 @@ g         = ['x**2+y**2']
 # idmp     = (0,1)
 geometry = load_xml('annulus.xml')
 idmp     = (0,1,2,3)
+# ...
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 

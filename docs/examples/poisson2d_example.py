@@ -58,7 +58,6 @@ def poisson_solve(V, VT, u11_mph, u12_mph, u_d):
     # Assemble stiffness matrix
     stiffness  = StencilMatrix(V.vector_space, V.vector_space)
     stiffness  = assemble_matrix_un(VT, fields=[u11_mph, u12_mph], out=stiffness)
-    stiffness1 = apply_dirichlet(V, stiffness)
 
     # Assemble right-hand side vector
     rhs        = StencilVector(V.vector_space)
@@ -69,7 +68,7 @@ def poisson_solve(V, VT, u11_mph, u12_mph, u_d):
     rhs        = apply_dirichlet(V, rhs)
 
     # Solve linear system
-    lu         = sla.splu(csc_matrix(stiffness1))
+    lu         = sla.splu(csc_matrix(stiffness))
     x          = lu.solve(rhs)
 
     # Apply Dirichlet boundary conditions

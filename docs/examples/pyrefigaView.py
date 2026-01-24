@@ -34,4 +34,4 @@ functions = [
     {"name": "density", "expression": func},
 ]
 
-ViewGeo(geometry, Nump, nbpts = nbpts, functions= functions, plot = args.plot)
+ViewGeo(geometry, Nump, nbpts = nbpts, functions= functions, filename="figs/multipatch_geometry", plot = args.plot)

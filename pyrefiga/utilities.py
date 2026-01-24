@@ -576,10 +576,13 @@ class pyref_patch:
       self.element_id  = element_id
       self.boundaries  = boundaries
       self.dirichmlet  = Dirichlet_all
-
+      self.ensure_positive_orientation
     @property
     def nbasis(self):
         return self._nbasis
+    @property
+    def ndim(self):
+        return np.prod(self._nbasis)
     @property
     def dim(self):
         return self._dim
@@ -613,7 +616,7 @@ class pyref_patch:
             return Omega[:,0,0], Omega[0,:,0], Omega[0,0,:]
     @property
     def coefs(self):    
-        return [self._coefs[i].reshape(self._nbasis) for i in range( self.geo_dim)]
+        return [self._coefs[i] for i in range( self.geo_dim)]
     #.. get tensor space
     @property
     def space(self):
@@ -657,6 +660,32 @@ class pyref_patch:
             return u1, u2, u3
         else:
             raise TypeError('dimension mismatch')
+    @property
+    def ensure_positive_orientation(self):
+        """
+        Check if the 3x3 Bézier block has positive Jacobian everywhere.
+        xi_block, eta_block: 3x3 arrays
+        coefs: list of two 3x3 arrays [xi, eta]
+        """
+        if self.geo_dim == self.dim == 2:
+            xi, eta     = self.coefs
+            oriontation = True
+            # Loop over 3x3 blocks 
+            [[dx_xi, dy_xi], [dx_eta, dy_eta]] = self.gradient(nbpts=(20,20)) 
+            J = dx_xi * dy_eta - dx_eta * dy_xi
+            J_mean = np.mean(J)
+            if J_mean < 0:
+                oriontation = False        
+            if not oriontation:
+                # Reverse both directions 3x3 block
+                print('Reversing patch orientation to ensure positive Jacobian.')
+                xi  = xi[::-1]
+                eta = eta[::-1]
+                self._coefs[0] = xi
+                self._coefs[1] = eta
+        return 0.
+
+    #.. clone patch
     def clone(self, Dirichlet_all = None):
         if Dirichlet_all is None:
             Dirichlet_all = self.Dirichlet_all
@@ -1340,19 +1369,19 @@ class pyrefInterface(object):
             self.interface   = False
             self.dirichlet_1 = False
             self.dirichlet_2 = False
-            if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])+np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-15 :
+            if (len(xmp[-1,:])  == len(xmp1[0,:]) and np.max(np.absolute(xmp[-1,:] - xmp1[0,:])+np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-15) :
                 self.interface   = [2,1]
                 self.dirichlet_1 = [[True, False],[True, True]]
                 self.dirichlet_2 = [[False, True],[True, True]]
-            elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])+np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-15 :
+            elif (len(xmp[0,:] ) ==  len(xmp1[-1,:]) and np.max(np.absolute(xmp[0,:] - xmp1[-1,:])+np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-15) :
                 self.interface   = [1,2]
                 self.dirichlet_1 = [[False, True], [True, True]]
                 self.dirichlet_2 = [[True, False], [True, True]]
-            elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])+np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-15 :
+            elif (len(xmp[:,0] ) ==  len(xmp1[:,-1]) and np.max(np.absolute(xmp[:,0] - xmp1[:,-1])+np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-15) :
                 self.interface   = [3,4]
                 self.dirichlet_1 = [[True, True], [False, True]]
                 self.dirichlet_2 = [[True, True], [True, False]]
-            elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])+np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-15 :
+            elif (len(xmp[:,-1] ) ==  len(xmp1[:,0]) and np.max(np.absolute(xmp[:,-1] - xmp1[:,0])+np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-15 ):
                 self.interface   = [4,3]
                 self.dirichlet_1 = [[True, True], [True, False]]
                 self.dirichlet_2 = [[True, True], [False, True]]
@@ -1363,19 +1392,19 @@ class pyrefInterface(object):
             self.interface   = False
             self.dirichlet_1 = False
             self.dirichlet_2 = False
-            if np.max(np.absolute(xmp[-1,:] - xmp1[0,:])+np.absolute(ymp[-1,:] - ymp1[0,:])+np.absolute(zmp[-1,:] - zmp1[0,:])) <= 1e-15 :
+            if (len(xmp[-1,:])  == len(xmp1[0,:]) and np.max(np.absolute(xmp[-1,:] - xmp1[0,:])+np.absolute(ymp[-1,:] - ymp1[0,:])+np.absolute(zmp[-1,:] - zmp1[0,:])) <= 1e-15) :
                 self.interface   = [2,1]
                 self.dirichlet_1 = [[True, False],[True, True]]
                 self.dirichlet_2 = [[False, True],[True, True]]
-            elif np.max(np.absolute(xmp[0,:] - xmp1[-1,:])+np.absolute(ymp[0,:] - ymp1[-1,:])+np.absolute(zmp[0,:] - zmp1[-1,:])) <= 1e-15 :
+            elif (len(xmp[0,:] ) ==  len(xmp1[-1,:]) and np.max(np.absolute(xmp[0,:] - xmp1[-1,:])+np.absolute(ymp[0,:] - ymp1[-1,:])+np.absolute(zmp[0,:] - zmp1[-1,:])) <= 1e-15) :
                 self.interface   = [1,2]
                 self.dirichlet_1 = [[False, True], [True, True]]
                 self.dirichlet_2 = [[True, False], [True, True]]
-            elif np.max(np.absolute(xmp[:,0] - xmp1[:,-1])+np.absolute(ymp[:,0] - ymp1[:,-1])+np.absolute(zmp[:,0] - zmp1[:,-1])) <= 1e-15 :
+            elif (len(xmp[:,0] ) ==  len(xmp1[:,-1]) and np.max(np.absolute(xmp[:,0] - xmp1[:,-1])+np.absolute(ymp[:,0] - ymp1[:,-1])+np.absolute(zmp[:,0] - zmp1[:,-1])) <= 1e-15) :
                 self.interface   = [3,4]
                 self.dirichlet_1 = [[True, True], [False, True]]
                 self.dirichlet_2 = [[True, True], [True, False]]
-            elif np.max(np.absolute(xmp[:,-1] - xmp1[:,0])+np.absolute(ymp[:,-1] - ymp1[:,0])+np.absolute(zmp[:,-1] - zmp1[:,0])) <= 1e-15 :
+            elif (len(xmp[:,-1] ) ==  len(xmp1[:,0]) and np.max(np.absolute(xmp[:,-1] - xmp1[:,0])+np.absolute(ymp[:,-1] - ymp1[:,0])+np.absolute(zmp[:,-1] - zmp1[:,0])) <= 1e-15) :
                 self.interface   = [4,3]
                 self.dirichlet_1 = [[True, True], [True, False]]
                 self.dirichlet_2 = [[True, True], [False, True]]
@@ -1386,27 +1415,27 @@ class pyrefInterface(object):
             self.interface   = False
             self.dirichlet_1 = False
             self.dirichlet_2 = False
-            if np.max(np.absolute(xmp[-1,:,:] - xmp1[0,:,:])+np.absolute(ymp[-1,:,:] - ymp1[0,:,:])+np.absolute(zmp[-1,:,:] - zmp1[0,:,:])) <= 1e-15 :
+            if (len(xmp[-1,:,:]) == len(xmp1[0,:,:]) and np.max(np.absolute(xmp[-1,:,:] - xmp1[0,:,:])+np.absolute(ymp[-1,:,:] - ymp1[0,:,:])+np.absolute(zmp[-1,:,:] - zmp1[0,:,:])) <= 1e-15) :
                 self.interface   = [2,1]
                 self.dirichlet_1 = [[True, False],[True, True],[True, True]]
                 self.dirichlet_2 = [[False, True],[True, True],[True, True]]
-            elif np.max(np.absolute(xmp[0,:,:] - xmp1[-1,:,:])+np.absolute(ymp[0,:,:] - ymp1[-1,:,:])+np.absolute(zmp[0,:,:] - zmp1[-1,:,:])) <= 1e-15 :
+            elif (len(xmp[0,:,:]) == len(xmp1[-1,:,:]) and np.max(np.absolute(xmp[0,:,:] - xmp1[-1,:,:])+np.absolute(ymp[0,:,:] - ymp1[-1,:,:])+np.absolute(zmp[0,:,:] - zmp1[-1,:,:])) <= 1e-15) :
                 self.interface   = [1,2]
                 self.dirichlet_1 = [[False, True], [True, True],[True, True]]
                 self.dirichlet_2 = [[True, False], [True, True],[True, True]]
-            elif np.max(np.absolute(xmp[:,0,:] - xmp1[:,-1,:])+np.absolute(ymp[:,0,:] - ymp1[:,-1,:])+np.absolute(zmp[:,0,:] - zmp1[:,-1,:])) <= 1e-15 :
+            elif (len(xmp[:,0,:]) == len(xmp1[:,-1,:]) and np.max(np.absolute(xmp[:,0,:] - xmp1[:,-1,:])+np.absolute(ymp[:,0,:] - ymp1[:,-1,:])+np.absolute(zmp[:,0,:] - zmp1[:,-1,:])) <= 1e-15) :
                 self.interface   = [3,4]
                 self.dirichlet_1 = [[True, True], [False, True],[True, True]]
                 self.dirichlet_2 = [[True, True], [True, False],[True, True]]
-            elif np.max(np.absolute(xmp[:,-1,:] - xmp1[:,0,:])+np.absolute(ymp[:,-1,:] - ymp1[:,0,:])+np.absolute(zmp[:,-1,:] - zmp1[:,0,:])) <= 1e-15 :
+            elif (len(xmp[:,-1,:]) == len(xmp1[:,0,:]) and np.max(np.absolute(xmp[:,-1,:] - xmp1[:,0,:])+np.absolute(ymp[:,-1,:] - ymp1[:,0,:])+np.absolute(zmp[:,-1,:] - zmp1[:,0,:])) <= 1e-15) :
                 self.interface   = [4,3]
                 self.dirichlet_1 = [[True, True], [True, False],[True, True]]
                 self.dirichlet_2 = [[True, True], [False, True],[True, True]]
-            elif np.max(np.absolute(xmp[:,:,0] - xmp1[:,:,-1])+np.absolute(ymp[:,:,0] - ymp1[:,:,-1])+np.absolute(zmp[:,:,0] - zmp1[:,:,-1])) <= 1e-15 :
+            elif (len(xmp[:,:,0]) == len(xmp1[:,:,-1]) and np.max(np.absolute(xmp[:,:,0] - xmp1[:,:,-1])+np.absolute(ymp[:,:,0] - ymp1[:,:,-1])+np.absolute(zmp[:,:,0] - zmp1[:,:,-1])) <= 1e-15) :
                 self.interface   = [5,6]
                 self.dirichlet_1 = [[True, True],[True, True], [False, True]]
                 self.dirichlet_2 = [[True, True],[True, True], [True, False]]
-            elif np.max(np.absolute(xmp[:,:,-1] - xmp1[:,:,0])+np.absolute(ymp[:,:,-1] - ymp1[:,:,0])+np.absolute(zmp[:,:,-1] - zmp1[:,:,0])) <= 1e-15 :
+            elif (len(xmp[:,:,-1]) == len(xmp1[:,:,0]) and np.max(np.absolute(xmp[:,:,-1] - xmp1[:,:,0])+np.absolute(ymp[:,:,-1] - ymp1[:,:,0])+np.absolute(zmp[:,:,-1] - zmp1[:,:,0])) <= 1e-15) :
                 self.interface   = [6,5]
                 self.dirichlet_1 = [[True, True],[True, True], [True, False]]
                 self.dirichlet_2 = [[True, True],[True, True], [False, True]]
