@@ -26,7 +26,6 @@ assemble_norm_un     = compile_kernel(assemble_norm_un_ex02, arity=1)
 
 from   scipy.sparse                      import linalg as sla
 from   numpy                             import zeros
-from   tabulate                          import tabulate
 import numpy                             as     np
 import time
 import argparse
@@ -224,13 +223,9 @@ if args.plot :
 
     from pyrefiga    import paraview_nurbsSolutionMultipatch
     solutions = [
-        {"name": "Solution", "data": xuh}
+        {"name": "Solution", "data": xuh, "space": Vh}
     ]
     functions = [
         {"name": "Exact solution", "expression": g[0]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP,  solution = solutions, functions = functions)
-    import subprocess
-
-    # Load the multipatch VTM
-    subprocess.run(["paraview", "figs/multipatch_solution.vtm"])
+    paraview_nurbsSolutionMultipatch(nbpts, pyrefMP,  solution = solutions, functions = functions, plot = args.plot)

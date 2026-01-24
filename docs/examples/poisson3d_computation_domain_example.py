@@ -13,9 +13,8 @@ from pyrefiga import SplineSpace
 from pyrefiga import TensorSpace
 from pyrefiga import StencilMatrix
 from pyrefiga import StencilVector
-from pyrefiga import pyccel_sol_field_3d
 from pyrefiga import Poisson
-from pyrefiga import getGeometryMap
+from pyrefiga import pyref_patch
 # ... Using Matrices accelerated with Pyccel
 from   pyrefiga                    import assemble_stiffness1D
 from   pyrefiga                    import assemble_mass1D     
@@ -27,13 +26,6 @@ from gallery.gallery_section_03 import assemble_norm_ex01
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
 assemble_norm_l2     = compile_kernel(assemble_norm_ex01, arity=1)
 
-#from matplotlib.pyplot import plot, show
-import matplotlib.pyplot            as     plt
-from   mpl_toolkits.axes_grid1      import make_axes_locatable
-from   mpl_toolkits.mplot3d         import axes3d
-from   matplotlib                   import cm
-from   mpl_toolkits.mplot3d.axes3d  import get_test_data
-from   matplotlib.ticker            import LinearLocator, FormatStrFormatter
 #..
 from   scipy.sparse                 import kron
 from   scipy.sparse                 import csr_matrix
@@ -117,22 +109,15 @@ args = parser.parse_args()
 
 nbpts       = 100 #for plot
 nelements   = 8
+degree      = 2
 # Test 1
 from pyrefiga import load_xml
-geometry = load_xml('cube.xml')
+geometry    = load_xml('cube.xml')
 g           = ['np.sin(np.pi*x)*np.sin(np.pi*y)*np.sin(np.pi*z)']
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
-
 # Extract geometry mapping
-mp             = getGeometryMap(geometry,0)
-degree         = mp.degree[0] # Use same degree as geometry
-xmp, ymp, zmp  = mp.coefs()
-
-V1   = SplineSpace(degree=mp.degree[0], grid=mp.grids[0])
-V2   = SplineSpace(degree=mp.degree[1], grid=mp.grids[1])
-V3   = SplineSpace(degree=mp.degree[2], grid=mp.grids[2])
-Vg   = TensorSpace(V1, V2, V3)
+mp             = pyref_patch(geometry,0)
 
 #----------------------
 #..... Initialisation and computing optimal mapping for 16*16
@@ -152,16 +137,9 @@ print(np.min(xuh), np.max(xuh))
 #------------------------------------------------------------------------------
 from pyrefiga    import paraview_nurbsSolutionMultipatch
 solutions = [
-    {"name": "Solution", "data": [xuh]}
+    {"name": "Solution", "data": [xuh], "space": V},
 ]
 functions = [
     {"name": "Exact solution", "expression": g[0]},
 ]
-paraview_nurbsSolutionMultipatch(nbpts, [V], [xmp], [ymp], zmp=[zmp], Vg = [Vg], solution = solutions, functions = functions)
-#------------------------------------------------------------------------------
-# Show or close plots depending on argument
-if args.plot :
-    import subprocess
-
-    # Load the multipatch VTM
-    subprocess.run(["paraview", "figs/multipatch_solution.vtm"])
+paraview_nurbsSolutionMultipatch(nbpts, pyrefGeometry=mp, solution = solutions, functions = functions, plot = args.plot)

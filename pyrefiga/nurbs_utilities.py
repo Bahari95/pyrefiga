@@ -216,12 +216,11 @@ def collocation_2dNURBspline(Vh, sol, xmp = None, adxmp = None):
 #----------------------------------------------------------------------------------------------------------------------------------------
 import numpy                        as     np
 import pyvista                      as     pv
-from   .spaces                      import TensorSpace
 from   .utilities                   import pyref_multipatch, pyref_patch
 import os
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None, adspace = None, solution = None, functions = None, precomputed = None, Analytic = None, filename = "figs/admultipatch_multiblock", plot = True): 
+def paraview_nurbsAdMeshMultipatch(nbpts, pyrefGeometry, moving_mesh, solution = None, functions = None, precomputed = None, Analytic = None, filename = "figs/admultipatch_multiblock", plot = False): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -229,11 +228,14 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
    ----------
    nbpts : int
        Number of points per patch direction for evaluation.
-   V : TensorSpace 
-      Tensor spline space for finite element analysis otherewise for mapping if Vg is None.
    pyrefGeometry: pyref_multipatch or pyref_patch
-   xad, yad : list
-       Lists of control points for the adaptive mesh in x and y directions.
+   moving_mesh : collable , optional
+       List of solution control points for each patch and its name.
+       solutions = [
+         {"name": "x", "data": xuh = list, V},   # e.g., x/mapping field control points
+         {"name": "y", "data": yuh = list, V},   # e.g., y/mapping field control points
+         {"name": "z", "data": zuh = list, V},   # e.g., z/mapping field control points
+      ]
    zad : list, optional
        List of control points for the adaptive mesh in z direction (for 3D).
    adSpace: TensorSpace space 
@@ -276,26 +278,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
    #---
    numPaches = pyrefGeometry.nb_patches
    # ...
-   assert isinstance(V, TensorSpace)
-   # ...
-   if adspace is None:
-      if zad is None:
-         Vrefx = V
-         Vrefy = V
-      else:
-         Vrefx = V
-         Vrefy = V     
-         Vrefz = V      
-   else:
-      #... different spaces for adaptive mapping
-      if zad is None:
-         Vrefx = adspace[0]
-         Vrefy = adspace[1]
-      else:
-         Vrefx = adspace[0]
-         Vrefy = adspace[1]      
-         Vrefz = adspace[2]      
-   if Analytic is not None and V.dim != 2:
+   if Analytic is not None and pyrefGeometry.geo_dim != 2:
       raise TypeError('Not implemented')
    
    os.makedirs("figs", exist_ok=True)
@@ -303,9 +286,13 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
    #F3 = [] 
    if pyrefGeometry.geo_dim == 2:
       for i in range(numPaches):
-         #... computes adaptive mesh
-         sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-         sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
+         # ....
+         mm  =  moving_mesh[0]
+         assert mm["name"] == 'x', "First moving mesh must be x mapping"
+         sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), mm["data"][i], mm["space"].omega, mm["space"].knots, mm["space"].degree)[0:3]
+         mm  =  moving_mesh[1]
+         assert mm["name"] == 'y', "Second moving mesh must be y mapping"
+         sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), mm["data"][i], mm["space"].omega, mm["space"].knots, mm["space"].degree)[0:3]
          #---Compute a image by initial mapping
          x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
          [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
@@ -335,7 +322,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
          if solution is not None :
             for sol in solution:
-               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
 
          if precomputed is not None :
@@ -346,8 +333,12 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
       if pyrefGeometry.dim == 2 : # 2D adaptive mesh in 3D mapping
             for i in range(numPaches):
                #... computes adaptive mesh
-               sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:3]
-               sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:3]
+               mm  =  moving_mesh[0]
+               assert mm["name"] == 'x', "First moving mesh must be x mapping"
+               sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), mm["data"][i], mm["space"].omega, mm["space"].knots, mm["space"].degree)[0:3]
+               mm  =  moving_mesh[1]
+               assert mm["name"] == 'y', "Second moving mesh must be y mapping"
+               sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), mm["data"][i], mm["space"].omega, mm["space"].knots, mm["space"].degree)[0:3]
                #---Compute a image by initial mapping
                x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
                [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, mesh=(sx, sy))
@@ -397,7 +388,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
                # .... 
                if solution is not None :
                   for sol in solution:
-                     U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+                     U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                      grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
                # .... 
                if precomputed is not None :
@@ -407,9 +398,15 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
       else: #... zad
          for i in range(numPaches):
             #... computes adaptive mesh
-            sx, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xad[i], Vrefx.omega, Vrefx.knots, Vrefx.degree)[0:4]
-            sy, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), yad[i], Vrefy.omega, Vrefy.knots, Vrefy.degree)[0:4]
-            sz, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zad[i], Vrefz.omega, Vrefz.knots, Vrefz.degree)[0:4]
+            mm  =  moving_mesh[0]
+            assert mm["name"] == 'x', "First moving mesh must be x mapping"
+            sx, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), mm["data"][i], mm["space"].omega, mm["space"].knots, mm["space"].degree)[0:4]
+            mm  =  moving_mesh[1]
+            assert mm["name"] == 'y', "Second moving mesh must be y mapping"
+            sy, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), mm["data"][i], mm["space"].omega, mm["space"].knots, mm["space"].degree)[0:4]
+            mm  =  moving_mesh[2]
+            assert mm["name"] == 'z', "Third moving mesh must be z mapping"
+            sz, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), mm["data"][i], mm["space"].omega, mm["space"].knots, mm["space"].degree)[0:4]
             #---Compute a image by initial mapping
             x, y, z  = pyrefGeometry.eval(i+1, mesh=(sx, sy, sz))
             #...Compute a Jacobian in  i direction
@@ -423,7 +420,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
             grid.dimensions = [nx, ny, nz]
 
             # Flatten the solution and attach as a scalar field
-            grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+            grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
 
             # Flatten the solution and attach as a scalar field
             # ... image bu analytic function
@@ -434,7 +431,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
             # .... 
             if solution is not None:
                for sol in solution:
-                  U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+                  U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                   grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
             # .... 
             if precomputed is not None :
@@ -445,10 +442,14 @@ def paraview_nurbsAdMeshMultipatch(nbpts, V, pyrefGeometry, xad, yad, zad = None
    # Save multiblock dataset
    multiblock.save(filename+".vtm")
    print(f"Saved all patches with solution to {filename}.vtm")
+   if plot:
+    import subprocess
+    # Load the multipatch VTM
+    subprocess.run(["paraview", filename+".vtm"])
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, functions = None, precomputed = None, Analytic = None, filename = "figs/multipatch_solution", plot = True): 
+def paraview_nurbsSolutionMultipatch(nbpts, pyrefGeometry, solution = None, functions = None, precomputed = None, Analytic = None, filename = "figs/multipatch_solution", plot = False): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -456,19 +457,13 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
    ----------
    nbpts : int
        Number of points per patch direction for evaluation.
-   V : list
-      Tensor spline space for finite element analysis otherewise for mapping if Vg is None.
-   xmp, ymp : list
-       Lists of control points for the initial mapping in x and y directions.
-   omega : list
-       List of weights in one direction for each patch
    pyrefGeometry: pyref_multipatch or pyref_patch
 
    solution : list, optional
        List of solution control points for each patch and name.
        solutions = [
-         {"name": "displacement", "data": xuh},   # e.g., displacement field control points
-         {"name": "velocity", "data": yuh},   # e.g., velocity field control points
+         {"name": "displacement", "data": xuh, "space": V},   # e.g., displacement field control points
+         {"name": "velocity", "data": yuh, "space": V},   # e.g., velocity field control points
          # Add more solution fields as needed
       ]
    functions : callable, optional
@@ -502,10 +497,8 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
    "Geomapping must be pyref_multipatch or pyref_patch class"
    #---
    numPaches = pyrefGeometry.nb_patches
-   #...
-   assert isinstance(V, TensorSpace)
 
-   if Analytic is not None and V.dim != 2:
+   if Analytic is not None and pyrefGeometry.geo_dim != 2:
          raise TypeError('Not implemented')
 
    os.makedirs("figs", exist_ok=True)
@@ -539,7 +532,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
                grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
          if solution is not None :
             for sol in solution:
-               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
 
          if precomputed is not None :
@@ -562,7 +555,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
          grid.dimensions = [nx, ny, nz]
 
          # Flatten the solution and attach as a scalar field
-         grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+         grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
 
          # Flatten the solution and attach as a scalar field
          # ... image bu analytic function
@@ -573,7 +566,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
          # .... 
          if solution is not None :
             for sol in solution:
-               U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+               U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
          # .... 
          if precomputed is not None :
@@ -622,7 +615,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
          # ...
          if solution is not None :
             for sol in solution:
-               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], V.omega, V.knots, V.degree)[0]
+               U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
          # ...
          if precomputed is not None :
@@ -633,8 +626,12 @@ def paraview_nurbsSolutionMultipatch(nbpts, V, pyrefGeometry, solution = None, f
    # Save multiblock dataset
    multiblock.save(filename+".vtm")
    print(f"Saved all patches with solution to {filename}.vtm")
+   if plot:
+    import subprocess
+    # Load the multipatch VTM
+    subprocess.run(["paraview", filename+".vtm"])
 
-def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True, Analytic = None, filename="figs/multipatch_geometry"):
+def ViewGeo(geometry, Nump, nbpts=50, functions = None, Analytic = None, filename="figs/multipatch_geometry", plot = True):
    """
    Example on how one can use nurbs mapping and prolongate it in fine grid
    """
@@ -643,7 +640,7 @@ def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True, Analytic = 
    mp  = pyref_multipatch(geometry, Nump)
    print("geom dim = ",mp.geo_dim)
    # ... save a solution as .vtm for paraview
-   paraview_nurbsSolutionMultipatch(nbpts, mp.space, mp, functions = functions, Analytic=Analytic, filename=filename)      
+   paraview_nurbsSolutionMultipatch(nbpts, mp, functions = functions, Analytic=Analytic, filename=filename)      
    #------------------------------------------------------------------------------
    # Show or close plots depending on argument
    if plot :
@@ -656,7 +653,7 @@ def ViewGeo(geometry, Nump, nbpts=50, functions = None, plot = True, Analytic = 
 #--------------------------------------------------------------------------------------------------------------------
 # ... Time post-processes TODO
 #--------------------------------------------------------------------------------------------------------------------
-def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, Vg = None, LStime = None, solution = None, functions = None, precomputed = None, filename = "figs/multipatch_solution", output_pvd_path="figs/solution.pvd"): 
+def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solution = None, functions = None, precomputed = None, filename = "figs/multipatch_solution", plot = False): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -664,20 +661,14 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, Vg = None, L
    ----------
    nbpts : int
        Number of points per patch direction for evaluation.
-   V : list
-      Tensor spline space for finite element analysis otherewise for mapping if Vg is None.
-   xmp, ymp : list
-       Lists of control points for the initial mapping in x and y directions.
-   zmp : list, optional
-       List of control points for the initial mapping in z direction (for 3D).
-   Vg: TensorSpace 
-      for mapping is defined independently of the solution space V.
+
+   pyrefGeometry: pyref_multipatch or pyref_patch
    LStime: liste of times
    solution : list, optional
        List of solution control points for each patch and name.
        solutions = [
-         {"name": "displacement", "data": xuh},   # e.g., displacement field control points
-         {"name": "velocity", "data": yuh},   # e.g., velocity field control points
+         {"name": "displacement", "data": xuh, "space": V},   # e.g., displacement field control points
+         {"name": "velocity", "data": yuh, "space": V},   # e.g., velocity field control points
          # Add more solution fields as needed
       ]
    functions : callable, optional
@@ -704,443 +695,135 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, Vg = None, L
        The function saves the multi-block dataset to the specified output path.
        
    """
-   #---Compute a solution
-   numPaches = len(Vg)
-   assert isinstance(V, TensorSpace)
-   if Vg is None:
-      Vg = V
-   assert isinstance(Vg, TensorSpace)
-   # Handle the case where the user uses a B-spline space and wants to plot using this function
-   for j in range(numPaches):
-      if Vg.omega is None or all(x is None for x in Vg.omega):
-         for i in range(Vg.dim):
-            Vg.spaces[i]._omega = np.ones(Vg.nbasis[i])
+   assert isinstance(pyrefGeometry, (pyref_multipatch, pyref_patch)), \
+   "Geomapping must be pyref_multipatch or pyref_patch class"
+   #---
+   numPaches       = pyrefGeometry.nb_patches
+   # ...
+   output_pvd_path = filename + ".pvd"
    # --- Create PVD file header
    with open(output_pvd_path, 'w') as f:
       f.write('<?xml version="1.0"?>\n')
       f.write('<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">\n')
       f.write('  <Collection>\n')
-      if zmp is None:
-         if solution is None:
-            if functions is None:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     #...Compute a Jacobian
-                     Jf = F1x*F2y - F1y*F2x
-                     #...
-                     z = np.zeros_like(x)
-                     points = np.stack((x, y, z), axis=-1)
+      if pyrefGeometry.geo_dim ==2:
+         for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
+            multiblock = pv.MultiBlock()
+            for i in range(numPaches):
+               #---Compute a physical domain
+               x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
+               [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
+               #...Compute a Jacobian
+               Jf = F1x*F2y - F1y*F2x
+               #...
+               z = np.zeros_like(x)
+               points = np.stack((x, y, z), axis=-1)
 
-                     nx, ny = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, 1]
+               nx, ny = x.shape
+               grid = pv.StructuredGrid()
+               grid.points = points.reshape(-1, 3)
+               grid.dimensions = [nx, ny, 1]
 
-                     # Flatten the solution and attach as a scalar field
-                     grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-            else:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     #...Compute a Jacobian
-                     Jf = F1x*F2y - F1y*F2x
-                     #...
-                     z = np.zeros_like(x)
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, 1]
-
-                     # Flatten the solution and attach as a scalar field
-                     grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     # ... image bu analytic function
-                     t = LStime[t_ix]
-                     for Funct in functions:
-                        fnc = eval(Funct["expression"])
-                        grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
+               # Flatten the solution and attach as a scalar field
+               grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
+               # ... image bu analytic function
+               t = LStime[t_ix]
+               if functions is not None :
+                  for Funct in functions:
+                     fnc = eval(Funct["expression"])
+                     grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
+               # ...
+               if solution is not None :
+                  for sol in solution:
+                     U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i][t_ix], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
+                     grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
+               # ...
+               if precomputed is not None :
+                  for sol in precomputed:
+                     grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
+               multiblock[f"patch_{i}"] = grid
+            # --- Save one .vtm per time step
+            vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
+            multiblock.save(vtm_filename)
 
 
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-         else:
-            if functions is None:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     #...Compute a Jacobian
-                     Jf = F1x*F2y - F1y*F2x
-                     #...
-                     z = np.zeros_like(x)
-                     points = np.stack((x, y, z), axis=-1)
+            rel_path = os.path.basename(vtm_filename)
+            f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
+      elif pyrefGeometry.dim == 3: #.. z is not none 3D case
+         for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
+            multiblock = pv.MultiBlock()
+            for i in range(numPaches):
+               #---Compute a physical domain
+               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts, nbpts))
+               # [[uxx, uxy, uxz],[uyx, uyy, uyz],[uzx, uzy, uzz]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts, nbpts))
+               #...Compute a Jacobian
+               # Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
+               # .... 
+               points = np.stack((x, y, z), axis=-1)
 
-                     nx, ny = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, 1]
+               nx, ny, nz = x.shape
+               grid = pv.StructuredGrid()
+               grid.points = points.reshape(-1, 3)
+               grid.dimensions = [nx, ny, nz]
 
-                     # Flatten the solution and attach as a scalar field
-                     grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-                     for sol in solution:
-                        U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i][t_ix], V.omega, V.knots, V.degree)[0]
-                        grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
+               # Flatten the solution and attach as a scalar field
+               # ... image bu analytic function
+               t = LStime[t_ix]
+               if functions is not None :
+                  for Funct in functions:
+                     fnc = eval(Funct["expression"])
+                     grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
+               # .... 
+               if solution is not None :
+                  for sol in solution:
+                     U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i][t_ix], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
+                     grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
 
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-            else:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     #...Compute a Jacobian
-                     Jf = F1x*F2y - F1y*F2x
-                     #...
-                     z = np.zeros_like(x)
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, 1]
-
-                     # Flatten the solution and attach as a scalar field
-                     grid["Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-                     # ... image bu analytic function
-                     t = LStime[t_ix]
-                     for Funct in functions:
-                        fnc = eval(Funct["expression"])
-                        grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     for sol in solution:
-                        U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i][t_ix], V.omega, V.knots, V.degree)[0]
-                        grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
+               if precomputed is not None :
+                  for sol in precomputed:
+                     grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
+               multiblock[f"patch_{i}"] = grid
+            # --- Save one .vtm per time step
+            vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
+            multiblock.save(vtm_filename)
 
 
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-      elif V.dim == 3: #.. z is not none 3D case
-         if solution is None:
-            if functions is None:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x, uxx, uxy, uxz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0:4]
-                     y, uyx, uyy, uyz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0:4]
-                     z, uzx, uzy, uzz = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg.omega, Vg.knots, Vg.degree)[0:4]
-                     #...Compute a Jacobian
-                     Jf = uxx*(uyy*uzz-uzy*uyz) - uxy*(uxx*uzz - uzx*uyz) +uxz*(uyx*uzy -uzx*uyy)
-                     # .... 
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny, nz = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, nz]
-
-                     # Flatten the solution and attach as a scalar field
-                     grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-            else:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     # .... 
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny, nz = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, nz]
-
-                     # Flatten the solution and attach as a scalar field
-                     # ... image bu analytic function
-                     t = LStime[t_ix]
-                     for Funct in functions:
-                        fnc = eval(Funct["expression"])
-                        grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-         else:
-            if functions is None:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     # .... 
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny, nz = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, nz]
-
-                     # Flatten the solution and attach as a scalar field
-                     # .... 
-                     for sol in solution:
-                        U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i][t_ix], V.omega, V.knots, V.degree)[0]
-                        grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-            else:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x = sol_field_NURBS_3d((nbpts, nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     y = sol_field_NURBS_3d((nbpts, nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     z = sol_field_NURBS_3d((nbpts, nbpts, nbpts), zmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     # .... 
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny, nz = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, nz]
-
-                     # Flatten the solution and attach as a scalar field
-                     # ... image bu analytic function
-                     t = LStime[t_ix]
-                     for Funct in functions:
-                        fnc = eval(Funct["expression"])
-                        grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-                     # .... 
-                     for sol in solution:
-                        U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i][t_ix], V.omega, V.knots, V.degree)[0]
-                        grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
+            rel_path = os.path.basename(vtm_filename)
+            f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
       else: #.. z is not none
-         if solution is None:
-            if functions is None:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x, F1x, F1y = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     y, F2x, F2y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     z, F3x, F3y = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg.omega, Vg.knots, Vg.degree)[0:3]
-                     #...Compute a Jacobian
-                     Jf = F1x*F2y - F1y*F2x
-                     #...
-                     points = np.stack((x, y, z), axis=-1)
+         for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
+            multiblock = pv.MultiBlock()
+            for i in range(numPaches):
+               #---Compute a physical domain
+               x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
+               #...
+               points = np.stack((x, y, z), axis=-1)
 
-                     nx, ny = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, 1]
+               nx, ny = x.shape
+               grid = pv.StructuredGrid()
+               grid.points = points.reshape(-1, 3)
+               grid.dimensions = [nx, ny, 1]
 
-                     # Flatten the solution and attach as a scalar field
-                     grid["i-Jacobain"] = Jf.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-            else:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     #...
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, 1]
-
-                     # Flatten the solution and attach as a scalar field
-                     # ... image bu analytic function
-                     t = LStime[t_ix]
-                     for Funct in functions:
-                        fnc = eval(Funct["expression"])
-                        grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-         else:
-            if functions is None:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     #...
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, 1]
-
-                     # Flatten the solution and attach as a scalar field
-                     for sol in solution:
-                        U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i][t_ix], V.omega, V.knots, V.degree)[0]
-                        grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-                     if precomputed is not None :
-                           for sol in precomputed:
-                              grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one .vtm per time step
-                  vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
-                  multiblock.save(vtm_filename)
-
-
-                  rel_path = os.path.basename(vtm_filename)
-                  f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
-            else:
-               for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
-                  multiblock = pv.MultiBlock()
-                  for i in range(numPaches):
-                     #---Compute a physical domain
-                     x = sol_field_NURBS_2d((nbpts, nbpts), xmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     y = sol_field_NURBS_2d((nbpts, nbpts), ymp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     z = sol_field_NURBS_2d((nbpts, nbpts), zmp[i], Vg.omega, Vg.knots, Vg.degree)[0]
-                     #...
-                     points = np.stack((x, y, z), axis=-1)
-
-                     nx, ny = x.shape
-                     grid = pv.StructuredGrid()
-                     grid.points = points.reshape(-1, 3)
-                     grid.dimensions = [nx, ny, 1]
-
-                     # Flatten the solution and attach as a scalar field
-                     # ... image bu analytic function
-                     t = LStime[t_ix]
-                     for Funct in functions:
-                        fnc = eval(Funct["expression"])
-                        grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
-                     for sol in solution:
-                        U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i][t_ix], V.omega, V.knots, V.degree)[0]
-                        grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
-
-                     if precomputed is not None :
-                        for sol in precomputed:
-                           grid[sol["name"]]  = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
-                     multiblock[f"patch_{i}"] = grid
-                  # --- Save one VTM file per time step
-                  filename_t = f"{filename}_t{t_ix:03d}.vtm"   
-                  multiblock.save(filename_t)
+               # Flatten the solution and attach as a scalar field
+               # ... image bu analytic function
+               t = LStime[t_ix]
+               if functions is not None :
+                  for Funct in functions:
+                     fnc = eval(Funct["expression"])
+                     grid[Funct["name"]] = fnc.flatten(order='C')  # or 'F' if needed (check your ordering)
+               # ...
+               if solution is not None :
+                  for sol in solution:
+                     U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i][t_ix], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
+                     grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
+               # ...
+               if precomputed is not None :
+                  for sol in precomputed:
+                     grid[sol["name"]]  = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
+               multiblock[f"patch_{i}"] = grid
+            # --- Save one VTM file per time step
+            filename_t = f"{filename}_t{t_ix:03d}.vtm"   
+            multiblock.save(filename_t)
       # --- Close PVD file
       f.write('  </Collection>\n')
       f.write('</VTKFile>\n')
@@ -1148,3 +831,7 @@ def paraview_TimeSolutionMultipatch(nbpts, V, xmp, ymp, zmp = None, Vg = None, L
    print(f"Saved all patches with solution to {filename}.vtm")
    print(f"PVD time-series file written to {output_pvd_path}")
    print("👉 Open this .pvd file in ParaView to view the animation.")
+   if plot:
+    import subprocess
+    # Load the multipatch VTM
+    subprocess.run(["paraview", output_pvd_path])

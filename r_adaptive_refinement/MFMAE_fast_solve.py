@@ -449,14 +449,12 @@ functions = [
         {"name": "density", "expression": rho[0]},
 ]
 
-paraview_nurbsAdMeshMultipatch(nbpts, Vh01, mp, [x11uh], [x12uh], adspace =[Vh01,Vh10], functions = functions, filename = 'figs/admesh_2dexample')
-#------------------------------------------------------------------------------
-# Show or close plots depending on argument
-if args.plot :
-    import subprocess
+moving_mesh = [
+    {"name": "x", "data": [x11uh], "space": Vh01},
+    {"name": "y", "data": [x12uh], "space": Vh10},
+]
 
-    # Load the multipatch VTM
-    subprocess.run(["paraview", "figs/admesh_2dexample.vtm"])
+paraview_nurbsAdMeshMultipatch(nbpts, mp, moving_mesh, functions = functions, filename = 'figs/admesh_2dexample', plot = args.plot)
 
 print("End")
 

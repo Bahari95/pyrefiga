@@ -29,7 +29,6 @@ assemble_norm_un     = compile_kernel(assemble_norm_un_ex01, arity=1)
 from   scipy.sparse                 import csc_matrix, linalg as sla
 from   numpy                        import zeros
 import numpy                        as     np
-import timeit
 import time
 import argparse
 
@@ -217,10 +216,6 @@ if args.plot :
             {"name": "numerical_solution", "data": [un]},
             {"name": "Error", "data": [np.absolute(un-Sol_un)]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, Vh, mp, functions = functions, precomputed= precomputed,filename = 'figs/poisson_un_2dexample')
-    import subprocess
-
-    # Load the multipatch VTM
-    subprocess.run(["paraview", "figs/poisson_un_2dexample.vtm"])
+    paraview_nurbsSolutionMultipatch(nbpts, mp, functions = functions, precomputed= precomputed, filename = 'figs/poisson_un_2dexample', plot = args.plot)
 
 print("End")

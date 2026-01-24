@@ -33,6 +33,7 @@ class quadratures_in_admesh(object):
 		sp_dim      = W.dim
 
 		if W.nurbs:# ... if the parameterization is given by nurbs
+			# print("Using NURBS mapping for quadratures in adaptive mesh")
 			if sp_dim == 1 :
 				# ... 1D reparametrization
 				if len(V.spans.shape) == 1:

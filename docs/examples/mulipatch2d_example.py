@@ -13,7 +13,6 @@ from   pyrefiga                         import StencilMatrix
 from   pyrefiga                         import StencilVector
 from   pyrefiga                         import StencilNitsche
 from   pyrefiga                         import pyref_multipatch
-from   pyrefiga                         import build_dirichlet
 from   pyrefiga                         import load_xml
 from   pyrefiga                         import compute_eoc
 # Import Poisson assembly tools for uniform mesh
@@ -231,13 +230,9 @@ if args.plot :
 
     from pyrefiga    import paraview_nurbsSolutionMultipatch
     solutions = [
-        {"name": "Solution", "data": xuh}
+        {"name": "Solution", "data": xuh, "space": Vh},
     ]
     functions = [
         {"name": "Exact solution", "expression": g[0]},
     ]
-    paraview_nurbsSolutionMultipatch(nbpts, Vh, pyrefMP,  solution = solutions, functions = functions)
-    import subprocess
-
-    # Load the multipatch VTM
-    subprocess.run(["paraview", "figs/multipatch_solution.vtm"])
+    paraview_nurbsSolutionMultipatch(nbpts, pyrefMP, solution = solutions, functions = functions, plot = args.plot)
