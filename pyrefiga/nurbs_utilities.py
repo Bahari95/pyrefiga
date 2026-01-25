@@ -276,7 +276,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, pyrefGeometry, moving_mesh, solution =
    assert isinstance(pyrefGeometry, (pyref_multipatch, pyref_patch)), \
    "Geomapping must be pyref_multipatch or pyref_patch class"
    #---
-   numPaches = pyrefGeometry.nb_patches
+   nb_Patches = pyrefGeometry.nb_patches
    # ...
    if Analytic is not None and pyrefGeometry.geo_dim != 2:
       raise TypeError('Not implemented')
@@ -285,7 +285,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, pyrefGeometry, moving_mesh, solution =
    multiblock = pv.MultiBlock()
    #F3 = [] 
    if pyrefGeometry.geo_dim == 2:
-      for i in range(numPaches):
+      for i in range(nb_Patches):
          # ....
          mm  =  moving_mesh[0]
          assert mm["name"] == 'x', "First moving mesh must be x mapping"
@@ -331,7 +331,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, pyrefGeometry, moving_mesh, solution =
          multiblock[f"patch_{i}"] = grid
    else:
       if pyrefGeometry.dim == 2 : # 2D adaptive mesh in 3D mapping
-            for i in range(numPaches):
+            for i in range(nb_Patches):
                #... computes adaptive mesh
                mm  =  moving_mesh[0]
                assert mm["name"] == 'x', "First moving mesh must be x mapping"
@@ -396,7 +396,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, pyrefGeometry, moving_mesh, solution =
                      grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
                multiblock[f"patch_{i}"] = grid
       else: #... zad
-         for i in range(numPaches):
+         for i in range(nb_Patches):
             #... computes adaptive mesh
             mm  =  moving_mesh[0]
             assert mm["name"] == 'x', "First moving mesh must be x mapping"
@@ -496,7 +496,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, pyrefGeometry, solution = None, func
    assert isinstance(pyrefGeometry, (pyref_multipatch, pyref_patch)), \
    "Geomapping must be pyref_multipatch or pyref_patch class"
    #---
-   numPaches = pyrefGeometry.nb_patches
+   nb_Patches = pyrefGeometry.nb_patches
 
    if Analytic is not None and pyrefGeometry.geo_dim != 2:
          raise TypeError('Not implemented')
@@ -504,7 +504,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, pyrefGeometry, solution = None, func
    os.makedirs("figs", exist_ok=True)
    multiblock = pv.MultiBlock()
    if pyrefGeometry.geo_dim == 2:
-      for i in range(numPaches):
+      for i in range(nb_Patches):
          #---Compute a physical domain
          x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
          [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
@@ -540,7 +540,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, pyrefGeometry, solution = None, func
                grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
          multiblock[f"patch_{i}"] = grid
    elif pyrefGeometry.dim == 3: #.. z is not none 3D case
-      for i in range(numPaches):
+      for i in range(nb_Patches):
          #---Compute a physical domain
          x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts, nbpts))
          [[uxx, uxy, uxz],[uyx, uyy, uyz],[uzx, uzy, uzz]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts, nbpts))
@@ -574,7 +574,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, pyrefGeometry, solution = None, func
                grid[sol["name"]] = sol["data"][i].flatten(order='C')  # or 'F' if needed (check your ordering)
          multiblock[f"patch_{i}"] = grid
    else: #.. z is not none
-      for i in range(numPaches):
+      for i in range(nb_Patches):
          #---Compute a physical domain
          x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
          [[F1x, F1y],[F2x, F2y],[F3x, F3y]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
@@ -698,9 +698,9 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
    assert isinstance(pyrefGeometry, (pyref_multipatch, pyref_patch)), \
    "Geomapping must be pyref_multipatch or pyref_patch class"
    #---
-   numPaches       = pyrefGeometry.nb_patches
+   nb_Patches       = pyrefGeometry.nb_patches
    # ...
-   output_pvd_path = filename + ".pvd"
+   output_pvd_path = os.path.abspath(filename + ".pvd")
    # --- Create PVD file header
    with open(output_pvd_path, 'w') as f:
       f.write('<?xml version="1.0"?>\n')
@@ -709,7 +709,7 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
       if pyrefGeometry.geo_dim ==2:
          for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
             multiblock = pv.MultiBlock()
-            for i in range(numPaches):
+            for i in range(nb_Patches):
                #---Compute a physical domain
                x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
                [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
@@ -752,7 +752,7 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
       elif pyrefGeometry.dim == 3: #.. z is not none 3D case
          for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
             multiblock = pv.MultiBlock()
-            for i in range(numPaches):
+            for i in range(nb_Patches):
                #---Compute a physical domain
                x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts, nbpts))
                # [[uxx, uxy, uxz],[uyx, uyy, uyz],[uzx, uzy, uzz]]   = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts, nbpts))
@@ -793,7 +793,7 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
       else: #.. z is not none
          for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
             multiblock = pv.MultiBlock()
-            for i in range(numPaches):
+            for i in range(nb_Patches):
                #---Compute a physical domain
                x, y, z  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
                #...
