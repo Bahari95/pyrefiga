@@ -255,7 +255,7 @@ class TensorSpace(object):
         assert all( isinstance( s, SplineSpace ) for s in args )
         self._spaces = tuple(args)
 
-        self._nurbs = bool(sum(not V.nurbs for V in self.spaces))
+        self._nurbs = any(V.nurbs for V in self.spaces)
         # ...
         nbasis   = [V.nbasis   for V in self.spaces]
         degree   = [V.degree   for V in self.spaces]
