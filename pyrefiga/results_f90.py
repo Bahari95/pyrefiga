@@ -439,27 +439,20 @@ import os
 colors = ['b', 'k', 'r', 'g', 'm', 'c', 'y', 'orange']
 markers = ['v', 'o', 's', 'D', '^', '<', '>', '*']  # Different markers
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def plot_SolutionMultipatch(nbpts, xuh, V, xmp, ymp, savefig = None, plot = True, Jacfield = None): 
+def plot_SolutionMultipatch(nbpts, xuh, V, V_geo, xmp, ymp, savefig = None, plot = True): 
    """
    Plot the solution of the problem in the whole multi-patch domain
    """
    #---Compute a solution
-   numPaches = len(V)
+   numPaches = len(xmp)
    u   = []
    F1  = []
    F2  = []
-   JF = []
    for i in range(numPaches):
-      u.append(pyccel_sol_field_2d((nbpts, nbpts), xuh[i], V[i].knots, V[i].degree)[0])
+      u.append(pyccel_sol_field_2d((nbpts, nbpts), xuh[i], V.knots, V.degree)[0])
       #---Compute a solution
-      F1.append(pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0])
-      F2.append(pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0])
-      #...Compute a Jacobian
-      F1x, F1y = pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[1:3]
-      F2x, F2y = pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[1:3]
-      JF.append(F1x*F2y - F1y*F2x)
-   if Jacfield is not None:
-       u = JF
+      F1.append(pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V_geo.knots, V_geo.degree)[0])
+      F2.append(pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V_geo.knots, V_geo.degree)[0])
 
    # --- Compute Global Color Levels ---
    u_min  = min(np.min(u[0]), np.min(u[1]))
@@ -483,7 +476,7 @@ def plot_SolutionMultipatch(nbpts, xuh, V, xmp, ymp, savefig = None, plot = True
       cbar.ax.tick_params(labelsize=15)
       cbar.ax.yaxis.label.set_fontweight('bold')
    # --- Formatting ---
-   axes.set_title("Solution the in whole domain ", fontweight='bold')
+   axes.set_title("Numerical Solution", fontweight='bold')
    for label in axes.get_xticklabels() + axes.get_yticklabels():
       label.set_fontweight('bold')
 

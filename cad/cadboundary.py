@@ -240,7 +240,7 @@ print("Usage: python3 cadboundary.py --expr1 'x' --expr2 'y'")
 parser = argparse.ArgumentParser(description="Control plot behavior and save control points.")
 parser.add_argument("--plot", action="store_true", help="Enable plotting and saving control points")
 parser.add_argument("--degree", type=int, default=2, help="Degree of the polynomial (default: 2)")
-parser.add_argument("--nelements", type=int, default=16, help="Number of elements (default: 16)")
+parser.add_argument("--nelements", type=int, default=8, help="Number of elements (default: 16)")
 parser.add_argument("--name", type=str, default='Geometry', help="Name of geometry (default: Geometry)")
 parser.add_argument("--expr1", type=str, default="1.+(2.*x-1.)*np.sqrt(1.-(2.*y-1.)**2/2.0)", help="First mathematical expression (default: 'x')")
 parser.add_argument("--expr2", type=str, default="0.5*(2.*y-1.)*np.sqrt(1.-(2.*x-1.)**2/2.0)", help="Second mathematical expression (default: 'y')")
@@ -281,8 +281,45 @@ V2 = SplineSpace(degree=degree, nelements= nelements, nderiv = 2)
 # create the tensor space
 Vh = TensorSpace(V1, V2)
 
-xD, u01 = build_dirichlet(Vh, gx)
-yD, u10 = build_dirichlet(Vh, gy)
+xD, u01 = np.zeros(Vh.nbasis), StencilVector(Vh.vector_space)#build_dirichlet(Vh, gx)
+yD, u10 = np.zeros(Vh.nbasis), StencilVector(Vh.vector_space)#build_dirichlet(Vh, gy)
+#... Set Dirichlet boundary condition
+from pyrefiga import least_square_Bspline
+from pyrefiga import pyref_patch, plot_MeshMultipatch
+boundary_map = {
+    1: (0, slice(None)),
+    2: (-1, slice(None)),
+    3: (slice(None), 0),
+    4: (slice(None), -1),
+}
+
+geometry = pyref_patch('../fields/meshJET.xml', 0)
+numberpatchs = 3
+mesh = (np.zeros((100,100)), np.zeros((100,100)))
+meshx, meshy = np.meshgrid( np.linspace(0, 1, 100), np.linspace(0.75, 1., 100), indexing='ij' )
+mesh[0][:,:] = meshx
+mesh[1][:,:] = meshy
+Ximage, Yimage  = geometry.eval(mesh = mesh)
+
+plt.plot(Ximage[0, :], Yimage[0, :], 'b')
+plt.plot(Ximage[-1, :], Yimage[-1, :], 'r')
+plt.plot(Ximage[:,  0], Yimage[:,  0], 'g')
+plt.plot(Ximage[:, -1], Yimage[:, -1], 'm')
+plt.show(block=True)
+plt.close()
+
+xD[0, :] = least_square_Bspline(V2.degree, V2.knots, Ximage[0, :])
+xD[-1,:] = least_square_Bspline(V2.degree, V2.knots, Ximage[-1,:])
+xD[:, 0] = least_square_Bspline(V1.degree, V1.knots, Ximage[:, 0])
+xD[:,-1] = least_square_Bspline(V1.degree, V1.knots, Ximage[:,-1])
+
+yD[0, :] = least_square_Bspline(V2.degree, V2.knots, Yimage[0, :])
+yD[-1,:] = least_square_Bspline(V2.degree, V2.knots, Yimage[-1,:])
+yD[:, 0] = least_square_Bspline(V1.degree, V1.knots, Yimage[:, 0])
+yD[:,-1] = least_square_Bspline(V1.degree, V1.knots, Yimage[:,-1])
+u01.from_array(Vh, xD)
+u10.from_array(Vh, yD)
+
 #+++++++++++++++++++++++++++++++++++
 print('++ NEW-FORMULATION--FOR---VOLUMETRIC-PARAMETERIZATION')
 start = time.time()
@@ -362,7 +399,8 @@ if np.min(Z) < 0. :
         
 print( ' min of Jacobian in the intire unit square =', np.min(Z) )
 print( ' max of Jacobian in the intire unit square =', np.max(Z) )
-
+np.savetxt('tok_ix_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x11uh, fmt='%.2e')
+np.savetxt('tok_iy_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x12uh, fmt='%.2e')
 # ... save data
 #np.savetxt('figs/filex_'+str(degree)+'_'+str(nelements)+'.txt', x11uh, fmt='%.20e')
 #np.savetxt('figs/filey_'+str(degree)+'_'+str(nelements)+'.txt', x12uh, fmt='%.20e')

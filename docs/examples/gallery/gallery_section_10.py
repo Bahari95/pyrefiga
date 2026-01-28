@@ -319,11 +319,13 @@ def assemble_vector_un_ex02(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', 
                     lvalues_udy[g1, g2]  = (F1x * udy - F1y*udx)
                     lvalues_udy[g1, g2] /= J_mat
                     # .. test 0
-                    # f  = 2.*(2.*pi)**2*sin(2.*pi*x)*sin(2.*pi*y)
+                    # f  = 2.*(4.*pi)**2*sin(4.*pi*x)*sin(4.*pi*y)
                     # test 1
                     #f = 3.85749969592784e-18*exp(100.0*x + 100.0*y)/(1.92874984796392e-22*exp(100.0*x + 100.0*y) + 1.0)**2 - 1.48803039040833e-39*exp(200.0*x + 200.0*y)/(1.92874984796392e-22*exp(100.0*x + 100.0*y) + 1.0)**3
                     # .. test 0
-                    f  = -4.+0.*x
+                    # f  = -4.+0.*x
+                    # # # annulus
+                    f = exp(-100.0 * (x**2 + y**2 - 2.25)**2) * (800.0 * (x**2 + y**2 - 2.25)+ 800.0 * (x**2 + y**2)- 160000.0 * (x**2 + y**2) * (x**2 + y**2 - 2.25)**2)
 
                     lvalues_u[g1,g2]   = f 
                     lvalues_Jac[g1,g2] = J_mat
@@ -575,13 +577,17 @@ def assemble_norm_un_ex02(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', p4
                     sy    = lvalues_uy[g1,g2]
 
                     #... TEST 1
-                    # f    = sin(2.*pi*x)*sin(2.*pi*y) 
-                    # fx   = 2.*pi*cos(2.*pi*x)*sin(2.*pi*y) 
-                    # fy   = 2.*pi*sin(2.*pi*x)*cos(2.*pi*y) 
+                    # f    = sin(4.*pi*x)*sin(4.*pi*y) 
+                    # fx   = 4.*pi*cos(4.*pi*x)*sin(4.*pi*y) 
+                    # fy   = 4.*pi*sin(4.*pi*x)*cos(4.*pi*y) 
                     #... TEST 2
-                    f    = x**2+y**2
-                    fx   = x*2.
-                    fy   = y*2.
+                    # f    = x**2+y**2
+                    # fx   = x*2.
+                    # fy   = y*2.
+                    #... test annulus
+                    f   =   exp(-100 * ( x**2 + y**2-2.25)**2)
+                    fx  =  -400 * x * ( x**2 + y**2-2.25) * f
+                    fy  =  -400 * y * ( x**2 + y**2-2.25) * f
                     # ...
                     uhx   = (F2y*sx-F2x*sy)/det_J
                     uhy   = (F1x*sy-F1y*sx)/det_J

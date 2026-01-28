@@ -355,45 +355,129 @@ class StencilNitsche(object):
                     dof_p = cpw + 0*(pd4-pd3)      + j
                     dof_q = pw + (d2-d1-1)*(d4-d3) + j
 
-                    rep = min(dof_p, dof_q)
-                    equiv.setdefault(rep, set()).update({dof_p, dof_q})
+                    # --- find current representatives
+                    rep_p = dof_to_rep.get(dof_p, dof_p)
+                    rep_q = dof_to_rep.get(dof_q, dof_q)
 
-                    dof_to_rep[dof_p] = rep
-                    dof_to_rep[dof_q] = rep
+                    # --- choose final representative
+                    rep = min(rep_p, rep_q)
 
+                    # --- merge sets
+                    set_p = equiv.get(rep_p, {rep_p})
+                    set_q = equiv.get(rep_q, {rep_q})
+
+                    merged = set_p | set_q | {dof_p, dof_q}
+
+                    equiv[rep] = merged
+
+                    # --- update all DoFs to new representative
+                    for d in merged:
+                        dof_to_rep[d] = rep
+
+                    # --- clean old representatives
+                    if rep_p != rep:
+                        equiv.pop(rep_p, None)
+                    if rep_q != rep:
+                        equiv.pop(rep_q, None)
+                        
             if interface_like == 2: # x = 1
                 assert(pd3==d3 and pd4==d4) # conform multipatch
                 for j in range(0,pd4-pd3):
                     dof_p = cpw + (pd2-pd1-1)*(pd4-pd3) + j
                     dof_q = pw +   0*(d4-d3)            + j
 
-                    rep = min(dof_p, dof_q)
-                    equiv.setdefault(rep, set()).update({dof_p, dof_q})
+                    # --- find current representatives
+                    rep_p = dof_to_rep.get(dof_p, dof_p)
+                    rep_q = dof_to_rep.get(dof_q, dof_q)
 
-                    dof_to_rep[dof_p] = rep
-                    dof_to_rep[dof_q] = rep
+                    # --- choose final representative
+                    rep = min(rep_p, rep_q)
+
+                    # --- merge sets
+                    set_p = equiv.get(rep_p, {rep_p})
+                    set_q = equiv.get(rep_q, {rep_q})
+
+                    merged = set_p | set_q | {dof_p, dof_q}
+
+                    equiv[rep] = merged
+
+                    # --- update all DoFs to new representative
+                    for d in merged:
+                        dof_to_rep[d] = rep
+
+                    # --- clean old representatives
+                    if rep_p != rep:
+                        equiv.pop(rep_p, None)
+                    if rep_q != rep:
+                        equiv.pop(rep_q, None)
+
             if interface_like == 3: # y = 0
                 assert(pd1==d1 and pd2==d2) # conform multipatch
                 for i in range(0,pd2-pd1):
                     dof_p = cpw + i*(pd4-pd3) + 0
                     dof_q = pw +  i*(d4-d3)   + (d4-d3-1)
 
-                    rep = min(dof_p, dof_q)
-                    equiv.setdefault(rep, set()).update({dof_p, dof_q})
+                    # --- find current representatives
+                    rep_p = dof_to_rep.get(dof_p, dof_p)
+                    rep_q = dof_to_rep.get(dof_q, dof_q)
 
-                    dof_to_rep[dof_p] = rep
-                    dof_to_rep[dof_q] = rep
+                    # --- choose final representative
+                    rep = min(rep_p, rep_q)
+
+                    # --- merge sets
+                    set_p = equiv.get(rep_p, {rep_p})
+                    set_q = equiv.get(rep_q, {rep_q})
+
+                    merged = set_p | set_q | {dof_p, dof_q}
+
+                    equiv[rep] = merged
+
+                    # --- update all DoFs to new representative
+                    for d in merged:
+                        dof_to_rep[d] = rep
+
+                    # --- clean old representatives
+                    if rep_p != rep:
+                        equiv.pop(rep_p, None)
+                    if rep_q != rep:
+                        equiv.pop(rep_q, None)
+
             if interface_like == 4: # y = 1
                 assert(pd1==d1 and pd2==d2) # conform multipatch
                 for i in range(0,pd2-pd1):
                     dof_p = cpw + i*(pd4-pd3) + (pd4-pd3-1)
                     dof_q = pw +  i*(d4-d3)   + 0
 
-                    rep = min(dof_p, dof_q)
-                    equiv.setdefault(rep, set()).update({dof_p, dof_q})
+                    # --- find current representatives
+                    rep_p = dof_to_rep.get(dof_p, dof_p)
+                    rep_q = dof_to_rep.get(dof_q, dof_q)
 
-                    dof_to_rep[dof_p] = rep
-                    dof_to_rep[dof_q] = rep
+                    # --- choose final representative
+                    rep = min(rep_p, rep_q)
+
+                    # --- merge sets
+                    set_p = equiv.get(rep_p, {rep_p})
+                    set_q = equiv.get(rep_q, {rep_q})
+
+                    merged = set_p | set_q | {dof_p, dof_q}
+
+                    equiv[rep] = merged
+
+                    # --- update all DoFs to new representative
+                    for d in merged:
+                        dof_to_rep[d] = rep
+
+                    # --- clean old representatives
+                    if rep_p != rep:
+                        equiv.pop(rep_p, None)
+                    if rep_q != rep:
+                        equiv.pop(rep_q, None)
+
+                    # rep = min(dof_p, dof_q)
+                    # equiv.setdefault(rep, set()).update({dof_p, dof_q})
+
+                    # dof_to_rep[dof_p] = rep
+                    # dof_to_rep[dof_q] = rep
         new_id  = {}
         old_id  = {}
         current = 0

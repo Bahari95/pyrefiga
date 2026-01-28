@@ -140,11 +140,13 @@ print("(#=assembled Dirichlet, #=solve poisson)\n")
 # Define exact solution and Dirichlet boundary condition
 #------------------------------------------------------------------------------
 # Test 0
-# g         = ['np.sin(2.*np.pi*x)*np.sin(2.*np.pi*y)']
+# g         = ['np.sin(4.*np.pi*x)*np.sin(4.*np.pi*y)']
 # Test 1
 #g         = ['1./(1.+np.exp((x + y  - 0.5)/0.01) )']
-# Test 1
-g         = ['x**2+y**2']
+# Test 2
+# g         = ['x**2+y**2']
+# ... test annulus
+g         = ['np.exp(-100 * ( x**2 + y**2-2.25)**2)']
 
 #------------------------------------------------------------------------------
 # Load CAD geometry
@@ -191,10 +193,11 @@ for ne in range(refGrid,refGrid+RefinNumber+1):
     Vh  = TensorSpace(V1, V2)
 
     u_d = pyrefMP.assemble_dirichlet(Vh, g)
-    print('#spaces')
+    print('#spaces', Vh.nbasis)
     # Solve Poisson equation on refined mesh
     start = time.time()
     xuh, l2_error,  H1_error = poisson_solve(Vh, pyrefMP, u_d)
+    #... 
     times.append(time.time()- start)
     print('#')
     # Store results
