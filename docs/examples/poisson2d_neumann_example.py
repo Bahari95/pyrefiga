@@ -11,7 +11,6 @@ from pyrefiga import apply_dirichlet
 
 from pyrefiga import SplineSpace
 from pyrefiga import TensorSpace
-from pyrefiga import StencilMatrix
 from pyrefiga import StencilVector
 from pyrefiga import pyccel_sol_field_2d
 
@@ -26,25 +25,12 @@ from gallery.gallery_section_02 import assemble_norm_ex01      #---1 : In unifor
 assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
 assemble_norm_l2     = compile_kernel(assemble_norm_ex01, arity=1)
 
-#from matplotlib.pyplot import plot, show
-import matplotlib.pyplot            as     plt
-from   mpl_toolkits.axes_grid1      import make_axes_locatable
-from   mpl_toolkits.mplot3d         import axes3d
-from   matplotlib                   import cm
-from   mpl_toolkits.mplot3d.axes3d  import get_test_data
-from   matplotlib.ticker            import LinearLocator, FormatStrFormatter
 #..
 from   scipy.sparse                 import kron
 from   scipy.sparse                 import csr_matrix
 from   scipy.sparse                 import csc_matrix, linalg as sla
-from   numpy                        import zeros, linalg, asarray
-from   numpy                        import cos, sin, pi, exp, sqrt, arctan2
-from   tabulate                     import tabulate
-import numpy                        as     np
-import timeit
 import time
 
-from tabulate import tabulate
 #==============================================================================
 #  for figures 
 import os
@@ -71,12 +57,10 @@ def poisson_solve(V1, V2, V):
        # Stiffness and Mass matrix in 1D in the second deriction
        K2                  = assemble_stiffness1D(V2)
        K2                  = K2.tosparse()
-       K2                  = K2.toarray()
        K2                  = csr_matrix(K2)
 
        M2                  = assemble_mass1D(V2)
        M2                  = M2.tosparse()
-       M2                  = M2.toarray()
        M2                  = csr_matrix(M2)
        
        # Stiffness and Mass matrix in 1D in the thrd deriction
@@ -91,7 +75,7 @@ def poisson_solve(V1, V2, V):
        xkron               = xkron.reshape([V1.nbasis-2,V2.nbasis])
        # ...
        u                   = apply_dirichlet(V, xkron, dirichlet=[[True, True], [False, False]], update = u)#zero Dirichlet
-       x                   = u.toarray().reshape(V.nbasis)
+       x                   = u.tensor
        # ...
        Norm                = assemble_norm_l2(V, fields=[u]) 
        norm                = Norm.toarray()
@@ -101,7 +85,8 @@ def poisson_solve(V1, V2, V):
 
 degree      = 2
 quad_degree = degree + 1
-
+#----------------------
+u_exact = [ 'np.sin(np.pi*x)* np.sin(np.pi*y)']
 #----------------------
 #..... Initialisation and computing optimal mapping for 16*16
 #----------------------
@@ -115,47 +100,18 @@ print('#---IN-UNIFORM--MESH')
 u_pH, xuh, l2_norm, H1_norm = poisson_solve(V1, V2, Vh)
 print('-----> L^2-error ={} -----> H^1-error = {}'.format(l2_norm, H1_norm))
 
-#---Compute a solution
-nbpts = 50
-#---Solution in uniform mesh
-u, ux, uy, X, Y = pyccel_sol_field_2d((nbpts,nbpts),  xuh , Vh.knots, Vh.degree)
-
-#~~~~~~~~~~~~~~~~~~~~
-#.. Plot the surface
-
-# set up a figure twice as wide as it is tall
-fig = plt.figure(figsize=plt.figaspect(0.5))
-#===============
-#  First subplot
-# set up the axes for the first plot
-ax = fig.add_subplot(1, 2, 1, projection='3d')
-
-# plot a 3D surface like in the example mplot3d/surface3d_demo
-surf0 = ax.plot_surface(X, Y, u, rstride=1, cstride=1, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
-ax.set_xlim(0.0, 1.0)
-ax.set_ylim(0.0, 1.0)
-ax.zaxis.set_major_locator(LinearLocator(10))
-ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-ax.set_title('Approximate solution')
-ax.set_xlabel('X',  fontweight ='bold')
-ax.set_ylabel('Y',  fontweight ='bold')
-# Add a color bar which maps values to colors.
-fig.colorbar(surf0, shrink=0.5, aspect=25)
-
-#===============
-# Second subplot
-Sol = lambda x, y : sin(pi*x)* sin(pi*y)
-ax = fig.add_subplot(1, 2, 2, projection='3d')
-surf = ax.plot_surface(X, Y, Sol(X,Y), cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
-ax.set_xlim(0.0, 1.0)
-ax.set_ylim(0.0, 1.0)
-ax.zaxis.set_major_locator(LinearLocator(10))
-ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-ax.set_title('Exact Solution')
-ax.set_xlabel('F1',  fontweight ='bold')
-ax.set_ylabel('F2',  fontweight ='bold')
-fig.colorbar(surf, shrink=0.5, aspect=25)
-plt.savefig('figs/Poisson3D.png')
-plt.show()
+# ...
+plot = True
+if plot:
+       #---Compute a solution
+       nbpts = 50
+       from pyrefiga import pyref_patch, load_xml, paraview_nurbsSolutionMultipatch
+       geometry = load_xml('unitSquare.xml')
+       patch    = pyref_patch(geometry, 0)
+       solutions = [
+              {"name": "Solution", "data": [xuh], "space": Vh},
+       ]
+       functions = [
+              {"name": "Exact solution", "expression": u_exact[0]},
+       ]
+       paraview_nurbsSolutionMultipatch(nbpts, patch, solution=solutions, functions=functions, plot = True)

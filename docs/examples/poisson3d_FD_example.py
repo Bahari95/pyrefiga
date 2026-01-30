@@ -6,15 +6,14 @@ Example: Solving Poisson's Equation on a 3D using B-spline on the computational 
 author :  M. BAHARI
 """
 
-from pyrefiga import compile_kernel
-from pyrefiga import apply_dirichlet
-
-from pyrefiga import SplineSpace
-from pyrefiga import TensorSpace
-from pyrefiga import StencilMatrix
-from pyrefiga import StencilVector
-from pyrefiga import Poisson
-from pyrefiga import pyref_patch
+from  pyrefiga                      import compile_kernel
+from  pyrefiga                      import apply_dirichlet
+# ...
+from  pyrefiga                     import SplineSpace
+from  pyrefiga                     import TensorSpace
+from  pyrefiga                     import StencilVector
+from  pyrefiga                     import Poisson
+from  pyrefiga                     import pyref_patch
 # ... Using Matrices accelerated with Pyccel
 from   pyrefiga                    import assemble_stiffness1D
 from   pyrefiga                    import assemble_mass1D     
@@ -30,14 +29,9 @@ assemble_norm_l2     = compile_kernel(assemble_norm_ex01, arity=1)
 from   scipy.sparse                 import kron
 from   scipy.sparse                 import csr_matrix
 from   scipy.sparse                 import csc_matrix, linalg as sla
-from   numpy                        import zeros, linalg, asarray
-from   numpy                        import cos, sin, pi, exp, sqrt, arctan2
-from   tabulate                     import tabulate
 import numpy                        as     np
-import timeit
 import time
 import argparse
-from tabulate import tabulate
 #==============================================================================
 #  for figures 
 import os
@@ -107,7 +101,7 @@ parser = argparse.ArgumentParser(description="Control plot behavior and save con
 parser.add_argument("--plot", action="store_true", help="Enable plotting and saving control points")
 args = parser.parse_args()
 
-nbpts       = 100 #for plot
+nbpts       = 50 #for plot
 nelements   = 8
 degree      = 2
 # Test 1
@@ -142,4 +136,4 @@ solutions = [
 functions = [
     {"name": "Exact solution", "expression": g[0]},
 ]
-paraview_nurbsSolutionMultipatch(nbpts, pyrefGeometry=mp, solution = solutions, functions = functions, plot = args.plot)
+paraview_nurbsSolutionMultipatch(nbpts, mp, solution = solutions, functions = functions, plot = args.plot)
