@@ -442,7 +442,7 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
         for i in range(2):
             basis            = ET.SubElement(basis_inner, 'Basis', type='BSplineBasis', index=str(i))
             basis.text       = '\n'
-            knot_vector      = ET.SubElement(basis, 'KnotVector', degree=str(V.degree[0]))
+            knot_vector      = ET.SubElement(basis, 'KnotVector', degree=str(V.degree[i]))
             knot_vector.text = '\n' + ' '.join(map(str, V.knots[i])) + '\n'
         
         # Add coefficients (control points)

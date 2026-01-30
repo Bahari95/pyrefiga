@@ -27,8 +27,8 @@ Nump     = args.mp
 func     = args.f
 # geometry = 'quart_annulus.xml'
 # geometry = 'circle.xml'
-#geometry  = 'egg.xml' '/home/bahari/pyrefiga/cad/figs/Geometry.xml' #
-geometry  = load_xml(args.name)
+#geometry  = 'egg.xml' 
+geometry   = load_xml(args.name)
 
 functions = [
     {"name": "density", "expression": func},

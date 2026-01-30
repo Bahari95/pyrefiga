@@ -6,31 +6,30 @@ cadboundary.py
 @author : M. BAHARI
 """
 
-from pyrefiga          import compile_kernel
-from pyrefiga          import SplineSpace
-from pyrefiga          import TensorSpace
-from pyrefiga          import StencilVector
-from pyrefiga          import pyccel_sol_field_2d
-from pyrefiga          import least_square_Bspline
-from pyrefiga          import save_geometry_to_xml
-from pyrefiga          import build_dirichlet
+from   pyrefiga                    import compile_kernel
+from   pyrefiga                    import SplineSpace
+from   pyrefiga                    import TensorSpace
+from   pyrefiga                    import StencilVector
+from   pyrefiga                    import pyccel_sol_field_2d
+from   pyrefiga                    import least_square_Bspline
+from   pyrefiga                    import save_geometry_to_xml
+from   pyrefiga                    import build_dirichlet
 # ... Using Matrices accelerated with Pyccel
 from   pyrefiga                    import assemble_stiffness1D
 from   pyrefiga                    import assemble_mass1D     
+# ...
+from    gallery_section_04         import assemble_vector_ex01
+from    gallery_section_04         import assemble_vector_ex02
 
-from gallery_section_04 import assemble_vector_ex01
-from gallery_section_04 import assemble_vector_ex02
-
-
+# ...
 assemble_rhs01      = compile_kernel(assemble_vector_ex01, arity=1)
 assemble_rhs10      = compile_kernel(assemble_vector_ex02, arity=1)
 
 #from numpy import asarray
 import matplotlib.pyplot            as     plt
-from   mpl_toolkits.axes_grid1      import make_axes_locatable
 from   scipy.sparse                 import csr_matrix
-from   numpy                        import zeros, linalg, asarray, cos, sin, pi, exp, sqrt
-from   pyrefiga                    import Poisson
+from   numpy                        import sqrt
+from   pyrefiga                     import Poisson
 from   scipy.sparse                 import kron
 import numpy                        as     np
 # ---
@@ -242,8 +241,10 @@ parser.add_argument("--plot", action="store_true", help="Enable plotting and sav
 parser.add_argument("--degree", type=int, default=2, help="Degree of the polynomial (default: 2)")
 parser.add_argument("--nelements", type=int, default=8, help="Number of elements (default: 16)")
 parser.add_argument("--name", type=str, default='Geometry', help="Name of geometry (default: Geometry)")
-parser.add_argument("--expr1", type=str, default="1.+(2.*x-1.)*np.sqrt(1.-(2.*y-1.)**2/2.0)", help="First mathematical expression (default: 'x')")
-parser.add_argument("--expr2", type=str, default="0.5*(2.*y-1.)*np.sqrt(1.-(2.*x-1.)**2/2.0)", help="Second mathematical expression (default: 'y')")
+parser.add_argument("--expr1", type=str, default="np.sqrt(1.+x*np.cos(2.*np.pi*y))", help="First mathematical expression (default: 'x')")
+parser.add_argument("--expr2", type=str, default="0.5*x*np.sin(2.*np.pi*y)", help="Second mathematical expression (default: 'y')")
+# parser.add_argument("--expr1", type=str, default="1.+(2.*x-1.)*np.sqrt(1.-(2.*y-1.)**2/2.0)", help="First mathematical expression (default: 'x')")
+# parser.add_argument("--expr2", type=str, default="0.5*(2.*y-1.)*np.sqrt(1.-(2.*x-1.)**2/2.0)", help="Second mathematical expression (default: 'y')")
 #.. If the boundary is given by four curves insted of analytic tranfsormation
 parser.add_argument("--Xx0", type=str, default=None, help="mathematical expression in x direction (default: 'None')")
 parser.add_argument("--Xx1", type=str, default=None, help="mathematical expression in x direction (default: 'None')")
@@ -281,6 +282,10 @@ V2 = SplineSpace(degree=degree, nelements= nelements, nderiv = 2)
 # create the tensor space
 Vh = TensorSpace(V1, V2)
 
+print( 1./(V1.knots[degree+1]-V1.knots[0]), nelements)
+print( 1./(V1.knots[degree+1]-V1.knots[0]), nelements)
+print( 1./(V1.knots[degree+1]-V1.knots[0]), nelements)
+print( 1./(V1.knots[degree+1]-V1.knots[0]), nelements)
 xD, u01 = np.zeros(Vh.nbasis), StencilVector(Vh.vector_space)#build_dirichlet(Vh, gx)
 yD, u10 = np.zeros(Vh.nbasis), StencilVector(Vh.vector_space)#build_dirichlet(Vh, gy)
 #... Set Dirichlet boundary condition
@@ -294,29 +299,73 @@ boundary_map = {
 }
 
 geometry = pyref_patch('../fields/meshJET.xml', 0)
-numberpatchs = 3
-mesh = (np.zeros((100,100)), np.zeros((100,100)))
-meshx, meshy = np.meshgrid( np.linspace(0, 1, 100), np.linspace(0.75, 1., 100), indexing='ij' )
-mesh[0][:,:] = meshx
-mesh[1][:,:] = meshy
-Ximage, Yimage  = geometry.eval(mesh = mesh)
+xs, ys = [], []
+dx = 0.  
+dy = 0.25
+for numberpatchs in range(0, 4):
+    mesh = (np.zeros((100,100)), np.zeros((100,100)))
+    dx += 0.25 
+    dy += 0.25
+    meshx, meshy = np.meshgrid( np.linspace(0.2, 1., 100), np.linspace(dx, dy, 100), indexing='ij' )
+    mesh[0][:,:] = meshx
+    mesh[1][:,:] = meshy
+    # Ximage, Yimage  = geometry.eval(mesh = mesh)
+    x = mesh[0]
+    y = mesh[1]
+    Ximage, Yimage  = eval(args.expr1), eval(args.expr2)
+    if numberpatchs == 0:
+        xs.append(Ximage[0, :])
+        ys.append(Yimage[0, :])
+    if numberpatchs == 1:
+        xs.append(Ximage[0, ::-1])
+        ys.append(Yimage[0, ::-1])
+    if numberpatchs == 2:
+        xs.append(Ximage[0, ::-1])
+        ys.append(Yimage[0, ::-1])
+    if numberpatchs == 3:
+        xs.append(Ximage[0, :])
+        ys.append(Yimage[0, :])
 
-plt.plot(Ximage[0, :], Yimage[0, :], 'b')
-plt.plot(Ximage[-1, :], Yimage[-1, :], 'r')
-plt.plot(Ximage[:,  0], Yimage[:,  0], 'g')
-plt.plot(Ximage[:, -1], Yimage[:, -1], 'm')
+plt.plot(xs[0], ys[0], 'b')
+plt.plot(xs[1], ys[1], 'r')
+plt.plot(xs[2], ys[2], 'g')
+plt.plot(xs[3], ys[3], 'm')
 plt.show(block=True)
 plt.close()
 
-xD[0, :] = least_square_Bspline(V2.degree, V2.knots, Ximage[0, :])
-xD[-1,:] = least_square_Bspline(V2.degree, V2.knots, Ximage[-1,:])
-xD[:, 0] = least_square_Bspline(V1.degree, V1.knots, Ximage[:, 0])
-xD[:,-1] = least_square_Bspline(V1.degree, V1.knots, Ximage[:,-1])
+if nelements == 1:
+    xD[0, :] = (Ximage[0,  0], Ximage[ 0, -1], Ximage[ 0, -1])
+    xD[-1,:] = (Ximage[-1, 0], Ximage[-1, -1], Ximage[-1, -1])
+    xD[:, 0] = (Ximage[0,  0],  Ximage[-1,  0])
+    xD[:,-1] = (Ximage[0, -1],  Ximage[-1, -1])
 
-yD[0, :] = least_square_Bspline(V2.degree, V2.knots, Yimage[0, :])
-yD[-1,:] = least_square_Bspline(V2.degree, V2.knots, Yimage[-1,:])
-yD[:, 0] = least_square_Bspline(V1.degree, V1.knots, Yimage[:, 0])
-yD[:,-1] = least_square_Bspline(V1.degree, V1.knots, Yimage[:,-1])
+    yD[0, :] = (Yimage[0,  0], Yimage[0,  0], Yimage[ 0, -1])
+    yD[-1,:] = (Yimage[-1, 0], Yimage[-1, 0], Yimage[-1, -1])
+    yD[:, 0] = (Yimage[0,  0],  Yimage[-1,  0])
+    yD[:,-1] = (Yimage[0, -1],  Yimage[-1, -1])
+else:
+    xD[0, :] = least_square_Bspline(V2.degree, V2.knots, xs[2])
+    # print(xD[0,0], yD[0,0],'=================================0',xs[3][0] )
+    xD[-1,:] = least_square_Bspline(V2.degree, V2.knots, xs[0])
+    xD[:, 0] = least_square_Bspline(V1.degree, V1.knots, xs[3])
+    # print(xD[0,0], yD[0,0],'=================================1',xs[1][0])
+    xD[:,-1] = least_square_Bspline(V1.degree, V1.knots, xs[1])
+
+    yD[0, :] = least_square_Bspline(V2.degree, V2.knots, ys[2])
+    # print(xD[0,0], yD[0,0],'=================================0',ys[3][0])
+    yD[-1,:] = least_square_Bspline(V2.degree, V2.knots, ys[0])
+    yD[:, 0] = least_square_Bspline(V1.degree, V1.knots, ys[3])
+    # print(xD[0,0], yD[0,0],'=================================1',ys[3][0])
+    yD[:,-1] = least_square_Bspline(V1.degree, V1.knots, ys[1])
+print(xD[0,-1], yD[0,-1],'---------------------------------')
+
+plt.plot(xD[0,0], yD[0,0], 'ro')
+plt.plot(xD[0, :],  yD[0, :], 'b')
+plt.plot(xD[-1, :], yD[-1, :], 'r')
+plt.plot(xD[:,  0], yD[:,  0], 'g')
+plt.plot(xD[:, -1], yD[:, -1], 'm')
+plt.show(block=True)
+plt.close()
 u01.from_array(Vh, xD)
 u10.from_array(Vh, yD)
 
@@ -399,8 +448,8 @@ if np.min(Z) < 0. :
         
 print( ' min of Jacobian in the intire unit square =', np.min(Z) )
 print( ' max of Jacobian in the intire unit square =', np.max(Z) )
-np.savetxt('tok_ix_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x11uh, fmt='%.2e')
-np.savetxt('tok_iy_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x12uh, fmt='%.2e')
+np.savetxt('tok_ix_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x11uh, fmt='%.4e')
+np.savetxt('tok_iy_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x12uh, fmt='%.4e')
 # ... save data
 #np.savetxt('figs/filex_'+str(degree)+'_'+str(nelements)+'.txt', x11uh, fmt='%.20e')
 #np.savetxt('figs/filey_'+str(degree)+'_'+str(nelements)+'.txt', x12uh, fmt='%.20e')
@@ -426,52 +475,7 @@ save_geometry_to_xml(Vh, Gmap, name = args.name)
 #np.savetxt('figs/Geom_'+str(degree)+'_'+str(nelements)+'.txt', Gmap, fmt='%.20e')
 
 if args.plot :
-    #---------------------------------------------------------
-    fig =plt.figure() 
-    for i in range(nbpts):
-        phidx = ux[:,i]
-        phidy = uy[:,i]
-
-    plt.plot(phidx, phidy, '-b', linewidth = 0.25)
-    for i in range(nbpts):
-        phidx = ux[i,:]
-        phidy = uy[i,:]
-
-    plt.plot(phidx, phidy, '-b', linewidth = 0.25)
-    plt.plot(u11_pH.toarray(), u12_pH.toarray(), 'ro', markersize=3.5)
-    #~~~~~~~~~~~~~~~~~~~~
-    #.. Plot the surface
-    phidx = ux[:,0]
-    phidy = uy[:,0]
-    plt.plot(phidx, phidy, 'm', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
-    # ...
-    phidx = ux[:,nbpts-1]
-    phidy = uy[:,nbpts-1]
-    plt.plot(phidx, phidy, 'b', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
-    #''
-    phidx = ux[0,:]
-    phidy = uy[0,:]
-    plt.plot(phidx, phidy, 'r',  linewidth=2., label = '$Im([0,1]^2_{x=0})$')
-    # ...
-    phidx = ux[nbpts-1,:]
-    phidy = uy[nbpts-1,:]
-    plt.plot(phidx, phidy, 'g', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
-
-    #axes[0].axis('off')
-    plt.margins(0,0)
-    fig.tight_layout()
-    plt.savefig('figs/meshes.png')
-    plt.show(block=False)
-    plt.close()
-
-    fig, axes =plt.subplots() 
-    im2 = plt.contourf( ux, uy, Z, np.linspace(np.min(Z),np.max(Z),100), cmap= 'jet')
-    divider = make_axes_locatable(axes) 
-    cax   = divider.append_axes("right", size="5%", pad=0.05, aspect = 40) 
-    plt.colorbar(im2, cax=cax) 
-    fig.tight_layout()
-    plt.savefig('figs/Jacobian.png')
-    plt.show(block=False)
-    plt.close()
+    from pyrefiga import ViewGeo
+    ViewGeo('figs/Geometry.xml', [0], nbpts = nbpts, filename="figs/multipatch_geometry", plot = args.plot)
 else:
     print("Plotting is disabled. No files were saved, re-run with --plot")
