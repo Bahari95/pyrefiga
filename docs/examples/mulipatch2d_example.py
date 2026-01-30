@@ -140,25 +140,25 @@ print("(#=assembled Dirichlet, #=solve poisson)\n")
 # Define exact solution and Dirichlet boundary condition
 #------------------------------------------------------------------------------
 # Test 0
-# g         = ['np.sin(4.*np.pi*x)*np.sin(4.*np.pi*y)']
+g         = ['np.sin(4.*np.pi*x)*np.sin(4.*np.pi*y)']
 # Test 1
 #g         = ['1./(1.+np.exp((x + y  - 0.5)/0.01) )']
 # Test 2
 # g         = ['x**2+y**2']
 # ... test annulus
-g         = ['np.exp(-100 * ( x**2 + y**2-2.25)**2)']
+#g         = ['np.exp(-100 * ( x**2 + y**2-2.25)**2)']
 
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-# geometry = load_xml('unitSquare.xml')
-# idmp = (0,1) # L shape TODO
+geometry = load_xml('unitSquare.xml')
+idmp = (0,1, 2, 3) # L shape TODO
 # geometry = load_xml('lshape.xml')
 # idmp = (0,1)
 # geometry = load_xml('quart_annulus.xml')
 # idmp     = (0,1)
-geometry = load_xml('annulus.xml')
-idmp     = (0,1,2,3)
+# geometry = load_xml('annulus.xml')
+# idmp     = (0,1,2,3)
 # ...
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
