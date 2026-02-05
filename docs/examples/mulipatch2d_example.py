@@ -153,6 +153,8 @@ g         = ['np.sin(4.*np.pi*x)*np.sin(4.*np.pi*y)']
 #------------------------------------------------------------------------------
 geometry = load_xml('unitSquare.xml')
 idmp = (0,1, 2, 3) # L shape TODO
+# geometry = load_xml('triangle.xml')
+# idmp = (0,1, 2) # L shape TODO
 # geometry = load_xml('lshape.xml')
 # idmp = (0,1)
 # geometry = load_xml('quart_annulus.xml')

@@ -105,7 +105,7 @@ def picard(V1, V2, V, u01, u10, u_01= None, u_10= None, x0 = None, y0 = None, ni
         
         b   = b.reshape(V.nbasis) 
         b   = b[1:-1, 1:-1]      
-        b   = b.reshape((V1.nbasis-2)*(V1.nbasis-2))
+        b   = b.reshape((V1.nbasis-2)*(V2.nbasis-2))
 
         #...
         xkron  = poisson.solve(b)
@@ -154,7 +154,7 @@ def picard(V1, V2, V, u01, u10, u_01= None, u_10= None, x0 = None, y0 = None, ni
         
              b   = b.reshape(V.nbasis) 
              b   = b[1:-1, 1:-1]      
-             b   = b.reshape((V1.nbasis-2)*(V1.nbasis-2))
+             b   = b.reshape((V1.nbasis-2)*(V2.nbasis-2))
      
              #...
              xkron  = poisson.solve(b)
@@ -276,8 +276,8 @@ else :
 #..... Initialisation and computing optimal mapping for 16*16
 #----------------------
 # create the spline space for each direction
-V1 = SplineSpace(degree=degree, nelements= nelements, nderiv = 2)
-V2 = SplineSpace(degree=degree, nelements= nelements, nderiv = 2)
+V1 = SplineSpace(degree=degree, nelements= 2, nderiv = 2)
+V2 = SplineSpace(degree=degree, nelements= 4, nderiv = 2)
 
 # create the tensor space
 Vh = TensorSpace(V1, V2)
@@ -302,29 +302,45 @@ geometry = pyref_patch('../fields/meshJET.xml', 0)
 xs, ys = [], []
 dx = 0.  
 dy = 0.25
-for numberpatchs in range(0, 4):
+# for numberpatchs in range(0, 4):
+for numberpatchs in [1]:
     mesh = (np.zeros((100,100)), np.zeros((100,100)))
-    dx += 0.25 
-    dy += 0.25
-    meshx, meshy = np.meshgrid( np.linspace(0.2, 1., 100), np.linspace(dx, dy, 100), indexing='ij' )
+    dx += 0.25*numberpatchs 
+    dy += 0.25*numberpatchs
+    meshx, meshy = np.meshgrid( np.linspace(0.1, 1., 100), np.linspace(dx, dy, 100), indexing='ij' )
     mesh[0][:,:] = meshx
     mesh[1][:,:] = meshy
     # Ximage, Yimage  = geometry.eval(mesh = mesh)
     x = mesh[0]
     y = mesh[1]
     Ximage, Yimage  = eval(args.expr1), eval(args.expr2)
-    if numberpatchs == 0:
+    if True:
+        xs.append(Ximage[-1, :])
+        ys.append(Yimage[-1, :])#*(-Yimage[-1, :]+Yimage[-1, 0]+1)**2
+        #..
+        xs.append(Ximage[:, -1]*(1.-0.13/Ximage[0, -1])+0.13)
+        ys.append(Yimage[:, -1])
+        #..
         xs.append(Ximage[0, :])
         ys.append(Yimage[0, :])
-    if numberpatchs == 1:
-        xs.append(Ximage[0, ::-1])
-        ys.append(Yimage[0, ::-1])
-    if numberpatchs == 2:
-        xs.append(Ximage[0, ::-1])
-        ys.append(Yimage[0, ::-1])
-    if numberpatchs == 3:
-        xs.append(Ximage[0, :])
-        ys.append(Yimage[0, :])
+        #..
+        print(Ximage[-1, 0], Ximage[0, 0])
+        xs.append(Ximage[:, 0])#*(1.-0.13/Ximage[0, 0])+0.13)
+        ys.append(Yimage[:, 0])
+
+    if False:
+        if numberpatchs == 0:
+            xs.append(Ximage[0, :])
+            ys.append(Yimage[0, :])
+        if numberpatchs == 1:
+            xs.append(Ximage[0, ::-1])
+            ys.append(Yimage[0, ::-1])
+        if numberpatchs == 2:
+            xs.append(Ximage[0, ::-1])
+            ys.append(Yimage[0, ::-1])
+        if numberpatchs == 3:
+            xs.append(Ximage[0, :])
+            ys.append(Yimage[0, :])
 
 plt.plot(xs[0], ys[0], 'b')
 plt.plot(xs[1], ys[1], 'r')
@@ -345,17 +361,13 @@ if nelements == 1:
     yD[:,-1] = (Yimage[0, -1],  Yimage[-1, -1])
 else:
     xD[0, :] = least_square_Bspline(V2.degree, V2.knots, xs[2])
-    # print(xD[0,0], yD[0,0],'=================================0',xs[3][0] )
     xD[-1,:] = least_square_Bspline(V2.degree, V2.knots, xs[0])
     xD[:, 0] = least_square_Bspline(V1.degree, V1.knots, xs[3])
-    # print(xD[0,0], yD[0,0],'=================================1',xs[1][0])
     xD[:,-1] = least_square_Bspline(V1.degree, V1.knots, xs[1])
 
     yD[0, :] = least_square_Bspline(V2.degree, V2.knots, ys[2])
-    # print(xD[0,0], yD[0,0],'=================================0',ys[3][0])
     yD[-1,:] = least_square_Bspline(V2.degree, V2.knots, ys[0])
     yD[:, 0] = least_square_Bspline(V1.degree, V1.knots, ys[3])
-    # print(xD[0,0], yD[0,0],'=================================1',ys[3][0])
     yD[:,-1] = least_square_Bspline(V1.degree, V1.knots, ys[1])
 print(xD[0,-1], yD[0,-1],'---------------------------------')
 
@@ -448,8 +460,8 @@ if np.min(Z) < 0. :
         
 print( ' min of Jacobian in the intire unit square =', np.min(Z) )
 print( ' max of Jacobian in the intire unit square =', np.max(Z) )
-np.savetxt('tok_ix_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x11uh, fmt='%.4e')
-np.savetxt('tok_iy_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x12uh, fmt='%.4e')
+np.savetxt('tokNx_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x11uh, fmt='%.4e')
+np.savetxt('tokNy_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x12uh, fmt='%.4e')
 # ... save data
 #np.savetxt('figs/filex_'+str(degree)+'_'+str(nelements)+'.txt', x11uh, fmt='%.20e')
 #np.savetxt('figs/filey_'+str(degree)+'_'+str(nelements)+'.txt', x12uh, fmt='%.20e')

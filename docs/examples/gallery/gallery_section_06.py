@@ -103,7 +103,7 @@ def assemble_matrix_un_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', 
 
                                     wvol  = weights_1[ie1, g1] * weights_2[ie2, g2]
 
-                                    v    += (bi_x * bj_x + bi_y * bj_y ) * wvol / J_mat[g1,g2]
+                                    v    += (bi_x * bj_x + bi_y * bj_y ) * wvol / J_mat[g1,g2] + (bi_0 * -1 * bj_x + bi_0 * 0.*bj_y ) * wvol
 
                             matrix[p1+i1, p2+i2, p1+j1-i1, p2+j2-i2]  += v
     # ...
@@ -203,7 +203,7 @@ def assemble_vector_un_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', 
                     #.. Test 0
                     #f = 2.*(2.*pi)**2*sin(2.*pi*x)*sin(2.*pi*y)
                     #.. Test 1
-                    f = -4.+0.*x+0.*y
+                    f = -4.+0.*x+0.*y - 2.*x
 
                     lvalues_u[g1,g2]   = f 
                     lvalues_Jac[g1,g2] = J_mat
@@ -227,7 +227,7 @@ def assemble_vector_un_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', 
                             u     = lvalues_u[g1,g2]
                             udx   = lvalues_udx[g1, g2]
                             udy   = lvalues_udy[g1, g2]
-                            v    += bi_0 * u * wvol * lvalues_Jac[g1,g2] -  (udx * bi_x+ udy * bi_y) * wvol
+                            v    += bi_0 * u * wvol * lvalues_Jac[g1,g2] -  (udx * bi_x+ udy * bi_y) * wvol -  (-1.*udx * bi_0 + 0.*udy * bi_0) * wvol* lvalues_Jac[g1,g2]
 
                     rhs[i1+p1,i2+p2] += v
 
