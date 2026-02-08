@@ -1152,7 +1152,8 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
             pass
         else:
             raise NotImplementedError('Not available only StencilVector')
-        u   = update
+        u   = StencilVector(V.vector_space)
+        u.from_array(V, update.tensor)
         # ...
         if V.dim == 1:
             n1      = V.nbasis

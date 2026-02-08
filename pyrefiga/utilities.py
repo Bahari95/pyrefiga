@@ -145,7 +145,115 @@ def compute_eoc(err):
         return eoc
     else:
         return [0.]
+#========================================================================
+# ... computes the ordered data from random data
+#========================================================================
+def order_points(x_c, y_c):
+    """
+    Order points along a curve using direction-aware tracing.
+    
+    TODO : SHOULD START FROM POINT WITH NO ONE NIGHBOR
 
+    Traces through points by following the smoothest continuation direction,
+    starting from the point with minimum y-coordinate. Useful for ordering
+    scattered points that form a continuous curve.
+    
+    Parameters
+    ----------
+    x_c : array-like
+        X-coordinates of points
+    y_c : array-like
+        Y-coordinates of points
+    
+    Returns
+    -------
+    x_ord : ndarray
+        Ordered x-coordinates
+    y_ord : ndarray
+        Ordered y-coordinates
+    """
+    points = np.column_stack((x_c, y_c))  # shape (N,2)
+    N = len(points)
+
+    # *****
+    '''
+    # Pairwise distances
+    D = np.linalg.norm(points[:, None, :] - points[None, :, :], axis=2)
+
+    # Distance threshold (adaptive)
+    dmin = np.partition(D + np.eye(N)*1e9, 1, axis=1)[:, 1]
+    radius = 1.5 * np.median(dmin)
+
+    # Build neighbor list
+    neighbors = [
+        np.where((D[i] > 1e-12) & (D[i] < radius))[0]
+        for i in range(N)
+    ]
+    endpoints = [i for i, nb in enumerate(neighbors) if len(nb) == 1]
+    if len(endpoints) > 0:
+        start = endpoints[0]        # open curve
+    else:
+        start = 0                   # closed curve: arbitrary
+    '''
+    # ****
+    start = np.argmin(points[:, 1])  # minimum y
+
+    k = 8              # max neighbors to consider
+    radius = None      # optional: set max radius if you want
+
+    ordered = [start]
+    visited = set(ordered)
+
+    # Initial direction: upward
+    prev_dir = np.array([0.0, 1.0])
+    current = start
+
+    while True:
+        # Compute distances to all points
+        diffs = points - points[current]
+        dists = np.linalg.norm(diffs, axis=1)
+
+        # Candidate neighbors: not visited, not itself
+        candidates = np.where(
+            (dists > 1e-12) & (~np.isin(np.arange(N), list(visited)))
+        )[0]
+
+        if len(candidates) == 0:
+            break
+
+        # Take k nearest candidates
+        idx = candidates[np.argsort(dists[candidates])[:k]]
+
+        # Direction vectors
+        dirs = points[idx] - points[current]
+        norms = np.linalg.norm(dirs, axis=1)
+        dirs /= norms[:, None]
+
+        # Choose continuation direction
+        dots = dirs @ prev_dir
+
+        # Optional: forbid backward jumps
+        dots[dots < 0] = -np.inf
+
+        if np.all(dots == -np.inf):
+            break
+
+        next_idx = idx[np.argmax(dots)]
+
+        # Update direction
+        new_dir = points[next_idx] - points[current]
+        new_dir /= np.linalg.norm(new_dir)
+
+        ordered.append(next_idx)
+        visited.add(next_idx)
+
+        prev_dir = new_dir
+        current = next_idx
+
+    points_ord = points[ordered]
+    x_ord = points_ord[:,0]
+    y_ord = points_ord[:,1]
+    return x_ord, y_ord
 #========================================================================
 # ... build Dirichlet in two dimensions from analytic form
 #========================================================================
