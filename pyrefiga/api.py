@@ -802,7 +802,7 @@ class StencilNitsche(object):
     #-------------------------------------------------
     # assemble Nitsche's Dirichlet contribution
     #-------------------------------------------------
-    def assemble_nitsche_dirichlet(self, rhs, patch_nb, Nitsche_dir = True):
+    def assemble_nitsche_dirichlet(self, rhs, patch_nb, Nitsche_dir = False):
         '''
         Docstring for assemble_nitsche_dirichlet: assemble rhs vector for Laplace operator
         

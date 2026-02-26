@@ -436,8 +436,44 @@ from   mpl_toolkits.axes_grid1      import make_axes_locatable
 import numpy                        as     np
 import pyvista                      as     pv
 import os
-colors = ['b', 'k', 'r', 'g', 'm', 'c', 'y', 'orange']
-markers = ['v', 'o', 's', 'D', '^', '<', '>', '*']  # Different markers
+colors      = ['b', 'k', 'r', 'g', 'm', 'c', 'y', 'orange']
+markers     = ['v', 'o', 's', 'D', '^', '<', '>', '*']  # Different markers
+line_styles = ['-', '--', '-.', ':', (0, (1, 1)), (0, (3, 1, 1, 1)), (0, (5, 2)), (0, (3, 2, 1, 2))]  # Different line styles 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def plot_results(X, Y, xlabel = '$\mathbf{Time}$', ylabel = '$\mathbf{H^1-error}$', MyLabel = f'$\mathbf{{Error}}$', mylocname = 'figs/error', 
+             xscale = True, yscale = True, lw = 2.5, i =0, j = 3, legend = True,
+             font_size = 13, markersize = 10, axes_size = 12, grid = True, margins = (0.02,0.02), plot = False):
+   '''
+   plot error under refinement or over time
+   '''
+   font = {'family': 'serif', 
+            'color':  'k', 
+            'weight': 'normal', 
+            'size': font_size, 
+            }    
+   fig, axes =plt.subplots() 
+   plt.plot( X, Y, color=colors[i], lw = lw, ls=line_styles[j], marker=markers[i], markersize = markersize, markerfacecolor = colors[i], label = MyLabel)
+   if xscale:
+      plt.xscale('log')
+   if yscale:    
+     plt.yscale('log')
+   if xlabel is not None:
+      plt.xlabel(xlabel,  fontweight ='bold', fontdict=font)
+   if ylabel is not None:
+      plt.ylabel(ylabel,  fontweight ='bold', fontdict=font)
+   if grid:
+      plt.grid(color='k', linestyle='--', linewidth=0.5, which ="both")
+   plt.margins(margins[0], margins[1])
+   if legend:
+      plt.legend(fontsize=font_size)
+   plt.tick_params(axis='both', which='major', labelsize=axes_size)
+   fig.tight_layout()
+   # Set axes (ticks) font weight
+   for label in axes.get_xticklabels() + axes.get_yticklabels():
+      label.set_fontweight('bold') 
+   plt.savefig(mylocname+'.png')
+   plt.show(block=plot)
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def plot_SolutionMultipatch(nbpts, xuh, V, V_geo, xmp, ymp, savefig = None, plot = True): 
    """

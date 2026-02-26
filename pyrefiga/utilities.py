@@ -35,7 +35,7 @@ __all__ = ['plot_field_1d',
            'load_xml']
 
 # ==========================================================
-def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None, label = None):
+def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None, label = None, plot = False):
     n = len(knots) - degree - 1
 
     if xmin is None :
@@ -55,7 +55,8 @@ def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None,
         plt.plot(xs, Q[:,0], label = label)
     else :
         plt.plot(xs, Q[:,0])
-
+    if plot:
+        plt.show()
 # ==========================================================
 def prolongation_matrix(VH, Vh):
     # TODO not working for duplicated internal knots : to be fixed soon
@@ -1427,10 +1428,53 @@ class pyref_multipatch(object):
             }:
                 return True
         return False
+
 #========================================================================
 #... construct connectivity between two patches: 
-# TODO doesn't support different oriontation
 #========================================================================
+def _coords_match_with_orientation(coords_a, coords_b, tol=1e-15):
+    """
+    Compare coordinate blocks allowing orientation flips/reversal.
+    Supports 1D edges and 2D faces (including transpose-compatible cases).
+    """
+    ref = coords_a[0]
+    cand = coords_b[0]
+
+    if ref.ndim != cand.ndim:
+        return False
+
+    if ref.ndim == 1:
+        transforms = (
+            lambda a: a,
+            lambda a: a[::-1],
+        )
+    elif ref.ndim == 2:
+        transforms = [
+            lambda a: a,
+            lambda a: a[::-1, :],
+            lambda a: a[:, ::-1],
+            lambda a: a[::-1, ::-1],
+        ]
+        if ref.shape == cand.T.shape:
+            transforms.extend((
+                lambda a: a.T,
+                lambda a: a.T[::-1, :],
+                lambda a: a.T[:, ::-1],
+                lambda a: a.T[::-1, ::-1],
+            ))
+    else:
+        return False
+
+    for transform in transforms:
+        candidate = transform(cand)
+        if ref.shape != candidate.shape:
+            continue
+        diff = sum(np.absolute(a - transform(b)) for a, b in zip(coords_a, coords_b))
+        if np.max(diff) <= tol:
+            return True
+
+    return False
+
 class pyrefInterface(object):
     """
     Detect interface between two patches.
@@ -1473,80 +1517,154 @@ class pyrefInterface(object):
         if mp.geo_dim == mp_next.geo_dim == 2 and mp.dim == mp_next.dim == 2:
             xmp, ymp     = mp.coefs
             xmp1, ymp1   = mp_next.coefs
-            #...
-            self.interface   = False
+            self.interface = False
             self.dirichlet_1 = False
             self.dirichlet_2 = False
-            if (len(xmp[-1,:])  == len(xmp1[0,:]) and np.max(np.absolute(xmp[-1,:] - xmp1[0,:])+np.absolute(ymp[-1,:] - ymp1[0,:])) <= 1e-15) :
-                self.interface   = [2,1]
-                self.dirichlet_1 = [[True, False],[True, True]]
-                self.dirichlet_2 = [[False, True],[True, True]]
-            elif (len(xmp[0,:] ) ==  len(xmp1[-1,:]) and np.max(np.absolute(xmp[0,:] - xmp1[-1,:])+np.absolute(ymp[0,:] - ymp1[-1,:])) <= 1e-15) :
-                self.interface   = [1,2]
-                self.dirichlet_1 = [[False, True], [True, True]]
-                self.dirichlet_2 = [[True, False], [True, True]]
-            elif (len(xmp[:,0] ) ==  len(xmp1[:,-1]) and np.max(np.absolute(xmp[:,0] - xmp1[:,-1])+np.absolute(ymp[:,0] - ymp1[:,-1])) <= 1e-15) :
-                self.interface   = [3,4]
-                self.dirichlet_1 = [[True, True], [False, True]]
-                self.dirichlet_2 = [[True, True], [True, False]]
-            elif (len(xmp[:,-1] ) ==  len(xmp1[:,0]) and np.max(np.absolute(xmp[:,-1] - xmp1[:,0])+np.absolute(ymp[:,-1] - ymp1[:,0])) <= 1e-15 ):
-                self.interface   = [4,3]
-                self.dirichlet_1 = [[True, True], [True, False]]
-                self.dirichlet_2 = [[True, True], [False, True]]
+            edges_mp = (
+                (xmp[0,:], ymp[0,:]),      # 1: u = 0
+                (xmp[-1,:], ymp[-1,:]),    # 2: u = 1
+                (xmp[:,0], ymp[:,0]),      # 3: v = 0
+                (xmp[:,-1], ymp[:,-1]),    # 4: v = 1
+            )
+            edges_mp1 = (
+                (xmp1[0,:], ymp1[0,:]),    # 1: u = 0
+                (xmp1[-1,:], ymp1[-1,:]),  # 2: u = 1
+                (xmp1[:,0], ymp1[:,0]),    # 3: v = 0
+                (xmp1[:,-1], ymp1[:,-1]),  # 4: v = 1
+            )
+
+            for i, edge_i in enumerate(edges_mp, start=1):
+                for j, edge_j in enumerate(edges_mp1, start=1):
+                    if _coords_match_with_orientation(edge_i, edge_j):
+                        self.interface = [i, j]
+
+                        self.dirichlet_1 = [[True, True], [True, True]]
+                        self.dirichlet_2 = [[True, True], [True, True]]
+
+                        if i == 1:
+                            self.dirichlet_1[0][0] = False
+                        elif i == 2:
+                            self.dirichlet_1[0][1] = False
+                        elif i == 3:
+                            self.dirichlet_1[1][0] = False
+                        else:
+                            self.dirichlet_1[1][1] = False
+
+                        if j == 1:
+                            self.dirichlet_2[0][0] = False
+                        elif j == 2:
+                            self.dirichlet_2[0][1] = False
+                        elif j == 3:
+                            self.dirichlet_2[1][0] = False
+                        else:
+                            self.dirichlet_2[1][1] = False
+                        break
+                if self.interface:
+                    break
         elif mp.geo_dim == mp_next.geo_dim == 3 and mp.dim == mp_next.dim == 2:
             xmp, ymp, zmp    = mp.coefs
             xmp1, ymp1, zmp1 = mp_next.coefs
-            #...
-            self.interface   = False
+            self.interface = False
             self.dirichlet_1 = False
             self.dirichlet_2 = False
-            if (len(xmp[-1,:])  == len(xmp1[0,:]) and np.max(np.absolute(xmp[-1,:] - xmp1[0,:])+np.absolute(ymp[-1,:] - ymp1[0,:])+np.absolute(zmp[-1,:] - zmp1[0,:])) <= 1e-15) :
-                self.interface   = [2,1]
-                self.dirichlet_1 = [[True, False],[True, True]]
-                self.dirichlet_2 = [[False, True],[True, True]]
-            elif (len(xmp[0,:] ) ==  len(xmp1[-1,:]) and np.max(np.absolute(xmp[0,:] - xmp1[-1,:])+np.absolute(ymp[0,:] - ymp1[-1,:])+np.absolute(zmp[0,:] - zmp1[-1,:])) <= 1e-15) :
-                self.interface   = [1,2]
-                self.dirichlet_1 = [[False, True], [True, True]]
-                self.dirichlet_2 = [[True, False], [True, True]]
-            elif (len(xmp[:,0] ) ==  len(xmp1[:,-1]) and np.max(np.absolute(xmp[:,0] - xmp1[:,-1])+np.absolute(ymp[:,0] - ymp1[:,-1])+np.absolute(zmp[:,0] - zmp1[:,-1])) <= 1e-15) :
-                self.interface   = [3,4]
-                self.dirichlet_1 = [[True, True], [False, True]]
-                self.dirichlet_2 = [[True, True], [True, False]]
-            elif (len(xmp[:,-1] ) ==  len(xmp1[:,0]) and np.max(np.absolute(xmp[:,-1] - xmp1[:,0])+np.absolute(ymp[:,-1] - ymp1[:,0])+np.absolute(zmp[:,-1] - zmp1[:,0])) <= 1e-15) :
-                self.interface   = [4,3]
-                self.dirichlet_1 = [[True, True], [True, False]]
-                self.dirichlet_2 = [[True, True], [False, True]]
+            edges_mp = (
+                (xmp[0,:], ymp[0,:], zmp[0,:]),      # 1: u = 0
+                (xmp[-1,:], ymp[-1,:], zmp[-1,:]),   # 2: u = 1
+                (xmp[:,0], ymp[:,0], zmp[:,0]),      # 3: v = 0
+                (xmp[:,-1], ymp[:,-1], zmp[:,-1]),   # 4: v = 1
+            )
+            edges_mp1 = (
+                (xmp1[0,:], ymp1[0,:], zmp1[0,:]),      # 1: u = 0
+                (xmp1[-1,:], ymp1[-1,:], zmp1[-1,:]),   # 2: u = 1
+                (xmp1[:,0], ymp1[:,0], zmp1[:,0]),      # 3: v = 0
+                (xmp1[:,-1], ymp1[:,-1], zmp1[:,-1]),   # 4: v = 1
+            )
+
+            for i, edge_i in enumerate(edges_mp, start=1):
+                for j, edge_j in enumerate(edges_mp1, start=1):
+                    if _coords_match_with_orientation(edge_i, edge_j):
+                        self.interface = [i, j]
+                        self.dirichlet_1 = [[True, True], [True, True]]
+                        self.dirichlet_2 = [[True, True], [True, True]]
+
+                        if i == 1:
+                            self.dirichlet_1[0][0] = False
+                        elif i == 2:
+                            self.dirichlet_1[0][1] = False
+                        elif i == 3:
+                            self.dirichlet_1[1][0] = False
+                        else:
+                            self.dirichlet_1[1][1] = False
+
+                        if j == 1:
+                            self.dirichlet_2[0][0] = False
+                        elif j == 2:
+                            self.dirichlet_2[0][1] = False
+                        elif j == 3:
+                            self.dirichlet_2[1][0] = False
+                        else:
+                            self.dirichlet_2[1][1] = False
+                        break
+                if self.interface:
+                    break
         elif mp.geo_dim == mp_next.geo_dim == 3 and mp.dim == mp_next.dim == 3:
             xmp, ymp, zmp    = mp.coefs
             xmp1, ymp1, zmp1 = mp_next.coefs
-            #...
-            self.interface   = False
+            self.interface = False
             self.dirichlet_1 = False
             self.dirichlet_2 = False
-            if (len(xmp[-1,:,:]) == len(xmp1[0,:,:]) and np.max(np.absolute(xmp[-1,:,:] - xmp1[0,:,:])+np.absolute(ymp[-1,:,:] - ymp1[0,:,:])+np.absolute(zmp[-1,:,:] - zmp1[0,:,:])) <= 1e-15) :
-                self.interface   = [2,1]
-                self.dirichlet_1 = [[True, False],[True, True],[True, True]]
-                self.dirichlet_2 = [[False, True],[True, True],[True, True]]
-            elif (len(xmp[0,:,:]) == len(xmp1[-1,:,:]) and np.max(np.absolute(xmp[0,:,:] - xmp1[-1,:,:])+np.absolute(ymp[0,:,:] - ymp1[-1,:,:])+np.absolute(zmp[0,:,:] - zmp1[-1,:,:])) <= 1e-15) :
-                self.interface   = [1,2]
-                self.dirichlet_1 = [[False, True], [True, True],[True, True]]
-                self.dirichlet_2 = [[True, False], [True, True],[True, True]]
-            elif (len(xmp[:,0,:]) == len(xmp1[:,-1,:]) and np.max(np.absolute(xmp[:,0,:] - xmp1[:,-1,:])+np.absolute(ymp[:,0,:] - ymp1[:,-1,:])+np.absolute(zmp[:,0,:] - zmp1[:,-1,:])) <= 1e-15) :
-                self.interface   = [3,4]
-                self.dirichlet_1 = [[True, True], [False, True],[True, True]]
-                self.dirichlet_2 = [[True, True], [True, False],[True, True]]
-            elif (len(xmp[:,-1,:]) == len(xmp1[:,0,:]) and np.max(np.absolute(xmp[:,-1,:] - xmp1[:,0,:])+np.absolute(ymp[:,-1,:] - ymp1[:,0,:])+np.absolute(zmp[:,-1,:] - zmp1[:,0,:])) <= 1e-15) :
-                self.interface   = [4,3]
-                self.dirichlet_1 = [[True, True], [True, False],[True, True]]
-                self.dirichlet_2 = [[True, True], [False, True],[True, True]]
-            elif (len(xmp[:,:,0]) == len(xmp1[:,:,-1]) and np.max(np.absolute(xmp[:,:,0] - xmp1[:,:,-1])+np.absolute(ymp[:,:,0] - ymp1[:,:,-1])+np.absolute(zmp[:,:,0] - zmp1[:,:,-1])) <= 1e-15) :
-                self.interface   = [5,6]
-                self.dirichlet_1 = [[True, True],[True, True], [False, True]]
-                self.dirichlet_2 = [[True, True],[True, True], [True, False]]
-            elif (len(xmp[:,:,-1]) == len(xmp1[:,:,0]) and np.max(np.absolute(xmp[:,:,-1] - xmp1[:,:,0])+np.absolute(ymp[:,:,-1] - ymp1[:,:,0])+np.absolute(zmp[:,:,-1] - zmp1[:,:,0])) <= 1e-15) :
-                self.interface   = [6,5]
-                self.dirichlet_1 = [[True, True],[True, True], [True, False]]
-                self.dirichlet_2 = [[True, True],[True, True], [False, True]]
+            faces_mp = (
+                (xmp[0,:,:], ymp[0,:,:], zmp[0,:,:]),      # 1: u = 0
+                (xmp[-1,:,:], ymp[-1,:,:], zmp[-1,:,:]),   # 2: u = 1
+                (xmp[:,0,:], ymp[:,0,:], zmp[:,0,:]),      # 3: v = 0
+                (xmp[:,-1,:], ymp[:,-1,:], zmp[:,-1,:]),   # 4: v = 1
+                (xmp[:,:,0], ymp[:,:,0], zmp[:,:,0]),      # 5: w = 0
+                (xmp[:,:,-1], ymp[:,:,-1], zmp[:,:,-1]),   # 6: w = 1
+            )
+            faces_mp1 = (
+                (xmp1[0,:,:], ymp1[0,:,:], zmp1[0,:,:]),      # 1: u = 0
+                (xmp1[-1,:,:], ymp1[-1,:,:], zmp1[-1,:,:]),   # 2: u = 1
+                (xmp1[:,0,:], ymp1[:,0,:], zmp1[:,0,:]),      # 3: v = 0
+                (xmp1[:,-1,:], ymp1[:,-1,:], zmp1[:,-1,:]),   # 4: v = 1
+                (xmp1[:,:,0], ymp1[:,:,0], zmp1[:,:,0]),      # 5: w = 0
+                (xmp1[:,:,-1], ymp1[:,:,-1], zmp1[:,:,-1]),   # 6: w = 1
+            )
+
+            for i, face_i in enumerate(faces_mp, start=1):
+                for j, face_j in enumerate(faces_mp1, start=1):
+                    if _coords_match_with_orientation(face_i, face_j):
+                        self.interface = [i, j]
+                        self.dirichlet_1 = [[True, True], [True, True], [True, True]]
+                        self.dirichlet_2 = [[True, True], [True, True], [True, True]]
+
+                        if i == 1:
+                            self.dirichlet_1[0][0] = False
+                        elif i == 2:
+                            self.dirichlet_1[0][1] = False
+                        elif i == 3:
+                            self.dirichlet_1[1][0] = False
+                        elif i == 4:
+                            self.dirichlet_1[1][1] = False
+                        elif i == 5:
+                            self.dirichlet_1[2][0] = False
+                        else:
+                            self.dirichlet_1[2][1] = False
+
+                        if j == 1:
+                            self.dirichlet_2[0][0] = False
+                        elif j == 2:
+                            self.dirichlet_2[0][1] = False
+                        elif j == 3:
+                            self.dirichlet_2[1][0] = False
+                        elif j == 4:
+                            self.dirichlet_2[1][1] = False
+                        elif j == 5:
+                            self.dirichlet_2[2][0] = False
+                        else:
+                            self.dirichlet_2[2][1] = False
+                        break
+                if self.interface:
+                    break
         else:
             raise TypeError('only two or three dimensions')
 

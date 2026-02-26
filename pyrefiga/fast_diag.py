@@ -176,7 +176,6 @@ class Poisson(object):
             ds.append(d)
             Us.append(U)
             nDoFs.append(len(d))
-
         # ...
         self._mats_1 = mats_1
         self._mats_2 = mats_2
