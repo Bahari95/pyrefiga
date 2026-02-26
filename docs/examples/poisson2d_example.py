@@ -1,7 +1,7 @@
 """
 poisson2d_example.py
 
-    \Delta u +(a,b)\cdot \nabla u = f
+    \\Delta u +(a,b)\\cdot \\nabla u = f
 
 Example: Solving Poisson's Equation on a 2D complex geometry using B-spline or NURBS representation.
 

@@ -67,12 +67,14 @@ class RunPyccelCommand(Command):
             'pyrefiga/adnitsche_core.py',
         ]
         for file in files_to_process:
-            print(f"Running pyccel on {file} with OpenMP...")
+            print(f"Running pyccel compile on {file} with OpenMP...")
             try:
-                subprocess.check_call(['pyccel', file, '--openmp'])
+                # Use 'compile' sub-command explicitly
+                subprocess.check_call(['pyccel', 'compile', file, '--openmp'])
             except subprocess.CalledProcessError as e:
                 print(f"Error occurred while processing {file}: {e}")
                 raise
+
         # Create a folder after running pyccel
         folder_name = "newFolder"
         Path(folder_name).mkdir(parents=True, exist_ok=True)

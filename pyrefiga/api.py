@@ -1,7 +1,7 @@
 import numpy as np
 from functools import partial
 
-from pyccel.epyccel import epyccel
+from pyccel  import epyccel
 
 from .linalg import StencilMatrix
 from .linalg import StencilVector
