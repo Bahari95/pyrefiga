@@ -27,6 +27,7 @@ from   .results_f90     import least_square_NURBspline
 
 __all__ = ['plot_field_1d', 
            'prolongation_matrix',
+           'prolongate_solution',
            'save_geometry_to_xml',
            'compute_eoc'
            'pyref_patch',
@@ -59,8 +60,10 @@ def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None,
         plt.show()
 # ==========================================================
 def prolongation_matrix(VH, Vh):
-    # TODO not working for duplicated internal knots : to be fixed soon
-    # ...
+    '''
+    compute the prolongation matrix from a coarse hierarchical space VH to a finer space Vh.
+
+    // last code
     assert VH.dim == Vh.dim, "Spaces must have the same number of dimensions"
     for i in range(VH.dim):
         knots_VH = set(VH.knots[i])
@@ -78,11 +81,72 @@ def prolongation_matrix(VH, Vh):
         M = hrefinement_matrix( ts, Wh.degree, tHs )
         mats.append(csr_matrix(M))
     # ...
+    '''
+
+    assert VH.dim == Vh.dim, "Spaces must have the same number of dimensions"
+    mats = []
+    for i, (Wh, WH) in enumerate(zip(Vh.spaces, VH.spaces)):
+        ths = np.asarray(Wh.knots)
+        tHs = np.asarray(WH.knots)
+
+        uh, ch = np.unique(ths, return_counts=True)
+        uH, cH = np.unique(tHs, return_counts=True)
+
+        idx = np.searchsorted(uh, uH)
+        present = (idx < uh.size) & (uh[idx] == uH)
+        if not np.all(present):
+            raise AssertionError(f"Knots in VH not included in Vh at dimension {i}")
+
+        coarse_counts_on_fine = np.zeros_like(ch)
+        coarse_counts_on_fine[idx] = cH
+        if np.any(ch < coarse_counts_on_fine):
+            raise AssertionError(
+                f"Knot multiplicities in VH exceed those in Vh at dimension {i}"
+            )
+
+        ts = np.repeat(uh, ch - coarse_counts_on_fine)
+        M = hrefinement_matrix(ts, Wh.degree, tHs)
+        mats.append(csr_matrix(M))
 
     M = reduce(kron, (m for m in mats))
 
     return M
 
+#====================================================
+# ... Prolongate a solution
+#====================================================
+def prolongate_solution(self, solution, VH, Vh):
+    """
+    prolongate_solution: Prolongate a solution from a coarse hierarchical space VH to a finer space Vh.
+
+    Parameters
+    ----------
+    solution : list of StencilVector
+        The solution vectors defined in the coarse space VH.
+    VH : TensorSpace or SplineSpace
+        The coarse hierarchical space.
+    Vh : TensorSpace or SplineSpace
+        The finer space to which the solution will be prolongated.
+    Returns
+    -------
+    u_fine : StencilVector
+        The prolonged solution vector defined in the finer space Vh.
+    """
+    assert isinstance(VH, (TensorSpace, SplineSpace)), "VH must be a TensorSpace or SplineSpace"
+    assert isinstance(Vh, (TensorSpace, SplineSpace)), "Vh must be a TensorSpace or SplineSpace"
+    assert VH.dim == Vh.dim, "Spaces must have the same number of dimensions"
+    assert solution[0].vector_space == VH.vector_space, "Solution vector space must match VH's vector space"
+    # ...prolongeted solution
+    u_fine = [StencilVector(Vh.vector_space) for _ in solution]
+    if isinstance(solution[0], StencilVector):
+        # Refine the coefs
+        M_mp      = prolongation_matrix(VH, Vh)
+        for i, sol in enumerate(solution):
+            u_fine[i].from_array(Vh, M_mp.dot(sol.toarray()).reshape(Vh.nbasis))
+        return u_fine
+    else:
+        raise AssertionError("Solution must be a StencilVector")
+        
 #====================================
 # ...  Identity B-spline mapping
 #======================================
@@ -587,7 +651,6 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
 
 #========================================================================
 #... class patches from xml files : one patch
-# TODO doesn"t suuport multipatches 
 #========================================================================
 class pyref_patch:
     """
@@ -928,18 +991,6 @@ class pyref_patch:
             for i in range(self.geo_dim):
                 coefs_data.append( (M_mp.dot(self._coefs[i].reshape(nbasis_tot))).reshape(Vh.nbasis) )
             return coefs_data
-    def Refinesolution(self, solution, VH, Vh):
-        """
-        weights_h : Weights for the NURBS geometry, if None, it is assumed to be ones.
-        the user should provide the weights if the geometry is NURBS already in uniform mesh.
-        Refine the solution by elevating the DoFs numElevate times.
-        """
-        if isinstance(solution, StencilVector):
-            # Refine the coefs
-            M_mp      = prolongation_matrix(VH, Vh)
-            return (M_mp.dot(solution.toarray())).reshape(Vh.nbasis)
-        else:
-            raise AssertionError("Solution must be a StencilVector")
     # ...
     def eval_mesh(self, mesh, i_dir):
         '''

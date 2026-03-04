@@ -71,6 +71,7 @@ from pyrefiga.quadratures import gauss_legendre
 
 from pyrefiga.utilities import ( plot_field_1d,
                                   prolongation_matrix,
+                                  prolongate_solution,
                                   identity_bspline_mapping,
                                   compute_eoc,
                                   order_points,
