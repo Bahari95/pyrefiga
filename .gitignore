@@ -131,6 +131,7 @@ dmypy.json
 docs/build/
 pyrefiga/__pycache__
 pyrefiga/__pyccel__
+~__epyccel__
 pyrefiga/tests/__epyccel__
 pyrefiga/tests/__pycache__
 pyrefiga/tests/figs
@@ -139,6 +140,7 @@ r_adaptive_refinement/__epyccel__
 r_adaptive_refinement/__pycache__
 r_adaptive_refinement/figs
 [figs]
+*.lock
 /newFolder
 cad/__pycache__
 cad/__epyccel__

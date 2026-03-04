@@ -144,35 +144,28 @@ def collocation_2dNURBspline(Vh, sol, xmp = None, adxmp = None):
         Control coefficients.
     """
     import numpy as np
-    import scipy.sparse as sp
-    import scipy.sparse.linalg as sla
-    from .bsplines import find_span, basis_funs
-    from .  import Poisson
+    from .bsplines import find_span, basis_funs, greville
 
     p, q     = Vh.degree
     U, V     = Vh.knots
     wu, wv   = Vh.omega
     n_u, n_v = Vh.nbasis
-    # --- Right-hand side ---
-    Q        = np.zeros((n_u *n_v))
 
     # --- Greville points ---
-    u_k = np.array([np.mean(U[i+1:i+p+1]) for i in range(n_u)])
-    v_l = np.array([np.mean(V[j+1:j+q+1]) for j in range(n_v)])
+    u_k = greville(Vh.knots[0], Vh.degree[0], Vh.spaces[0].periodic)# np.array([np.mean(U[i+1:i+p+1]) for i in range(n_u)])
+    v_l = greville(Vh.knots[1], Vh.degree[1], Vh.spaces[1].periodic)#np.array([np.mean(V[j+1:j+q+1]) for j in range(n_v)])
 
     if xmp is None:
-      print("Using provided mesh for collocation")
-      Q[:]    =  sol[:]
+      Q = np.asarray(sol).reshape(n_u, n_v)
     else:
-      sx, sy  = np.meshgrid(u_k, v_l)
+      sx, sy  = np.meshgrid(u_k, v_l, indexing="ij")
       if adxmp is not None:
          #---Compute a image by initial mapping
          sx   = sol_field_NURBS_2d((None, None), adxmp[0], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
          sy   = sol_field_NURBS_2d((None, None), adxmp[1], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
       #---Compute a image by initial mapping
-      sx      = sol_field_NURBS_2d((None, None), xmp[0], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
-      sy      = sol_field_NURBS_2d((None, None), xmp[1], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
-      Q[:]    =  sol(sx, sy).reshape(n_u*n_v)[:]
+      sx, sy  = xmp.eval(mesh = (sx, sy))
+      Q       = np.asarray(sol(sx, sy)).reshape(n_u, n_v)
     
 
     # --- 1D collocation matrices (non-rational) ---
@@ -189,25 +182,18 @@ def collocation_2dNURBspline(Vh, sol, xmp = None, adxmp = None):
         vals = basis_funs(V, q, v, span)
         Nv[kv, span - q: span + 1] = vals
 
-    # --- Weighted basis ---
+    # --- Rational 1D collocation matrices ---
     Nu_w = Nu * wu[np.newaxis, :]
     Nv_w = Nv * wv[np.newaxis, :]
+    Ru = Nu_w / Nu_w.sum(axis=1, keepdims=True)
+    Rv = Nv_w / Nv_w.sum(axis=1, keepdims=True)
 
-    denom = (Nu_w @ np.ones(n_u))[:, None] * (Nv_w @ np.ones(n_v))[None, :]
+    # Solve tensor-product system:
+    # Q = Ru @ P @ Rv.T
+    T = np.linalg.solve(Ru, Q)
+    P = np.linalg.solve(Rv, T.T).T
 
-    # Kronecker product
-    N_tilde = sp.kron(Nv_w, Nu_w, format="csr")
-
-    denom_flat = denom.ravel(order="C")
-    Dinv = sp.diags(1.0 / denom_flat)
-
-    Cmat = Dinv @ N_tilde   # final sparse collocation matrix
-    rhs = Q.ravel(order="C")
-
-    # --- Solve square system ---
-    sol = sla.spsolve(Cmat, rhs)
-
-    return sol.reshape((n_u, n_v))
+    return P
 
 #----------------------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------------------

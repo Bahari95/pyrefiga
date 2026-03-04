@@ -1271,6 +1271,12 @@ class pyref_multipatch(object):
     def setFalseDirichlet(self):
         self.dirichlet = np.zeros((self.num_patches, self._dim, 2), dtype = bool)+False
     # ...
+    def get_patch(self, nb_patch):
+        '''
+        Returns the patch object for a given patch number.
+        '''
+        return self.patches[nb_patch-1]
+    # ...
     def eval(self, patch_nb, mesh=None, nbpts=None):
         '''
         Docstring pour eval

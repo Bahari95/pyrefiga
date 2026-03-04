@@ -460,8 +460,8 @@ if np.min(Z) < 0. :
         
 print( ' min of Jacobian in the intire unit square =', np.min(Z) )
 print( ' max of Jacobian in the intire unit square =', np.max(Z) )
-np.savetxt('tokNx_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x11uh, fmt='%.4e')
-np.savetxt('tokNy_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x12uh, fmt='%.4e')
+np.savetxt('figs/tokNx_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x11uh, fmt='%.4e')
+np.savetxt('figs/tokNy_'+str(degree)+'_'+str(nelements)+'_'+str(numberpatchs)+'.txt', x12uh, fmt='%.4e')
 # ... save data
 #np.savetxt('figs/filex_'+str(degree)+'_'+str(nelements)+'.txt', x11uh, fmt='%.20e')
 #np.savetxt('figs/filey_'+str(degree)+'_'+str(nelements)+'.txt', x12uh, fmt='%.20e')
