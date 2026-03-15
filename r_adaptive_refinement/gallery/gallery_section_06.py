@@ -1,7 +1,6 @@
 __all__ = ['assemble_vector_ex01',
            'assemble_norm_ex01'
 ]
-from pyccel.decorators import types
 
 #==============================================================================Assemble rhs Poisson
 #---1 : In uniform mesh
