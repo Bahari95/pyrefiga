@@ -266,12 +266,9 @@ def plot_results(X, Y, xlabel = '$\\mathbf{Time}$', ylabel = '$\\mathbf{H^1-erro
             'size': font_size, 
             }    
    fig, axes =plt.subplots() 
-   if len(X[0]) > 1:
-      for i in range(len(X)):
-         print('---',i)
-         plt.plot( X[i], Y[i], color=colors[i], lw = lw, ls=line_styles[j], marker=markers[i], markersize = markersize, markerfacecolor = colors[i], label = MyLabel[i])
-   else:
-      plt.plot( X, Y, color=colors[i], lw = lw, ls=line_styles[j], marker=markers[i], markersize = markersize, markerfacecolor = colors[i], label = MyLabel)
+   for i in range(len(X)):
+      print('---',i)
+      plt.plot( X[i], Y[i], color=colors[i], lw = lw, ls=line_styles[j], marker=markers[i], markersize = markersize, markerfacecolor = colors[i], label = MyLabel[i])
    if xscale:
       plt.xscale('log')
    if yscale:    
@@ -292,8 +289,6 @@ def plot_results(X, Y, xlabel = '$\\mathbf{Time}$', ylabel = '$\\mathbf{H^1-erro
       label.set_fontweight('bold') 
    plt.savefig(mylocname+'.png')
    plt.show(block=plot)
-
-
 
 
 '''

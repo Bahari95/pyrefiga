@@ -114,7 +114,7 @@ from pyrefiga.interpolation import (least_square_NURBspline,
                                   least_square_Bspline,
                                   least_square_2dNURBspline,
                                   collocation_2dNURBspline,
-                                  cubic_bsplines,
+                                  eval_bsplines,
                                   cubic_bspline_interpolation_1D,
                                   cubic_bspline_interpolation_2D)
 

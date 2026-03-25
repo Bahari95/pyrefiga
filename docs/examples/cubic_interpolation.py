@@ -54,12 +54,21 @@ if __name__ == "__main__":
 
     X,Y = np.meshgrid(xgrid,xgrid)
     # function and derivative at boundaries
-    g       = np.sin(2*np.pi*X.T)*np.sin(2*np.pi*Y.T)
-    gprimex = [2*np.pi*np.cos(2*np.pi*xgrid[0])*np.sin(2*np.pi*xgrid), 2*np.pi*np.cos(2*np.pi*xgrid[-1])*np.sin(2*np.pi*xgrid)]
-    gprimey = [2*np.pi*np.cos(2*np.pi*xgrid[0])*np.sin(2*np.pi*xgrid), 2*np.pi*np.cos(2*np.pi*xgrid[-1])*np.sin(2*np.pi*xgrid)]
+    f       = lambda x,y : np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
+    dxf     = lambda x,y : 2*np.pi*np.cos(2*np.pi*x)*np.sin(2*np.pi*y)
+    dyf     = lambda x,y : 2*np.pi*np.sin(2*np.pi*x)*np.cos(2*np.pi*y)
+    dxyf    = lambda x,y : 2*np.pi*2*np.pi*np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
 
+    g       = f(X.T, Y.T) 
+    gprimex = [dxf(xgrid[0],xgrid),dxf(xgrid[-1],xgrid)]
+    gprimey = [dxf(xgrid, xgrid[-1]), dxf(xgrid, xgrid[-1])]
+
+    corners = [dxyf(xgrid[0], xgrid[0]), 
+               dxyf(xgrid[0], xgrid[-1]), 
+               dxyf(xgrid[-1], xgrid[0]), 
+               dxyf(xgrid[-1], xgrid[-1])]
     # assemble system
-    eta, Vh = cubic_bspline_interpolation_2D(xgrid, xgrid, g, gprimex, gprimey, space = True)
+    eta, Vh = cubic_bspline_interpolation_2D(xgrid, xgrid, g, gprimex, gprimey, corners, space = True)
 
     S, Sx, Sy, X, Y = pyccel_sol_field_2d((100,100),  eta, Vh.knots, Vh.degree) 
 

@@ -294,7 +294,7 @@ def assemble_cubmatrix(core, V, ne, points,  out = None):
     args += [V.knots]
     core( *args, out._data )
     return out
-cubic_bsplines = core.ders_bspline_grid
+eval_bsplines  = core.ders_bspline_grid
 cubic_Hmatrix  = partial(assemble_cubmatrix, core.cubic_Hermit_matrix_grid )
 # ---------------------------------------------
 # 1D case
@@ -338,24 +338,21 @@ def cubic_bspline_interpolation_1D(xgrid, g, gprime0, gprimeN, space = False):
 # ---------------------------------------------
 # 2D
 # ---------------------------------------------
-def cubic_bspline_interpolation_2D(xgrid, ygrid, g, gprimex, gprimey, space = False):
+def cubic_bspline_interpolation_2D(xgrid, ygrid, g, gprimex, gprimey, corners, space = False):
     '''
     Assemble and solve the system A * eta = rhs for cubic spline interpolation
     with derivative boundary conditions.
     ----
     g : evaluation at xgrid X ygrid
-    gprimex0,gprimexN  = gprimex 
-    gprimey0, gprimeyN = gprimey 
-    where
-    gprimex0 : direvative at boundary x = x0
-    gprimexN : direvative at boundary x = xN 
-    gprimey0 : direvative at boundary y = y0 
-    gprimeyN : direvative at boundary y = yN
+
+    gprimex : (direvative at boundary x = x0, direvative at boundary x = xN)
+    gprimey :(direvative at boundary y = y0, direvative at boundary y = yN) 
+    corners :(dxy(0,0),dxy(0,-1),dxy(-1,0),dxy(-1,-1))
     ----
     return 
     control point of cubic B-spline function interpolate g
     '''
-    gprimex0,gprimexN  = gprimex 
+    gprimex0, gprimexN = gprimex 
     gprimey0, gprimeyN = gprimey 
     # ...
     Nx = len(xgrid)-1
@@ -373,14 +370,20 @@ def cubic_bspline_interpolation_2D(xgrid, ygrid, g, gprimex, gprimey, space = Fa
     cubic_Hmatrix(Vx, Nx+1, xgrid, Ax)
     #.. build B-spline space from ygrid
     Vy  = SplineSpace(degree = 3, grid=ygrid)
-    Ay = StencilMatrix(Vy.vector_space, Vy.vector_space)
+    Ay  = StencilMatrix(Vy.vector_space, Vy.vector_space)
     cubic_Hmatrix(Vy, Ny+1, ygrid, Ay)
-    # ... rhs
-    rhs[0, 1:-1] = gprimex0[0]
-    rhs[-1,1:-1] = gprimexN[1]
-    rhs[1:-1, 0] = gprimey0[0]
-    rhs[1:-1,-1] = gprimeyN[1]
-    rhs[1:-1,1:-1] = g[:,:]
+    # ... rhs for cubic interpolation
+    rhs[1:-1,1:-1] = g[:,:] # points interpolation
+    # ... derivatives
+    rhs[0, 1:-1] = gprimex0[0] # dx at x=0
+    rhs[-1,1:-1] = gprimexN[1] # dx at x=1
+    rhs[1:-1, 0] = gprimey0[0] # dy at y=0
+    rhs[1:-1,-1] = gprimeyN[1] # dy at y=1
+    # corners
+    rhs[ 0, 0]   = corners[0]
+    rhs[ 0,-1]   = corners[1]
+    rhs[-1, 0]   = corners[2]
+    rhs[-1,-1]   = corners[3]
 
     # reshape not needed if already matrix
     # Solve Ax * Z = rhs

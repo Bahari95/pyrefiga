@@ -1085,7 +1085,7 @@ def sol_field_3D_mesh(nx:'int', ny:'int', nz:'int', uh:'float[:,:,:]', Tu:'float
               Q[i_x, j_y, k_z,2]   = cy
               Q[i_x, j_y, k_z,3]   = cz
 # ---------------------------------------------
-# 1D cubic B-spline generator on given points
+# 1D B-spline generator on given points
 # ---------------------------------------------
 def ders_bspline_grid(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64[:,:,:]', points_1:'float64[:]', knots_1:'float64[:]', nders:'int'):
     # Assemble NURBS basis functions and their derivatives at quadrature points for 1D elements.
@@ -1293,9 +1293,9 @@ def cubic_Hermit_matrix_grid(ne1:'int', points_1:'float64[:]', knots_1:'float64[
             matrix[degree+i1, degree+ i2-i1] = ders[0,il_2]
     h = knots_1[degree+1]-knots_1[degree]
     matrix[degree,degree] = -1/(2*h)    # eta_{-1}
-    matrix[degree,degree+3] =  1/(2*h)    # eta_{0}
+    matrix[degree,degree+3] =  1/(2*h)  # eta_{0}
     #~~~~~~~~~~~~~~~
     span = len(knots_1)-1-degree-1
-    h = knots_1[degree+1]-knots_1[degree]
+    h = knots_1[span+degree+1]-knots_1[span] #knots_1[degree+1]-knots_1[degree]
     matrix[degree+span,degree-3] = 1/(2*h)   # eta_{N}
     matrix[degree+span,degree] = -1/(2*h)    # eta_{N+1}
