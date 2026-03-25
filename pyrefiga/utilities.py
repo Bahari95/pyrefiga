@@ -11,22 +11,18 @@ Features:
 """
 import numpy            as     np
 from   functools        import reduce
-from   matplotlib       import pyplot as plt
 from   scipy.sparse     import kron, csr_matrix
-from   .cad             import point_on_bspline_curve
-from   .cad             import point_on_bspline_surface
 from   .bsplines        import hrefinement_matrix
 from   .bsplines        import greville
 from   .linalg          import StencilVector
 from   .spaces          import SplineSpace
 from   .spaces          import TensorSpace
-from   .results_f90     import least_square_Bspline
 from   .results_f90     import pyccel_sol_field_2d
 from   .results_f90     import sol_field_NURBS_2d
-from   .results_f90     import least_square_NURBspline
+from   .interpolation   import least_square_Bspline
+from   .interpolation   import least_square_NURBspline
 
-__all__ = ['plot_field_1d', 
-           'prolongation_matrix',
+__all__ = ['prolongation_matrix',
            'prolongate_solution',
            'save_geometry_to_xml',
            'compute_eoc'
@@ -35,29 +31,6 @@ __all__ = ['plot_field_1d',
            'pyrefInterface',
            'load_xml']
 
-# ==========================================================
-def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None, label = None, plot = False):
-    n = len(knots) - degree - 1
-
-    if xmin is None :
-        xmin = knots[degree]
-    if xmax is None :
-        xmax = knots[-degree-1]
-
-    xs = np.linspace(xmin, xmax, nx)
-
-    P = np.zeros((len(u), 1))
-    P[:,0] = u[:]
-    Q = np.zeros((nx, 1))
-    for i,x in enumerate(xs):
-        Q[i,:] = point_on_bspline_curve(knots, P, x)
-
-    if label is not None :
-        plt.plot(xs, Q[:,0], label = label)
-    else :
-        plt.plot(xs, Q[:,0])
-    if plot:
-        plt.show()
 # ==========================================================
 def prolongation_matrix(VH, Vh):
     '''
@@ -117,7 +90,7 @@ def prolongation_matrix(VH, Vh):
 #====================================================
 def prolongate_solution(self, solution, VH, Vh):
     """
-    prolongate_solution: Prolongate a solution from a coarse hierarchical space VH to a finer space Vh.
+    prolongate_solution: Prolongate a solution from a coarse space VH to a finer space Vh.
 
     Parameters
     ----------
@@ -147,6 +120,49 @@ def prolongate_solution(self, solution, VH, Vh):
     else:
         raise AssertionError("Solution must be a StencilVector")
         
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Prolongate NURBS mapping from VH to Vh
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+def prolongate_NURBS_mapping(VH, Vh, w, Cp):
+    '''
+    Prolongate a NURBs mapping from a coarse space VH to a finer space Vh. TODO CAN WE USE IGAKET 
+    '''
+    assert isinstance(VH, (TensorSpace, SplineSpace)), "VH must be a TensorSpace or SplineSpace"
+    assert isinstance(Vh, (TensorSpace, SplineSpace)), "Vh must be a TensorSpace or SplineSpace"
+    assert VH.dim == Vh.dim, "Spaces must have the same number of dimensions"
+    #.. Prologation by knots insertion matrix
+    M  = prolongation_matrix(VH, Vh)
+    if Vh.dim == 2 :
+        px, py = Cp
+        # ... Prolongate the wieghts first
+        z  = M.dot(w.reshape(VH.nbasis[0] * VH.nbasis[1])).reshape(Vh.nbasis)
+
+        # ... 
+        px = w * px
+        py = w * py
+
+        # ...
+        Px = (M.dot(px.reshape(VH.nbasis[0] * VH.nbasis[1])).reshape(Vh.nbasis))/z
+        Py = (M.dot(py.reshape(VH.nbasis[0] * VH.nbasis[1])).reshape(Vh.nbasis))/z
+
+        return Px, Py, z[:,0], z[0,:]
+    else :
+        px, py, pz = Cp
+        # ... Prolongate the wieghts first
+        z  = M.dot(w.reshape(VH.nbasis[0] * VH.nbasis[1]* VH.nbasis[2])).reshape(Vh.nbasis)
+
+        # ... 
+        px = w * px
+        py = w * py
+        pz = w * pz
+
+        # ...
+        Px = (M.dot(px.reshape(VH.nbasis[0] * VH.nbasis[1] * VH.nbasis[2])).reshape(Vh.nbasis))/z
+        Py = (M.dot(py.reshape(VH.nbasis[0] * VH.nbasis[1] * VH.nbasis[2])).reshape(Vh.nbasis))/z
+        Pz = (M.dot(pz.reshape(VH.nbasis[0] * VH.nbasis[1] * VH.nbasis[2])).reshape(Vh.nbasis))/z
+
+        return Px, Py, Pz, z[:,0,0], z[0,:,0], z[0,0,:]
+    
 #====================================
 # ...  Identity B-spline mapping
 #======================================
@@ -319,6 +335,7 @@ def order_points(x_c, y_c):
     x_ord = points_ord[:,0]
     y_ord = points_ord[:,1]
     return x_ord, y_ord
+
 #========================================================================
 # ... build Dirichlet in two dimensions from analytic form
 #========================================================================

@@ -1,5 +1,10 @@
-from numpy import empty
-import numpy as np
+import matplotlib.pyplot            as     plt
+from   mpl_toolkits.axes_grid1      import make_axes_locatable
+import numpy                        as     np
+from   numpy                        import empty
+colors      = ['b', 'k', 'r', 'g', 'm', 'c', 'y', 'orange']
+markers     = ['v', 'o', 's', 'D', '^', '<', '>', '*']  # Different markers
+line_styles = ['-', '--', '-.', ':', (0, (1, 1)), (0, (3, 1, 1, 1)), (0, (5, 2)), (0, (3, 2, 1, 2))]  # Different line styles 
 
 # ==========================================================
 def find_span( knots, degree, x ):
@@ -211,3 +216,364 @@ def sol_field_2d(Npoints,  uh , knots, degree):
     X, Y = meshgrid(xs, ys)
 
     return Q[:,:,0], Q[:,:,1], Q[:,:,2], X, Y
+
+# ==========================================================
+def point_on_bspline_curve(knots, P, x):
+    degree = len(knots) - len(P) - 1
+    d = P.shape[-1]
+
+    span = find_span( knots, degree, x )
+    b    = basis_funs_all_ders(knots, degree, x, span, 0)
+
+    c = np.zeros(d)
+    for k in range(0, degree+1):
+        c[:] += b[k,0]*P[span-degree+k,:]
+    return c
+
+# ==========================================================
+def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None, label = None, plot = False):
+    n = len(knots) - degree - 1
+
+    if xmin is None :
+        xmin = knots[degree]
+    if xmax is None :
+        xmax = knots[-degree-1]
+
+    xs = np.linspace(xmin, xmax, nx)
+
+    P = np.zeros((len(u), 1))
+    P[:,0] = u[:]
+    Q = np.zeros((nx, 1))
+    for i,x in enumerate(xs):
+        Q[i,:] = point_on_bspline_curve(knots, P, x)
+
+    if label is not None :
+        plt.plot(xs, Q[:,0], label = label)
+    else :
+        plt.plot(xs, Q[:,0])
+    if plot:
+        plt.show()
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def plot_results(X, Y, xlabel = '$\\mathbf{Time}$', ylabel = '$\\mathbf{H^1-error}$', MyLabel = '$\\mathbf{Error}$', mylocname = 'figs/error', 
+             xscale = True, yscale = True, lw = 2.5, i =0, j = 3, legend = True,
+             font_size = 13, markersize = 10, axes_size = 12, grid = True, margins = (0.02,0.02), plot = False):
+   '''
+   plot error under refinement or over time 
+   '''
+   font = {'family': 'serif', 
+            'color':  'k', 
+            'weight': 'normal', 
+            'size': font_size, 
+            }    
+   fig, axes =plt.subplots() 
+   if len(X[0]) > 1:
+      for i in range(len(X)):
+         print('---',i)
+         plt.plot( X[i], Y[i], color=colors[i], lw = lw, ls=line_styles[j], marker=markers[i], markersize = markersize, markerfacecolor = colors[i], label = MyLabel[i])
+   else:
+      plt.plot( X, Y, color=colors[i], lw = lw, ls=line_styles[j], marker=markers[i], markersize = markersize, markerfacecolor = colors[i], label = MyLabel)
+   if xscale:
+      plt.xscale('log')
+   if yscale:    
+     plt.yscale('log')
+   if xlabel is not None:
+      plt.xlabel(xlabel,  fontweight ='bold', fontdict=font)
+   if ylabel is not None:
+      plt.ylabel(ylabel,  fontweight ='bold', fontdict=font)
+   if grid:
+      plt.grid(color='k', linestyle='--', linewidth=0.5, which ="both")
+   plt.margins(margins[0], margins[1])
+   if legend:
+      plt.legend(fontsize=font_size)
+   plt.tick_params(axis='both', which='major', labelsize=axes_size)
+   fig.tight_layout()
+   # Set axes (ticks) font weight
+   for label in axes.get_xticklabels() + axes.get_yticklabels():
+      label.set_fontweight('bold') 
+   plt.savefig(mylocname+'.png')
+   plt.show(block=plot)
+
+
+
+
+'''
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def plot_SolutionMultipatch(nbpts, xuh, V, V_geo, xmp, ymp, savefig = None, plot = True): 
+   """
+   Plot the solution of the problem in the whole multi-patch domain
+   """
+   #---Compute a solution
+   numPaches = len(xmp)
+   u   = []
+   F1  = []
+   F2  = []
+   for i in range(numPaches):
+      u.append(pyccel_sol_field_2d((nbpts, nbpts), xuh[i], V.knots, V.degree)[0])
+      #---Compute a solution
+      F1.append(pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V_geo.knots, V_geo.degree)[0])
+      F2.append(pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V_geo.knots, V_geo.degree)[0])
+
+   # --- Compute Global Color Levels ---
+   u_min  = min(np.min(u[0]), np.min(u[1]))
+   u_max  = max(np.max(u[0]), np.max(u[1]))
+   for i in range(2, numPaches):
+      u_min  = min(u_min, np.min(u[i]))
+      u_max  = max(u_max, np.max(u[i]))
+   levels = np.linspace(u_min, u_max+1e-10, 100)  # Uniform levels for both plots
+
+   # --- Create Figure ---
+   fig, axes = plt.subplots(figsize=(8, 6))
+
+   # --- Contour Plot for First Subdomain ---
+   im = []
+   for i in range(numPaches):
+      im.append(axes.contourf(F1[i], F2[i], u[i], levels, cmap='jet'))
+      # --- Colorbar ---
+      divider = make_axes_locatable(axes)
+      cax = divider.append_axes("right", size="5%", pad=0.05, aspect=40)
+      cbar = plt.colorbar(im[i], cax=cax)
+      cbar.ax.tick_params(labelsize=15)
+      cbar.ax.yaxis.label.set_fontweight('bold')
+   # --- Formatting ---
+   axes.set_title("Numerical Solution", fontweight='bold')
+   for label in axes.get_xticklabels() + axes.get_yticklabels():
+      label.set_fontweight('bold')
+
+   fig.tight_layout()
+   if savefig is not None:
+      plt.savefig(savefig)
+   plt.show(block=plot)
+   print('Plotting done :  Solution in the whole domain (type savefig = \'location/somthing.png\' to save the figure)')
+   return 0
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def plot_JacobianMultipatch(nbpts, V, xmp, ymp, savefig = None, plot = True): 
+   """
+   Plot the solution of the problem in the whole domain
+   """
+   #---Compute a solution
+   numPaches = len(V)
+   u   = []
+   F1  = []
+   F2  = []
+   for i in range(numPaches):
+      #---Compute a solution
+      F1.append(pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0])
+      F2.append(pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0])
+      #...Compute a Jacobian
+      F1x, F1y = pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[1:3]
+      F2x, F2y = pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[1:3]
+      u.append(F1x*F2y - F1y*F2x)
+
+   # --- Compute Global Color Levels ---
+   u_min  = min(np.min(u[0]), np.min(u[1]))
+   u_max  = max(np.max(u[0]), np.max(u[1]))
+   for i in range(2, numPaches):
+      u_min  = min(u_min, np.min(u[i]))
+      u_max  = max(u_max, np.max(u[i]))
+   levels = np.linspace(u_min, u_max+1e-10, 100)  # Uniform levels for both plots
+
+   # --- Create Figure ---
+   fig, axes = plt.subplots(figsize=(8, 6))
+
+   # --- Contour Plot for First Subdomain ---
+   im = []
+   for i in range(numPaches):
+      im.append(axes.contourf(F1[i], F2[i], u[i], levels, cmap='jet'))
+      # --- Colorbar ---
+      divider = make_axes_locatable(axes)
+      cax = divider.append_axes("right", size="5%", pad=0.05, aspect=40)
+      cbar = plt.colorbar(im[i], cax=cax)
+      cbar.ax.tick_params(labelsize=15)
+      cbar.ax.yaxis.label.set_fontweight('bold')
+   # --- Formatting ---
+   #axes.set_title("Jacobian the in whole domain ", fontweight='bold')
+   for label in axes.get_xticklabels() + axes.get_yticklabels():
+      label.set_fontweight('bold')
+
+   fig.tight_layout()
+   if savefig is not None:
+      plt.savefig(savefig)
+   plt.show(block=plot)
+   print('Plotting done :  Solution in the whole domain (type savefig = \'location/somthing.png\' to save the figure)')
+   return 0
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def plot_MeshMultipatch(nbpts, V, xmp, ymp, cp = True, savefig = None, plot = True): 
+   """
+   Plot the solution of the problem in the whole domain
+   """
+   #---Compute a solution
+   numPaches = len(V)
+   F1 = []
+   F2 = []
+   for i in range(numPaches):
+      #---Compute a mesh
+      F1.append(pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0])
+      F2.append(pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0])
+
+   # --- Create Figure ---
+   fig =plt.figure() 
+   # ---
+   for ii in range(numPaches):
+      #---------------------------------------------------------
+      for i in range(nbpts):
+         phidx = F1[ii][:,i]
+         phidy = F2[ii][:,i]
+
+         plt.plot(phidx, phidy, linewidth = 0.5, color = 'k')
+      for i in range(nbpts):
+         phidx = F1[ii][i,:]
+         phidy = F2[ii][i,:]
+
+         plt.plot(phidx, phidy, linewidth = 0.5, color = 'k')
+      if cp:
+         plt.plot(xmp[ii].reshape(V[ii].nbasis[0]*V[ii].nbasis[1]), ymp[ii].reshape(V[ii].nbasis[0]*V[ii].nbasis[1]), 'ro', markersize=3.5)
+      #~~~~~~~~~~~~~~~~~~~~
+      #.. Plot the surface
+      if ii == 1:
+         phidx = F1[ii][:,0]
+         phidy = F2[ii][:,0]
+         plt.plot(phidx, phidy, '--k', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
+         # ...
+         phidx = F1[ii][:,nbpts-1]
+         phidy = F2[ii][:,nbpts-1]
+         plt.plot(phidx, phidy, '-g', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
+      else :
+         phidx = F1[ii][:,0]
+         phidy = F2[ii][:,0]
+         plt.plot(phidx, phidy, '-g', linewidth=2., label = '$Im([0,1]^2_{y=0})$')
+         # ...
+         phidx = F1[ii][:,nbpts-1]
+         phidy = F2[ii][:,nbpts-1]
+         plt.plot(phidx, phidy, '--k', linewidth=2. ,label = '$Im([0,1]^2_{y=1})$')
+      #''
+      phidx = F1[ii][0,:]
+      phidy = F2[ii][0,:]
+      plt.plot(phidx, phidy, '-r',  linewidth=2., label = '$Im([0,1]^2_{x=0})$')
+      # ...
+      phidx = F1[ii][nbpts-1,:]
+      phidy = F2[ii][nbpts-1,:]
+      plt.plot(phidx, phidy, '-r', linewidth= 2., label = '$Im([0,1]^2_{x=1}$)')
+
+   #axes[0].axis('off')
+   plt.margins(0,0)
+
+   fig.tight_layout()
+   if savefig is not None:
+      plt.savefig(savefig)
+   plt.show(block=plot)
+   print('Plotting done :  Solution in the whole domain (type savefig = \'location/somthing.png\' to save the figure)')
+   return 0
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def plot_FunctMultipatch(nbpts, V, xmp, ymp, functions, cp = True, savefig = None, plot = True): 
+   """
+   Plot the function in the whole domain
+   """
+   #---Compute a solution
+   numPaches = len(V)
+   F1     = []
+   F2     = []
+   values = []
+   for i in range(numPaches):
+      #---Compute a mesh
+      F1.append(pyccel_sol_field_2d((nbpts, nbpts), xmp[i], V[i].knots, V[i].degree)[0])
+      F2.append(pyccel_sol_field_2d((nbpts, nbpts), ymp[i], V[i].knots, V[i].degree)[0])
+      values.append(functions(F1[i], F2[i]))
+
+   # --- Compute Global Color Levels ---
+   u_min  = min(np.min(values[0]), np.min(values[1]))
+   u_max  = max(np.max(values[0]), np.max(values[1]))
+   for i in range(2, numPaches):
+      u_min  = min(u_min, np.min(values[i]))
+      u_max  = max(u_max, np.max(values[i]))
+   levels = np.linspace(u_min, u_max+1e-10, 100)  # Uniform levels for both plots
+   # --- Create Figure ---
+   # ... Analytic Density function
+   fig, axes =plt.subplots() 
+   for i in range(numPaches):
+      im2 = plt.contourf( F1[i], F2[i], values[i], levels, cmap= 'plasma')
+   #divider = make_axes_locatable(axes) 
+   #cax   = divider.append_axes("right", size="5%", pad=0.05, aspect = 40) 
+   #plt.colorbar(im2, cax=cax) 
+   fig.tight_layout()
+
+   if savefig is not None:
+      plt.savefig(savefig)
+   plt.show(block=plot)
+   print('Plotting done :  Solution in the whole domain (type savefig = \'location/somthing.png\' to save the figure)')
+   return 0
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def plot_AdMeshMultipatch(nbpts, V, xmp, ymp, xad, yad, cp = True, savefig = None, plot = True, patchesInterface = False): 
+   """
+   Plot the solution of the problem in the whole domain
+   """
+   #---Compute a solution
+   numPaches = len(V)
+   F1 = []
+   F2 = []
+   for i in range(numPaches):
+      sx = pyccel_sol_field_2d((nbpts, nbpts), xad[i], V[i].knots, V[i].degree)[0]
+      sy = pyccel_sol_field_2d((nbpts, nbpts), yad[i], V[i].knots, V[i].degree)[0]
+      #---Compute a mesh
+      F1.append(pyccel_sol_field_2d((None, None), xmp[i], V[i].knots, V[i].degree, mesh=(sx, sy))[0])
+      F2.append(pyccel_sol_field_2d((None, None), ymp[i], V[i].knots, V[i].degree, mesh=(sx, sy))[0])
+
+   # --- Create Figure ---
+   fig =plt.figure() 
+
+   # ---
+   for ii in range(numPaches):
+      #---------------------------------------------------------
+      for i in range(nbpts):
+         phidx = F1[ii][:,i]
+         phidy = F2[ii][:,i]
+
+         plt.plot(phidx, phidy, linewidth = 0.3, color = 'k')
+      for i in range(nbpts):
+         phidx = F1[ii][i,:]
+         phidy = F2[ii][i,:]
+
+         plt.plot(phidx, phidy, linewidth = 0.3, color = 'k')
+      if cp:
+         plt.plot(xmp[ii].reshape(V[ii].nbasis[0]*V[ii].nbasis[1]), ymp[ii].reshape(V[ii].nbasis[0]*V[ii].nbasis[1]), 'ro', markersize=3.5)
+      #~~~~~~~~~~~~~~~~~~~~
+      #.. Plot the surface
+      if patchesInterface:
+         phidx = F1[ii][:,0]
+         phidy = F2[ii][:,0]
+         plt.plot(phidx, phidy, '--k', linewidth=0.25, label = '$Im([0,1]^2_{y=0})$')
+         # ...
+         phidx = F1[ii][:,nbpts-1]
+         phidy = F2[ii][:,nbpts-1]
+         plt.plot(phidx, phidy, '--k', linewidth=0.25 ,label = '$Im([0,1]^2_{y=1})$')
+
+         phidx = F1[ii][:,0]
+         phidy = F2[ii][:,0]
+         plt.plot(phidx, phidy, '--k', linewidth=0.25, label = '$Im([0,1]^2_{y=0})$')
+         # ...
+         phidx = F1[ii][:,nbpts-1]
+         phidy = F2[ii][:,nbpts-1]
+         plt.plot(phidx, phidy, '--k', linewidth=0.25,label = '$Im([0,1]^2_{y=1})$')
+         #''
+         phidx = F1[ii][0,:]
+         phidy = F2[ii][0,:]
+         plt.plot(phidx, phidy, '--k',  linewidth=0.25, label = '$Im([0,1]^2_{x=0})$')
+         # ...
+         phidx = F1[ii][nbpts-1,:]
+         phidy = F2[ii][nbpts-1,:]
+         plt.plot(phidx, phidy, '--k', linewidth= 0.25, label = '$Im([0,1]^2_{x=1}$)')
+
+   #axes[0].axis('off')
+   plt.margins(0,0)
+
+   fig.tight_layout()
+   if savefig is not None:
+      plt.savefig(savefig)
+   plt.show(block=plot)
+   print('Plotting done :  Solution in the whole domain (type savefig = \'location/somthing.png\' to save the figure)')
+   return 0
+
+   '''

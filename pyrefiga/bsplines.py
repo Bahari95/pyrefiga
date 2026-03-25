@@ -865,7 +865,7 @@ def basis_ders_on_quad_grid(knots, degree, quad_grid, nders, normalization, mesh
 
 #==============================================================================
 def basis_integrals(knots, degree):
-    r"""
+    """
     Return the integral of each B-spline basis function over the real line:
 
     K[i] := \int_{-\infty}^{+\infty} B[i](x) dx = (T[i+p+1]-T[i]) / (p+1).

@@ -9,11 +9,12 @@ from pyrefiga import results
 from pyrefiga import results_f90
 from pyrefiga import ad_mesh_tools
 from pyrefiga import fast_diag
-from pyrefiga import nurbs_utilities
+from pyrefiga import post_processing_paraview
+from pyrefiga import interpolation
 
 __all__ = ['bsplines', 'cad',
            'spaces', 'linalg',
-           'quadratures', 'utilities', 'results', 'ad_mesh_tools', 'results_f90', 'api', 'nurbs_utilities']
+           'quadratures', 'utilities', 'results', 'ad_mesh_tools', 'results_f90', 'api', 'interpolation', 'post_processing_paraview']
 
 from pyrefiga.bsplines import ( find_span,
                                  basis_funs,
@@ -69,9 +70,9 @@ from pyrefiga.linalg import ( StencilVectorSpace,
 
 from pyrefiga.quadratures import gauss_legendre
 
-from pyrefiga.utilities import ( plot_field_1d,
-                                  prolongation_matrix,
+from pyrefiga.utilities import ( prolongation_matrix,
                                   prolongate_solution,
+                                  prolongate_NURBS_mapping,
                                   identity_bspline_mapping,
                                   compute_eoc,
                                   order_points,
@@ -82,7 +83,9 @@ from pyrefiga.utilities import ( plot_field_1d,
                                   load_xml,
                                   pyref_multipatch)
 
-from pyrefiga.results import ( sol_field_2d)
+from pyrefiga.results import ( sol_field_2d,
+                               plot_field_1d,
+                               plot_results)
 
 from pyrefiga.ad_mesh_tools import ( quadratures_in_admesh,
                                      assemble_stiffness1D,
@@ -97,15 +100,7 @@ from pyrefiga.results_f90 import ( sol_field_NURBS_1d,
                                   sol_field_NURBS_3d, 
                                   pyccel_sol_field_2d,
                                   pyccel_sol_field_1d,
-                                  pyccel_sol_field_3d, 
-                                  least_square_NURBspline,
-                                  least_square_Bspline,
-                                  plot_results,
-                                  plot_SolutionMultipatch,
-                                  plot_MeshMultipatch,
-                                  plot_AdMeshMultipatch,
-                                  plot_FunctMultipatch,
-                                  plot_JacobianMultipatch)
+                                  pyccel_sol_field_3d)
 
 from pyrefiga.api import (assemble_matrix, 
                           assemble_vector, 
@@ -115,7 +110,15 @@ from pyrefiga.api import (assemble_matrix,
                           apply_dirichlet, 
                           apply_periodic)
 
-from pyrefiga.nurbs_utilities import(prolongate_NURBS_mapping,
-                                      paraview_nurbsAdMeshMultipatch, paraview_nurbsSolutionMultipatch,
-                                      paraview_TimeSolutionMultipatch,
-                                      ViewGeo,least_square_2dNURBspline,collocation_2dNURBspline)
+from pyrefiga.interpolation import (least_square_NURBspline,
+                                  least_square_Bspline,
+                                  least_square_2dNURBspline,
+                                  collocation_2dNURBspline,
+                                  cubic_bsplines,
+                                  cubic_bspline_interpolation_1D,
+                                  cubic_bspline_interpolation_2D)
+
+from pyrefiga.post_processing_paraview import(paraview_nurbsAdMeshMultipatch, 
+                                            paraview_nurbsSolutionMultipatch,
+                                            paraview_TimeSolutionMultipatch,
+                                            ViewGeo)

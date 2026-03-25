@@ -120,3 +120,4 @@ plt.yscale('log')
 plt.savefig('figs/Error')
 plt.show(block=True)
 plt.close()
+from pyrefiga  import plot_results
