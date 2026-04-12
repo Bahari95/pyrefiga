@@ -290,7 +290,7 @@ xD, u01 = np.zeros(Vh.nbasis), StencilVector(Vh.vector_space)#build_dirichlet(Vh
 yD, u10 = np.zeros(Vh.nbasis), StencilVector(Vh.vector_space)#build_dirichlet(Vh, gy)
 #... Set Dirichlet boundary condition
 from pyrefiga import least_square_Bspline
-from pyrefiga import pyref_patch, plot_MeshMultipatch
+from pyrefiga import pyref_patch
 boundary_map = {
     1: (0, slice(None)),
     2: (-1, slice(None)),
@@ -303,30 +303,32 @@ xs, ys = [], []
 dx = 0.  
 dy = 0.25
 # for numberpatchs in range(0, 4):
-for numberpatchs in [1]:
+for numberpatchs in [3]:
     mesh = (np.zeros((100,100)), np.zeros((100,100)))
     dx += 0.25*numberpatchs 
     dy += 0.25*numberpatchs
     meshx, meshy = np.meshgrid( np.linspace(0.1, 1., 100), np.linspace(dx, dy, 100), indexing='ij' )
     mesh[0][:,:] = meshx
     mesh[1][:,:] = meshy
-    # Ximage, Yimage  = geometry.eval(mesh = mesh)
-    x = mesh[0]
-    y = mesh[1]
-    Ximage, Yimage  = eval(args.expr1), eval(args.expr2)
+    Ximage, Yimage  = geometry.eval(mesh = mesh)
+    Ximage -= 3.
+    Yimage -= 0.3    
+    # x = mesh[0]
+    # y = mesh[1]
+    # Ximage, Yimage  = eval(args.expr1), eval(args.expr2)
     if True:
         xs.append(Ximage[-1, :])
         ys.append(Yimage[-1, :])#*(-Yimage[-1, :]+Yimage[-1, 0]+1)**2
         #..
-        xs.append(Ximage[:, -1]*(1.-0.13/Ximage[0, -1])+0.13)
+        xs.append(Ximage[:, -1])#*(1.-0.13/Ximage[0, -1])+0.13)
         ys.append(Yimage[:, -1])
         #..
-        xs.append(Ximage[0, :])
-        ys.append(Yimage[0, :])
+        xs.append(Ximage[0, :]/4.)
+        ys.append(Yimage[0, :]/4.)
         #..
         print(Ximage[-1, 0], Ximage[0, 0])
-        xs.append(Ximage[:, 0])#*(1.-0.13/Ximage[0, 0])+0.13)
-        ys.append(Yimage[:, 0])
+        xs.append(Ximage[1:-1, 0])#*(1.-0.13/Ximage[0, 0])+0.13)
+        ys.append(Yimage[1:-1, 0])
 
     if False:
         if numberpatchs == 0:
@@ -362,15 +364,15 @@ if nelements == 1:
 else:
     xD[0, :] = least_square_Bspline(V2.degree, V2.knots, xs[2])
     xD[-1,:] = least_square_Bspline(V2.degree, V2.knots, xs[0])
-    xD[:, 0] = least_square_Bspline(V1.degree, V1.knots, xs[3])
-    xD[:,-1] = least_square_Bspline(V1.degree, V1.knots, xs[1])
+    xD[1:, 0] = least_square_Bspline(V1.degree, V1.knots, xs[3])[1:]
+    xD[1:,-1] = least_square_Bspline(V1.degree, V1.knots, xs[1])[1:]
 
     yD[0, :] = least_square_Bspline(V2.degree, V2.knots, ys[2])
     yD[-1,:] = least_square_Bspline(V2.degree, V2.knots, ys[0])
-    yD[:, 0] = least_square_Bspline(V1.degree, V1.knots, ys[3])
-    yD[:,-1] = least_square_Bspline(V1.degree, V1.knots, ys[1])
-print(xD[0,-1], yD[0,-1],'---------------------------------')
+    yD[1:, 0] = least_square_Bspline(V1.degree, V1.knots, ys[3])[1:]
+    yD[1:,-1] = least_square_Bspline(V1.degree, V1.knots, ys[1])[1:]
 
+print(xD[0, :],  yD[0, :],'---------------------------------')
 plt.plot(xD[0,0], yD[0,0], 'ro')
 plt.plot(xD[0, :],  yD[0, :], 'b')
 plt.plot(xD[-1, :], yD[-1, :], 'r')

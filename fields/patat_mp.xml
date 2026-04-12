@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--This file was created by bahari95/pyrefiga -->
+<!--Geometry in two dimensions -->
+<xml>
+<Geometry type="TensorNurbs2" id="0">
+<Basis type="TensorNurbsBasis2">
+<Basis type="TensorBSplineBasis2">
+<Basis type="BSplineBasis" index="0">
+<KnotVector degree="1">
+0.0 0.0 1.0 1.0
+</KnotVector></Basis><Basis type="BSplineBasis" index="1">
+<KnotVector degree="2">
+0.0 0.0 0.0 0.25 0.5 0.75 1.0 1.0 1.0
+</KnotVector></Basis><coefs geoDim="2">
+-0.027015 -0.137423
+0.004162 -0.145576
+0.060126 -0.110733
+0.084500 -0.074532
+0.102409 -0.030073
+0.103474 -0.012596
+-0.272569 -1.353037
+0.027745 -1.295918
+0.415120 -0.911145
+0.624586 -0.585946
+0.727078 -0.280221
+0.752034 -0.119360
+</coefs></Basis>
+</Basis>
+</Geometry>
+
+<Geometry type="TensorNurbs2" id="1">
+<Basis type="TensorNurbsBasis2">
+<Basis type="TensorBSplineBasis2">
+<Basis type="BSplineBasis" index="0">
+<KnotVector degree="1">
+0.0 0.0 1.0 1.0
+</KnotVector></Basis><Basis type="BSplineBasis" index="1">
+<KnotVector degree="2">
+0.0 0.0 0.0 0.25 0.5 0.75 1.0 1.0 1.0
+</KnotVector></Basis><coefs geoDim="2">
+0.103474 -0.012596
+0.106191 0.002380
+0.103693 0.047407
+0.090269 0.088920
+0.060447 0.135511
+0.030437 0.150716
+0.752034 -0.119360
+0.766836 0.009719
+0.747382 0.315042
+0.644985 0.647428
+0.412682 1.006525
+0.216032 1.140601
+</coefs></Basis>
+</Basis>
+</Geometry>
+
+<Geometry type="TensorNurbs2" id="2">
+<Basis type="TensorNurbsBasis2">
+<Basis type="TensorBSplineBasis2">
+<Basis type="BSplineBasis" index="0">
+<KnotVector degree="1">
+0.0 0.0 1.0 1.0
+</KnotVector></Basis><Basis type="BSplineBasis" index="1">
+<KnotVector degree="2">
+0.0 0.0 0.0 0.25 0.5 0.75 1.0 1.0 1.0
+</KnotVector></Basis><coefs geoDim="2">
+0.030437 0.150716
+-0.000766 0.168218
+-0.067734 0.142830
+-0.100329 0.089500
+-0.111359 0.043249
+-0.112059 0.022804
+0.216032 1.140601
+0.016690 1.307901
+-0.538102 1.253378
+-0.820673 0.796398
+-0.906553 0.387028
+-0.916907 0.196516
+</coefs></Basis>
+</Basis>
+</Geometry>
+
+<Geometry type="TensorNurbs2" id="3">
+<Basis type="TensorNurbsBasis2">
+<Basis type="TensorBSplineBasis2">
+<Basis type="BSplineBasis" index="0">
+<KnotVector degree="1">
+0.0 0.0 1.0 1.0
+</KnotVector></Basis><Basis type="BSplineBasis" index="1">
+<KnotVector degree="2">
+0.0 0.0 0.0 0.25 0.5 0.75 1.0 1.0 1.0
+</KnotVector></Basis><coefs geoDim="2">
+-0.112059 0.022804
+-0.112726 0.000319
+-0.107719 -0.038558
+-0.093232 -0.081274
+-0.057800 -0.130018
+-0.027015 -0.137423
+-0.916907 0.196516
+-0.927319 0.036370
+-0.888020 -0.352218
+-0.791852 -0.721483
+-0.535601 -1.268534
+-0.272569 -1.353037
+</coefs></Basis>
+</Basis>
+</Geometry>
+</xml>

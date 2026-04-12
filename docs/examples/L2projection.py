@@ -167,7 +167,6 @@ nb_ne             = refGrid #16  # number of elements after refinement
 quad_degree       = max(degree[0],degree[1]) # Quadrature degree
 #... Print multipatch info
 pyrefMP.detail()
-
 #------------------------------------------------------------------------------
 # Mesh refinement loop 
 #------------------------------------------------------------------------------

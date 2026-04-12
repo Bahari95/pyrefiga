@@ -91,6 +91,7 @@ from pyrefiga.ad_mesh_tools import ( quadratures_in_admesh,
                                      assemble_stiffness1D,
                                      assemble_mass1D,
                                      assemble_mass2D,
+                                     assemble_stiffness2D,
                                      assemble_matrix_ex01)
 
 from pyrefiga.fast_diag import ( Poisson)

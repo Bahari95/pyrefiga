@@ -136,6 +136,86 @@
 </Basis>
 </Geometry>
 
+<Geometry type="TensorNurbs2" id="2000">
+<Basis type="TensorNurbsBasis2">
+<Basis type="TensorBSplineBasis2">
+<Basis type="BSplineBasis" index="0">
+<KnotVector degree="2">
+0.0 0.0 0.0 1.0 1.0 1.0
+</KnotVector>
+</Basis>
+<Basis type="BSplineBasis" index="1">
+<KnotVector degree="2">
+0.0 0.0 0.0 1.0 1.0 1.0
+</KnotVector>
+</Basis>
+<coefs geoDim="2">
+  -1.  -1.
+  -1.   0.0
+  -1.   1.
+   0.   -1.
+   0.    0.0
+   0.    1.
+   1.   -1.
+   1.    0.0
+   1.    1.
+</coefs></Basis>
+</Basis>
+</Geometry>
+
+<Geometry type="TensorNurbs2" id="2001">
+<Basis type="TensorNurbsBasis2">
+<Basis type="TensorBSplineBasis2">
+<Basis type="BSplineBasis" index="0">
+<KnotVector degree="2">
+0.0 0.0 0.0 0.25 0.5 0.75 1.0 1.0 1.0
+</KnotVector></Basis>
+<Basis type="BSplineBasis" index="1">
+<KnotVector degree="2">
+0.0 0.0 0.0 0.25 0.5 0.75 1.0 1.0 1.0
+</KnotVector></Basis>
+<coefs geoDim="2">
+0.020000 0.000000
+0.016446 0.000000
+0.005984 0.000000
+-0.005984 0.000000
+-0.016446 0.000000
+-0.020000 0.000000
+0.140000 0.125000
+0.127777 0.126931
+0.061139 0.176463
+-0.061139 0.176463
+-0.127777 0.126931
+-0.140000 0.125000
+0.382500 0.375000
+0.352843 0.419510
+0.143303 0.520412
+-0.143303 0.520412
+-0.352843 0.419510
+-0.382500 0.375000
+0.627500 0.625000
+0.571227 0.715763
+0.270993 0.804941
+-0.270993 0.804941
+-0.571227 0.715763
+-0.627500 0.625000
+0.875000 0.875000
+0.804487 0.972309
+0.300127 0.970480
+-0.300127 0.970480
+-0.804487 0.972309
+-0.875000 0.875000
+1.000000 1.000000
+0.822309 1.000000
+0.299195 1.000000
+-0.299195 1.000000
+-0.822309 1.000000
+-1.000000 1.000000
+</coefs>
+</Basis>
+</Basis>
+</Geometry>
+
 <Geometry type="TensorNurbs2" id="1995">
 <Basis type="TensorNurbsBasis2">
 <Basis type="TensorBSplineBasis2">

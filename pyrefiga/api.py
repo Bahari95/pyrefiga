@@ -557,11 +557,12 @@ class StencilNitsche(object):
 
         return rhsMerged
     #... Extract solution
-    def extract_sol(self, sol_Dof, patch_nb = 0):
+    def extract_sol(self, sol_Dof, patch_nb = 0, u_last = None):
         '''
         extract_sol:  Extract Solution DoFs from master/slave DoFs
 
         :param patch_nb: is patch number start from 1
+        :param u_last: last solution to be updated
         '''
         SolExtracted = np.zeros(self._Nitshedim[0], dtype=self._type)
         for new_dof, olds in self.old_id.items():
@@ -569,6 +570,10 @@ class StencilNitsche(object):
                 SolExtracted[d] = sol_Dof[new_dof]   # Extract contributions
         if patch_nb == 0:
             return SolExtracted
+        if u_last is not None:
+            x_tmp = SolExtracted[self._block_index[patch_nb-1]:self._block_index[patch_nb]]
+            u_sol = apply_dirichlet(self._domain, x_tmp, dirichlet = self.mp.getDirPatch(patch_nb), update = u_last)
+            return u_sol
         else:
             x_tmp = SolExtracted[self._block_index[patch_nb-1]:self._block_index[patch_nb]]
             u_sol = apply_dirichlet(self._domain, x_tmp, dirichlet = self.mp.getDirPatch(patch_nb), update= self.u_d[patch_nb-1])
@@ -814,6 +819,7 @@ class StencilNitsche(object):
         # assert isinstance(u_d, StencilVector)
         if self.admp is None:
             if Nitsche_dir:
+                print("Dirichlet Nitsche contribution is assembled in strong form, not tested yet")
                 # assemble mappings for patches
                 u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
                 #... get interfaces for a given patch
@@ -825,9 +831,10 @@ class StencilNitsche(object):
                 u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = u_tmp[:]
             # ...
-            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
+            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = rhs[:]
         else:
             if Nitsche_dir:
+                print("Dirichlet Nitsche contribution is assembled in strong form, not tested yet")
                 # assemble mappings for patches
                 u_mae                                      = self.admp.stencil_mapping(patch_nb)
                 # asemble new basis and spans for geometry mapping
@@ -844,7 +851,7 @@ class StencilNitsche(object):
                 u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = u_tmp[:]
             # ...
-            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
+            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = rhs[:]
         # ...
         return
     #...
@@ -894,7 +901,7 @@ class StencilNitsche(object):
         self.assemble_nitsche2dDiag(self._domain, fields=[u11_mph, u12_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)
         #..
 #==============================================================================
-def apply_dirichlet(V, x, dirichlet = True, update = None):
+def apply_dirichlet(V, x, dirichlet = True, update = None, periodic = [False, False]):
     """
     Applies dirichlet boundary conditions to a matrix or vector by elimination.
 
@@ -917,6 +924,8 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
         Specifies a second patch for dirichlet elimination (default: False).
     update: StencilVector
         Updates the boundary values of the solution using the exact dirichlet data.
+    periodic: list or tuple, optional only 2d case
+        Specifies periodic boundary conditions in each direction (default: [False, False]).
     Returns
     -------
     ndarray
@@ -1152,6 +1161,7 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
             pass
         else:
             raise NotImplementedError('Not available only StencilVector')
+        
         u   = StencilVector(V.vector_space)
         u.from_array(V, update.tensor)
         # ...
@@ -1172,6 +1182,10 @@ def apply_dirichlet(V, x, dirichlet = True, update = None):
             d4 = n2-1 if dirichlet[1][1] else n2
             #... apply dirichlet
             u[d1:d2,d3:d4]+= x.reshape((d2-d1),(d4-d3))
+            # if periodic[0] == True: # in x direction
+            #     u[-1,:] = u[0,:]
+            # if periodic[1] == True: # in y direction
+            #     u[:,0] = u[:,-1]
             return  u
         elif V.dim == 3:
             n1, n2, n3  = V.nbasis

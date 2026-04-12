@@ -532,12 +532,12 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
                # ...
                if solution is not None :
                   for sol in solution:
-                     U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i][t_ix], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
+                     U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][t_ix][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                      grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
                # ...
                if precomputed is not None :
                   for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
+                     grid[sol["name"]] = sol["data"][t_ix][i].flatten(order='C')  # or 'F' if needed (check your ordering)
                multiblock[f"patch_{i}"] = grid
             # --- Save one .vtm per time step
             vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
@@ -573,12 +573,12 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
                # .... 
                if solution is not None :
                   for sol in solution:
-                     U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][i][t_ix], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
+                     U                 = sol_field_NURBS_3d((nbpts, nbpts, nbpts), sol["data"][t_ix][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                      grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
 
                if precomputed is not None :
                   for sol in precomputed:
-                     grid[sol["name"]] = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
+                     grid[sol["name"]] = sol["data"][t_ix][i].flatten(order='C')  # or 'F' if needed (check your ordering)
                multiblock[f"patch_{i}"] = grid
             # --- Save one .vtm per time step
             vtm_filename = f"{filename}_t{t_ix:03d}.vtm"
@@ -611,12 +611,12 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
                # ...
                if solution is not None :
                   for sol in solution:
-                     U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][i][t_ix], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
+                     U                 = sol_field_NURBS_2d((nbpts, nbpts), sol["data"][t_ix][i], sol["space"].omega, sol["space"].knots, sol["space"].degree)[0]
                      grid[sol["name"]] = U.flatten(order='C')  # or 'F' if needed (check your ordering)
                # ...
                if precomputed is not None :
                   for sol in precomputed:
-                     grid[sol["name"]]  = sol["data"][i][t_ix].flatten(order='C')  # or 'F' if needed (check your ordering)
+                     grid[sol["name"]]  = sol["data"][t_ix][i].flatten(order='C')  # or 'F' if needed (check your ordering)
                multiblock[f"patch_{i}"] = grid
             # --- Save one VTM file per time step
             filename_t = f"{filename}_t{t_ix:03d}.vtm"   

@@ -121,24 +121,12 @@ def least_square_Bspline(degree, knots, f):
     Pc[1:-1] = lu.solve(R)    
     return Pc
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Computes L2 projection of 2D function
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def least_square_2dNURBspline(p, q, U, V, omega_u, omega_v, Q):
     """
-    Computes least squares projection of f(u,v) onto a 2D NURBS surface basis.
-    
-    Parameters
-    ----------
-    p, q   : degrees in u and v
-    U, V   : knot vectors
-    omega  : weights (2D array shaped [n_u, n_v])
-    f      : function f(u,v) or sampled data on a grid
-    
-    Returns
-    -------
-    Pc     : control point coefficients (n_u x n_v)
+    Least-squares projection onto a tensor-product NURBS surface.
+    Boundary is treated first (1D LS), then interior is solved.
     """
+
     import numpy as np
     from scipy.sparse import csc_matrix, linalg as sla
     from .bsplines import find_span, basis_funs
@@ -146,55 +134,75 @@ def least_square_2dNURBspline(p, q, U, V, omega_u, omega_v, Q):
     n_u = len(U) - p - 1
     n_v = len(V) - q - 1
 
-    # Sampling points (dense grid in parameter domain)
-    m_u, m_v = Q.shape 
-    u_k = np.linspace(U[0], U[-1], m_u)
-    v_l = np.linspace(V[0], V[-1], m_v)
+    m_u, m_v = Q.shape
 
+    # Parameter sampling (correct support)
+    u_k = np.linspace(U[p], U[n_u], m_u)
+    v_l = np.linspace(V[q], V[n_v], m_v)
 
-    # Build collocation matrix
+    # Initialize
+    Pc = np.zeros((n_u, n_v))
+
+    # --- Boundary LS (1D) ---
+    Pc[0, :]  = least_square_NURBspline(q, V, omega_v, Q[0, :])
+    Pc[-1, :] = least_square_NURBspline(q, V, omega_v, Q[-1, :])
+    Pc[:, 0]  = least_square_NURBspline(p, U, omega_u, Q[:, 0])
+    Pc[:, -1] = least_square_NURBspline(p, U, omega_u, Q[:, -1])
+
+    # --- Build basis matrices ---
     N_u = np.zeros((m_u-2, n_u))
     N_v = np.zeros((m_v-2, n_v))
-    R   = np.zeros((m_u-2, m_v-2))
-    Pc  = np.zeros((n_u  , n_v  ))
-    Pc[0,:]  = least_square_NURBspline(q, V, omega_v, Q[0,:])
-    Pc[-1,:] = least_square_NURBspline(q, V, omega_v, Q[-1,:])
-    Pc[:,0]  = least_square_NURBspline(p, U, omega_u, Q[:,0])
-    Pc[:,-1] = least_square_NURBspline(p, U, omega_u, Q[:,-1])
 
     for k in range(1, m_u-1):
-       span                           = find_span( U, p, u_k[k] )
-       b                              = basis_funs( U, p, u_k[k], span )*omega_u[span-p:span+1]
-       b                             /= sum(b)
-       N_u[k-1,span-p:span+1] = b[:]
-    for k in range(1, m_v-1):
-       span                           = find_span( V, q, v_l[k] )
-       b                              = basis_funs( V, q, v_l[k], span )*omega_v[span-q:span+1]
-       b                             /= sum(b)
-       N_v[k-1,span-q:span+1] = b[:]
-    R[:,:] = Q[1:-1,1:-1]
-   # Example: subtract left strip contribution
-   # strips
-    R -= np.outer(N_u[:,0],   N_v @ Pc[0,:])     # left
-    R -= np.outer(N_u[:,-1],  N_v @ Pc[-1,:])    # right
-    R -= np.outer(N_u @ Pc[:,0],   N_v[:,0])     # bottom
-    R -= np.outer(N_u @ Pc[:,-1],  N_v[:,-1])    # top 
+        span = find_span(U, p, u_k[k])
+        b = basis_funs(U, p, u_k[k], span) * omega_u[span-p:span+1]
+        b /= np.sum(b)
+        N_u[k-1, span-p:span+1] = b
 
-    # corners (add back once)
-    R += Pc[0,0]       * np.outer(N_u[:,0],  N_v[:,0])   # bottom-left
-    R += Pc[0,-1]      * np.outer(N_u[:,0],  N_v[:,-1])  # top-left
-    R += Pc[-1,0]      * np.outer(N_u[:,-1], N_v[:,0])   # bottom-right
-    R += Pc[-1,-1]     * np.outer(N_u[:,-1], N_v[:,-1])  # top-right
+    for l in range(1, m_v-1):
+        span = find_span(V, q, v_l[l])
+        b = basis_funs(V, q, v_l[l], span) * omega_v[span-q:span+1]
+        b /= np.sum(b)
+        N_v[l-1, span-q:span+1] = b
 
-    # Solve least squares system
-    N_u = N_u[:,1:-1]
-    N_v = N_v[:,1:-1]
-    R   = R.reshape((m_u-2)*(m_v-2))
-    N   = np.kron(N_v, N_u)
-    M   = N.T.dot(N)
-    rhs = N.T.dot(R)
-    P   = sla.cg(M,rhs,rtol = 1e-16)[0]
-    Pc[1:-1,1:-1] = P.reshape(n_u-2, n_v-2)
+    # Interior RHS
+    R = Q[1:-1, 1:-1].copy()
+
+    # --- Subtract boundary contributions ---
+    R -= np.outer(N_u[:, 0],   N_v @ Pc[0, :])      # left
+    R -= np.outer(N_u[:, -1],  N_v @ Pc[-1, :])     # right
+    R -= np.outer(N_u @ Pc[:, 0],   N_v[:, 0])      # bottom
+    R -= np.outer(N_u @ Pc[:, -1],  N_v[:, -1])     # top
+
+    # --- Add corners back (avoid double subtraction) ---
+    R += Pc[0, 0]       * np.outer(N_u[:, 0],  N_v[:, 0])
+    R += Pc[0, -1]      * np.outer(N_u[:, 0],  N_v[:, -1])
+    R += Pc[-1, 0]      * np.outer(N_u[:, -1], N_v[:, 0])
+    R += Pc[-1, -1]     * np.outer(N_u[:, -1], N_v[:, -1])
+
+    # --- Interior system ---
+    Nu_int = N_u[:, 1:-1]
+    Nv_int = N_v[:, 1:-1]
+
+    # Flatten (consistent ordering)
+    R_vec = R.flatten(order='C')
+
+    # Kronecker product (correct ordering!)
+    N = np.kron(Nv_int, Nu_int)
+
+    M = N.T @ N
+    rhs = N.T @ R_vec
+
+    # Solve (robust)
+    # P, info = cg(csc_matrix(M), rhs, tol=1e-12, maxiter=2000)
+    lu        = sla.splu(csc_matrix(M))
+    P         = lu.solve(rhs)    
+    # if info != 0:
+    #     # fallback (safe)
+    #     P = np.linalg.solve(M, rhs)
+
+    Pc[1:-1, 1:-1] = P.reshape((n_u-2, n_v-2), order='C')
+
     return Pc
 
 def collocation_2dNURBspline(Vh, sol, xmp = None, adxmp = None):

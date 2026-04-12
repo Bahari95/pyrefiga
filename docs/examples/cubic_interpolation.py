@@ -1,11 +1,10 @@
 """
 cubic_interpolation.py
 
-cubic interpolation for a given function in one or two dimensions
+cubic interpolation for a given function in one and two dimensions
 
 Author: M. Bahari
 """
-from pyrefiga           import cubic_bsplines
 from pyrefiga           import cubic_bspline_interpolation_1D
 from pyrefiga           import cubic_bspline_interpolation_2D
 # ...
@@ -69,6 +68,12 @@ if __name__ == "__main__":
                dxyf(xgrid[-1], xgrid[-1])]
     # assemble system
     eta, Vh = cubic_bspline_interpolation_2D(xgrid, xgrid, g, gprimex, gprimey, corners, space = True)
+    # ... least square approximation (optional)
+    # from pyrefiga import least_square_2dNURBspline
+    # xls  = np.linspace(x0, xN, N*2+11)
+    # X,Y  = np.meshgrid(xls,xls)
+    # g    = f(X.T, Y.T)
+    # eta  = least_square_2dNURBspline(Vh.degree[0], Vh.degree[1], Vh.knots[0], Vh.knots[1], Vh.omega[0], Vh.omega[1], g)
 
     S, Sx, Sy, X, Y = pyccel_sol_field_2d((100,100),  eta, Vh.knots, Vh.degree) 
 
