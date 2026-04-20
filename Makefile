@@ -4,8 +4,8 @@ CLEAN_DIRS = __epyccel__ __pycache__ figs
 # Directories to clean
 ROOT_DIRS = ./r_adaptive_refinement \
             ./cad\
-            ./examples \
             ./docs/examples \
+            ./docs/anisotropic_diffusion \
             ./newFolder \
             ./pyrefiga/tests
 

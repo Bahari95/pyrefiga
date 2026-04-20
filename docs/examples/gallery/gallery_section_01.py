@@ -40,6 +40,7 @@ def assemble_vector_ex01(ne1:'int', p1:'int', spans_1:'int[:]', basis_1:'float64
                       #.. Test 0
                       kappa= 1.
                       u    =  (pi)**2*sin(pi*x)
+                    #   u    =  sin(pi*x)
                                                     
                       v   += bi_0 * u * wvol
 

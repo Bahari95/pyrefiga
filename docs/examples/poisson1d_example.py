@@ -68,18 +68,18 @@ def poisson_solve(V):
        K1                  = assemble_stiffness1D(V)
        K1                  = apply_dirichlet(V, K1, True)
 
-       M1                  = assemble_mass1D(V)
-       M1                  = apply_dirichlet(V, M1, True)
-       M1                  = csr_matrix(M1)
+       # M1                  = assemble_mass1D(V)
+       # M1                  = apply_dirichlet(V, M1, True)
+       # M1                  = csr_matrix(M1)
 
        # ...
        #--Assembles a right hand side of Poisson equation
        rhs                 = assemble_rhs( V )
        b                   = apply_dirichlet(V, rhs, True)
        # ...
-       xkron, status       = sla.cg(K1, b)
+       xkron, status       = sla.cg(K1, b, rtol=1e-30)
        # ...
-       u                   = apply_dirichlet(V, xkron, update = u)#zero Dirichlet u can be replaced by u_d if not zero
+       u                   = apply_dirichlet(V, xkron, update = u, dirichlet=True)#zero Dirichlet u can be replaced by u_d if not zero
        x                   = u.toarray().reshape(V.nbasis)
        # ...
        Norm                = assemble_norm_l2(V, fields=[u]) 
