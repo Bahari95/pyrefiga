@@ -120,7 +120,7 @@ def assemble_Nitesche_terms(Ni, dt):
 #------------------------------------------------------------------------------
 class anisotropic_diffusion(object):
     
-    def __init__(self, V, pyref_MP, Le, Ra, ratioPH, dt=1e-6, x0=0., y0=0.):
+    def __init__(self, V, pyref_MP, Le, Ra, ratioPH, dt, x0=0., y0=0.):
         assert isinstance(pyref_MP, pyref_multipatch), "pyref_MP must be a pyref_patch instance"
         assert isinstance(V, TensorSpace), "only accept TensorSpace"
 
@@ -154,6 +154,7 @@ class anisotropic_diffusion(object):
         self.pyref_MP= pyref_MP
         self.x0      = x0 
         self.y0      = y0
+        self.x_last  = 0.
         self.dt      = dt
         self.Le      = Le
         self.Ra      = Ra
@@ -252,13 +253,13 @@ class anisotropic_diffusion(object):
         l2_norm = 0.
         H1_norm = 0.
         l1_norm = 0.
-        u_sol   = []
+        u_str   = []
         # ... Extract solution
         for patch_nb in range(1,self.pyref_MP.nb_patches+1):
             # ... extract solution
             u1              = self.Ni.extract_sol(x, patch_nb)
             # ...
-            u_sol.append(u1)
+            u_str.append(u1)
             #... mapping in Stencil format
             u11_mph, u12_mph = self.pyref_MP.stencil_mapping(patch_nb)
             # Compute L2 and H1 errors
@@ -269,7 +270,7 @@ class anisotropic_diffusion(object):
             l1_norm += Norm[2]
         l2_norm = np.sqrt(l2_norm)
         H1_norm = np.sqrt(H1_norm)    
-        return u_sol, l2_norm, H1_norm, l1_norm
+        return u_str, l2_norm, H1_norm, l1_norm
     def temperature(self, u_tmp, u_sol, ttime = 0.):
         V                = self.V
         # ...
@@ -282,7 +283,7 @@ class anisotropic_diffusion(object):
         # ... Assemble Nitsche's global matrix
         Ni            = StencilNitsche(V, VT, pyrefMP)
         # ... Assemble Nitsche's global matrix
-        assemble_Nitesche_terms(Ni, dt)
+        assemble_Nitesche_terms(Ni, self.dt)
         for patch_nb in range(1, pyrefMP.nb_patches+1):
             #... mapping in Stencil format
             u11_mph, u12_mph = pyrefMP.stencil_mapping(patch_nb)
@@ -305,9 +306,10 @@ class anisotropic_diffusion(object):
         #=============================================
         M       = Ni.nitsche_merge()
         b       = Ni.nitsche_merge_rhs()
-        # x, inf  = sla.cg(M, b, rtol=1e-30)
+        # x, inf  = sla.gmres(M, b, rtol=1e-30, x0=self.x_last)
         lu         = sla.splu(csc_matrix(M))
         x          = lu.solve(b)
+        # self.x_last = x
         l2_norm = 0.
         H1_norm = 0.
         l1_norm = 0.
@@ -343,14 +345,14 @@ Le          = 1.
 ratioPH     = 1.
 Ra          = 1e3
 nbpts       = 75     # Number of points for plotting
-Ntimes      = 20    # Number of time step
+Ntimes      = 10000    # Number of time step
 RefinNumber = 5      # Number of global mesh refinements
 nbRefineNbr = 0      # Number of global mesh refinements loop
-degree      = [0,0]  # Elevate Degree of the spline space
+degree      = [1,0]  # Elevate Degree of the spline space
 Ltime0      = 0.
 time_max    = 1.#2.*pi
-dt          = 1e-3
-N_plot      = 1
+dt          = 1e-6
+N_plot      = 100
 table       = zeros((nbRefineNbr+1,7))
 LStimes     = []
 sol_app     = []
@@ -420,17 +422,18 @@ for nbRefine in range(nbRefineNbr+1):
     # Create tensor product space
     Vh = TensorSpace(V1, V2)
     # ...
+    u_str = [StencilVector(Vh.vector_space) for _ in range(pyref_MP.nb_patches)]
 
     print('#nbasis: ', Vh.nbasis)
 
     #------------------------------------------------------------------------------
     # Mesh refinement loop
     #------------------------------------------------------------------------------
-    AN = anisotropic_diffusion(Vh, pyref_MP, Le, Ra, ratioPH, dt= dt)
+    AN = anisotropic_diffusion(Vh, pyref_MP, Le, Ra, ratioPH, dt)
     # ...
     nt = 0
     # Project initial solution
-    u_tmp, l2_error,  H1_error, mass_error = AN.project(g0)
+    u_tmp, l2_error,  H1_error, mass_error = AN.project()
     # ... concentration
     u_c = u_tmp.copy()
 
@@ -464,9 +467,10 @@ for nbRefine in range(nbRefineNbr+1):
         #print('#')
         # Solve Poisson equation on refined mesh
         start = time.time()
-        # ...  anysotrpic diffusion
+        # ...  stream function
         u_str, l2_error,  H1_error, mass_error = AN.stream(u_tmp, u_tmp)
-        u_tmp, l2_error,  H1_error, mass_error = AN.temperature( u_tmp, u_str)
+        # ...  temperature
+        u_tmp, l2_error,  H1_error, mass_error = AN.temperature( u_tmp, u_str, ttime= Ltime)
         #print('#')
         print(f"Step {nt}: Time = {Ltime:.4e} s | L2 Error = {l2_error:.4e} | H1 Error = {H1_error:.4e} | l1 mass = {mass_error:.4e}")
         # ...

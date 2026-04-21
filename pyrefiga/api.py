@@ -562,7 +562,7 @@ class StencilNitsche(object):
         extract_sol:  Extract Solution DoFs from master/slave DoFs
 
         :param patch_nb: is patch number start from 1
-        :param u_last: last solution to be updated
+        :param u_last: last solution to be updated; not Dirichlet boudary
         '''
         SolExtracted = np.zeros(self._Nitshedim[0], dtype=self._type)
         for new_dof, olds in self.old_id.items():

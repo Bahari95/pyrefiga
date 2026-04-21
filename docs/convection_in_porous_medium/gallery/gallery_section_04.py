@@ -74,8 +74,8 @@ def assemble_matrix_diff_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int'
                             coeff_st =  lcoeffs_st[il_1,il_2]
                             stdx    +=  coeff_st * bj_x
                             stdy    +=  coeff_st * bj_y
-                    arr_dxst[g1, g2] = (F2y * stdx - F2x * stdy)
-                    arr_dyst[g1, g2] = (F1x * stdy - F1y * stdx)
+                    arr_dxst[g1, g2] = (F2y * stdx - F2x * stdy)/abs(F1x*F2y-F1y*F2x)
+                    arr_dyst[g1, g2] = (F1x * stdy - F1y * stdx)/abs(F1x*F2y-F1y*F2x)
                     # ...
                     arr_J_mat0[g1,g2] = F2y
                     arr_J_mat1[g1,g2] = F1x
@@ -256,7 +256,7 @@ def assemble_vector_diff_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int'
                     lvalues_udx[g1, g2]  = K11*(F2y * udx - F2x*udy)/J_mat +  K12*(F1x * udy - F1y*udx)/J_mat
                     lvalues_udy[g1, g2]  = K12*(F2y * udx - F2x*udy)/J_mat +  K22*(F1x * udy - F1y*udx)/J_mat
 
-                    lvalues_u[g1,g2]   = Ra * ((F2y * tmx - F2x*tmy)  + Nr * (F2y * cx - F2x*cy))
+                    lvalues_u[g1,g2]   = Ra * ((F2y * tmx - F2x*tmy)/J_mat  + Nr * (F2y * cx - F2x*cy)/J_mat)
                     lvalues_Jac[g1,g2] = J_mat
             for il_1 in range(0, p1+1):
                 for il_2 in range(0, p2+1):
