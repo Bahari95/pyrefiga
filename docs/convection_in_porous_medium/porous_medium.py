@@ -21,7 +21,7 @@ from   pyrefiga                    import paraview_TimeSolutionMultipatch
 from   pyrefiga                    import pyccel_sol_field_2d
 from   pyrefiga                    import eval_bsplines, StencilNitsche
 
-# Import Poisson assembly tools for uniform mesh
+# Import convection in porous medium assembly tools for uniform mesh
 from gallery.gallery_section_00             import assemble_matrix_un_ex01
 from gallery.gallery_section_00             import assemble_vector_un_ex01
 from gallery.gallery_section_00             import assemble_norm_un_ex01
@@ -29,7 +29,7 @@ assemble_matrix_un   = compile_kernel(assemble_matrix_un_ex01, arity=2)
 assemble_rhs_un      = compile_kernel(assemble_vector_un_ex01, arity=1)
 assemble_norm_un     = compile_kernel(assemble_norm_un_ex01, arity=1)
 
-# Import Poisson assembly tools for uniform mesh ..
+# Import convection in porous medium assembly tools for uniform mesh ..
 from gallery.gallery_section_04    import assemble_matrix_diff_ex01
 from gallery.gallery_section_04    import assemble_vector_diff_ex01
 from gallery.gallery_section_04    import assemble_vector_mass_ex01
@@ -116,9 +116,9 @@ def assemble_Nitesche_terms(Ni, dt):
     return 0
 
 #------------------------------------------------------------------------------
-# Poisson solver algorithm
+# convection in porous medium solver algorithm
 #------------------------------------------------------------------------------
-class anisotropic_diffusion(object):
+class convection_in_porous_medium(object):
     
     def __init__(self, V, pyref_MP, Le, Ra, ratioPH, dt, x0=0., y0=0.):
         assert isinstance(pyref_MP, pyref_multipatch), "pyref_MP must be a pyref_patch instance"
@@ -362,7 +362,7 @@ error_l2    = []
 error_h1    = []
 error_mass  = []
 x0, y0      = 1.5, 0.
-print("(#=assembled Dirichlet, #=solve poisson)\n")
+print("(#=assembled Dirichlet, #=solve convection in porous medium)\n")
 
 #------------------------------------------------------------------------------
 # Define exact solution and Dirichlet boundary condition
@@ -388,7 +388,7 @@ g0      = lambda x,y : 0. *x + 0. * y #10.*np.exp(-100.*((x-x0)**2+(y-y0)**2))
 geometry = load_xml('ushape.xml')
 
 id_mp    = [0,1,2]
-print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
+print('#---IN-UNIFORM--MESH-convection in porous medium equation', geometry)
 print("Dirichlet boundary conditions", g)
 
 # Extract geometry mapping
@@ -429,7 +429,7 @@ for nbRefine in range(nbRefineNbr+1):
     #------------------------------------------------------------------------------
     # Mesh refinement loop
     #------------------------------------------------------------------------------
-    AN = anisotropic_diffusion(Vh, pyref_MP, Le, Ra, ratioPH, dt)
+    AN = convection_in_porous_medium(Vh, pyref_MP, Le, Ra, ratioPH, dt)
     # ...
     nt = 0
     # Project initial solution
@@ -465,7 +465,7 @@ for nbRefine in range(nbRefineNbr+1):
         Ltime     += dt
         # ...
         #print('#')
-        # Solve Poisson equation on refined mesh
+        # Solve convection in porous medium equation on refined mesh
         start = time.time()
         # ...  stream function
         u_str, l2_error,  H1_error, mass_error = AN.stream(u_tmp, u_tmp)
