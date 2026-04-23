@@ -450,7 +450,7 @@ def ViewGeo(geometry, Nump, nbpts=50, functions = None, Analytic = None, filenam
 #--------------------------------------------------------------------------------------------------------------------
 # ... Time post-processes TODO
 #--------------------------------------------------------------------------------------------------------------------
-def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solution = None, functions = None, precomputed = None, filename = "figs/multipatch_solution", plot = False): 
+def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solution = None, functions = None, precomputed = None, moving_mesh = None, filename = "figs/multipatch_solution", plot = False): 
    """
    Post-processes and exports the solution in the multi-patch domain using Paraview.
 
@@ -486,6 +486,13 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
          {"name": "velocity", "data": yuh},   # e.g., velocity field control points
          # Add more solution fields as needed
       ]
+   moving_mesh : collable , optional
+       List of solution control points for each patch and its name.
+       solutions = [
+         {"name": "x", "data": xuh = list(list), V},   # e.g., x/mapping field control points
+         {"name": "y", "data": yuh = list(list), V},   # e.g., y/mapping field control points
+         {"name": "z", "data": zuh = list(list), V},   # e.g., z/mapping field control points
+      ]
    Returns
    -------
    None
@@ -508,10 +515,28 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
             multiblock = pv.MultiBlock()
             for i in range(nb_Patches):
                #---Compute a physical domain
-               x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
-               [[F1x, F1y], [F2x, F2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
+               if moving_mesh is not None:
+                  ms  =  moving_mesh[0]
+                  assert ms["name"] == 'TensorSpace', "First moving mesh must be space mapping"
+                  mm  =  moving_mesh[1]
+                  assert mm["name"] == 'x', "First moving mesh must be x mapping"
+                  sx, sxx, sxy = sol_field_NURBS_2d((nbpts, nbpts), mm["data"][t_ix][i], ms["space"].omega, ms["space"].knots, ms["space"].degree)[0:3]
+                  mm  =  moving_mesh[2]
+                  assert mm["name"] == 'y', "Second moving mesh must be y mapping"
+                  sy, syx, syy = sol_field_NURBS_2d((nbpts, nbpts), mm["data"][t_ix][i], ms["space"].omega, ms["space"].knots, ms["space"].degree)[0:3]
+                  #---Compute a image by initial mapping
+                  x, y  = pyrefGeometry.eval(i+1, mesh=(sx, sy))
+                  [[F1x, F1y], [F2x, F2y]] =pyrefGeometry.gradient(i+1, mesh=(sx, sy))
+                  # ...Compute analytic JACOBIAN
+                  F_1x = sxx*F1x + syx*F1y
+                  F_1y = sxx*F2x + syx*F2y
+                  F_2x = sxy*F1x + syy*F1y
+                  F_2y = sxy*F2x + syy*F2y
+               else :
+                  x, y  = pyrefGeometry.eval(i+1, nbpts=(nbpts, nbpts))
+                  [[F_1x, F_1y], [F_2x, F_2y]] = pyrefGeometry.gradient(i+1, nbpts=(nbpts, nbpts))
                #...Compute a Jacobian
-               Jf = F1x*F2y - F1y*F2x
+               Jf = F_1x*F_2y - F_1y*F_2x
                #...
                z = np.zeros_like(x)
                points = np.stack((x, y, z), axis=-1)
