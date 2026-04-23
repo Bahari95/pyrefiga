@@ -345,14 +345,14 @@ Le          = 1.
 ratioPH     = 1.
 Ra          = 1e3
 nbpts       = 75     # Number of points for plotting
-Ntimes      = 10000    # Number of time step
+Ntimes      = 100    # Number of time step
 RefinNumber = 5      # Number of global mesh refinements
 nbRefineNbr = 0      # Number of global mesh refinements loop
 degree      = [1,0]  # Elevate Degree of the spline space
 Ltime0      = 0.
 time_max    = 1.#2.*pi
-dt          = 1e-6
-N_plot      = 100
+dt          = 1e-5
+N_plot      = 5
 table       = zeros((nbRefineNbr+1,7))
 LStimes     = []
 sol_app     = []
@@ -434,9 +434,8 @@ for nbRefine in range(nbRefineNbr+1):
     nt = 0
     # Project initial solution
     u_tmp, l2_error,  H1_error, mass_error = AN.project()
-    # ... concentration
-    u_c = u_tmp.copy()
-
+    # ...  stream function
+    u_str, l2_error,  H1_error, mass_error = AN.stream(u_tmp, u_tmp)
     print(f"Step {nt}: Time = {Ltime:.4e} s | L2 Error = {l2_error:.4e} | H1 Error = {H1_error:.4e} | l1 mass = {mass_error:.4e}")
     # Store results
     x_ap    = []
@@ -445,7 +444,7 @@ for nbRefine in range(nbRefineNbr+1):
     x_err   = []
     for i in range(pyref_MP.nb_patches):
         x_ap.append( pyccel_sol_field_2d((nbpts, nbpts), u_tmp[i].tensor,  Vh.knots, Vh.degree)[0])
-        x_str.append(np.zeros((nbpts, nbpts)))
+        x_str.append( pyccel_sol_field_2d((nbpts, nbpts), u_str[i].tensor,  Vh.knots, Vh.degree)[0] )
         x, y  = pyref_MP.eval(patch_nb = i+1, nbpts = (nbpts, nbpts))
         x_ex.append( f_ex(x,y, Ltime))
         x_err.append( np.absolute(x_ap[-1]-x_ex[-1]) )
@@ -467,10 +466,10 @@ for nbRefine in range(nbRefineNbr+1):
         #print('#')
         # Solve convection in porous medium equation on refined mesh
         start = time.time()
-        # ...  stream function
-        u_str, l2_error,  H1_error, mass_error = AN.stream(u_tmp, u_tmp)
         # ...  temperature
         u_tmp, l2_error,  H1_error, mass_error = AN.temperature( u_tmp, u_str, ttime= Ltime)
+        # ...  stream function
+        u_str, l2_error,  H1_error, mass_error = AN.stream(u_tmp, u_tmp)
         #print('#')
         print(f"Step {nt}: Time = {Ltime:.4e} s | L2 Error = {l2_error:.4e} | H1 Error = {H1_error:.4e} | l1 mass = {mass_error:.4e}")
         # ...

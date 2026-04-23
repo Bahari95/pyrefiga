@@ -2,11 +2,9 @@ __all__ = ['assemble_matrix__un_ex01',
            'assemble_vector_un_ex01',
            'assemble_norm_ex02']
 
-#... utilities of poisson equation
 #==============================================================================
-#---2 : In adapted mesh Matrix
+#---2 : In Stiffness mesh Matrix for laplacian : FE space is different from mapping space
 #==============================================================================
-#---2 : In adapted mesh Matrix
 def assemble_matrix_un_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', p4:'int',
                             spans_1:'int[:]', spans_2:'int[:]',spans_3:'int[:,:]', spans_4:'int[:,:]',
                             basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]',  basis_3:'float64[:,:,:,:]', basis_4:'float64[:,:,:,:]',
