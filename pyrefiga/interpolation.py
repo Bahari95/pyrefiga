@@ -121,14 +121,14 @@ def least_square_Bspline(degree, knots, f):
     Pc[1:-1] = lu.solve(R)    
     return Pc
 
-def least_square_2dNURBspline(V, Q):
+def least_square_2dNURBspline(Vh, Q):
     """
     Least-squares projection onto a tensor-product NURBS surface.
     Boundary is treated first (1D LS), then interior is solved.
     """
-    p, q             = V.degree 
-    U, V             = V.knots
-    omega_u, omega_v = V.omega
+    p, q             = Vh.degree 
+    U, V             = Vh.knots
+    omega_u, omega_v = Vh.omega
 
     import numpy as np
     from scipy.sparse import csc_matrix, linalg as sla

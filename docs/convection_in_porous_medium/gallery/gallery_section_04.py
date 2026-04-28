@@ -113,7 +113,7 @@ def assemble_matrix_diff_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int'
                                     bj_x  = arr_J_mat0[g1,g2] * bj_x1 - arr_J_mat3[g1,g2] * bj_x2 
                                     bj_y  = arr_J_mat1[g1,g2] * bj_x2 - arr_J_mat2[g1,g2] * bj_x1 
                                     # ... nonlinear term semi-implicite
-                                    advec = dt * ratioPH * (  arr_dxst[g1,g2] * bi_y - arr_dyst[g1,g2] * bi_x ) * bj_0
+                                    advec = dt * ratioPH * (  -arr_dxst[g1,g2] * bj_y + arr_dyst[g1,g2] * bj_x ) * bi_0
 
                                     wvol  = weights_1[ie1, g1] * weights_2[ie2, g2]
 
