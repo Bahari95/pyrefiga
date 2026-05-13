@@ -249,8 +249,8 @@ def collocation_2dNURBspline(Vh, sol, xmp = None, adxmp = None):
       sx, sy  = np.meshgrid(u_k, v_l, indexing="ij")
       if adxmp is not None:
          #---Compute a image by initial mapping
-         sx   = sol_field_NURBS_2d((None, None), adxmp[0], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
-         sy   = sol_field_NURBS_2d((None, None), adxmp[1], Vh.omega, Vh.knots, Vh.degree, mesh=(sx, sy))[0]
+         sx   = sol_field_NURBS_2d((None, None), adxmp[0], adxmp[2].omega, adxmp[2].knots, adxmp[2].degree, mesh=(sx, sy))[0]
+         sy   = sol_field_NURBS_2d((None, None), adxmp[1], adxmp[2].omega, adxmp[2].knots, adxmp[2].degree, mesh=(sx, sy))[0]
       #---Compute a image by initial mapping
       sx, sy  = xmp.eval(mesh = (sx, sy))
       Q       = np.asarray(sol(sx, sy)).reshape(n_u, n_v)

@@ -27,11 +27,6 @@ assemble_norm_l2     = compile_kernel(assemble_norm_ex01, arity=1)
 
 #from matplotlib.pyplot import plot, show
 import matplotlib.pyplot            as     plt
-from   mpl_toolkits.axes_grid1      import make_axes_locatable
-from   mpl_toolkits.mplot3d         import axes3d
-from   matplotlib                   import cm
-from   mpl_toolkits.mplot3d.axes3d  import get_test_data
-from   matplotlib.ticker            import LinearLocator, FormatStrFormatter
 import numpy                        as     np
 font = {'family': 'serif', 
 	 'color':  'k', 
