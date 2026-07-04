@@ -315,7 +315,7 @@ def cubic_bspline_interpolation_1D(xgrid, g, gprime0, gprimeN, space = False):
     Assemble and solve the system A * eta = rhs for cubic spline interpolation
     with derivative boundary conditions.
     ----
-    g : evaluation at xgrid X ygrid
+    g : evaluation at xgrid
     gprime0 : direvative at boundary x = x0
     gprimeN : direvative at boundary x = xN 
     space   : if True we return sol and space
@@ -331,13 +331,12 @@ def cubic_bspline_interpolation_1D(xgrid, g, gprime0, gprimeN, space = False):
     # Matrix and RHS
     A       = StencilMatrix(V.vector_space, V.vector_space)
     rhs     = np.zeros(ncoef)
-    
     # 1. Left boundary derivative
     rhs[0]  = gprime0    
-    rhs[-1] = gprimeN
+    rhs[N+2]= gprimeN
     # 2. Interpolation at nodes
     cubic_Hmatrix(V, N+1, xgrid, A)
-    rhs[1:N+1] = g[0:N]    
+    rhs[1:-1] = g[:]    
 
     # solve for spline coefficients
     lu     = sla.splu(csc_matrix(A.tosparse()))

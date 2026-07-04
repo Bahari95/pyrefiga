@@ -1288,14 +1288,17 @@ def cubic_Hermit_matrix_grid(ne1:'int', points_1:'float64[:]', knots_1:'float64[
                 s2 = j
         #++++ depend on points
         i1 = ie1 + 1
+        # matrix[degree+i1, degree+ 1] = 1/6
+        # matrix[degree+i1, degree ]   = 4/6
+        # matrix[degree+i1, degree -1] = 1/6
         for il_2 in range(0, degree+1):
             i2 = span - degree + il_2
-            matrix[degree+i1, degree+ i2-i1] = ders[0,il_2]
+            matrix[degree+i1, degree+ i2-i1] += ders[0,il_2]
     h = knots_1[degree+1]-knots_1[degree]
-    matrix[degree,degree] = -1/(2*h)    # eta_{-1}
-    matrix[degree,degree+3] =  1/(2*h)  # eta_{0}
+    matrix[degree,degree]   = -3/(1*h)    # eta_{-1}
+    matrix[degree,degree+1] =  3/(1*h)  # eta_{0}
     #~~~~~~~~~~~~~~~
     span = len(knots_1)-1-degree-1
     h = knots_1[span+degree+1]-knots_1[span] #knots_1[degree+1]-knots_1[degree]
-    matrix[degree+span,degree-3] = 1/(2*h)   # eta_{N}
-    matrix[degree+span,degree] = -1/(2*h)    # eta_{N+1}
+    matrix[degree+span,degree-1] = -3/(1*h)   # eta_{N}
+    matrix[degree+span,degree]   =  3/(1*h)    # eta_{N+1}

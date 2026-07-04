@@ -17,7 +17,7 @@ from pyrefiga           import pyccel_sol_field_2d
 # ---------------------------------------------
 if __name__ == "__main__":
     # uniform grid
-    N = 100
+    N = 50
     x0, xN = 0.0, 1.0
     xgrid = np.linspace(x0, xN, N+1)
     h = xgrid[1]-xgrid[0]
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 # ---------------------------------------------
 if __name__ == "__main__":
     # uniform grid
-    N      = 100
+    N      = 50
     x0, xN = 0.0, 1.0
     xgrid  = np.linspace(x0, xN, N+1)
     h      = xgrid[1]-xgrid[0]

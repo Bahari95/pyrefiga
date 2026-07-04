@@ -435,7 +435,8 @@ def ViewGeo(geometry, Nump, nbpts=50, functions = None, Analytic = None, filenam
 
    print('#---: ', geometry, Nump)
    mp  = pyref_multipatch(geometry, Nump)
-   print("geom dim = ",mp.geo_dim)
+   #...
+   mp.detail()
    # ... save a solution as .vtm for paraview
    paraview_nurbsSolutionMultipatch(nbpts, mp, functions = functions, Analytic=Analytic, filename=filename)      
    #------------------------------------------------------------------------------

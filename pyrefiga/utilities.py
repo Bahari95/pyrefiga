@@ -1467,6 +1467,10 @@ class pyref_multipatch(object):
             raise TypeError('Expecting two dimensions TensorSpace')
     #.. print multipatch info
     def detail(self):
+        print(f"Geometry name : {self.geometryname}")
+        print(f"Patch IDs : {self.id_list}")
+        print(f"Dimension : {self.dim}D")
+        print(f"Geometric dimension : {self.geo_dim}D")
         print(f"Number of patches : {self.num_patches}")
         print("Interfaces between patches :")
         for interface in self.interfaces:
@@ -1755,17 +1759,25 @@ class pyrefInterface(object):
         print(f"Dirichlet BCs for patch {2} : {self.dirichlet_2}")
 
     def setInterface(self, xd1, xd2):
-        if self.interface[0] == 2 and self.interface[1] == 1:
-            xd1[-1,1:-1]   = 0.0 # Reset xd to zero
-            xd2[0,1:-1]    = 0.0 # Reset xd to zero
-        elif self.interface[0] == 1 and self.interface[1] == 2:
+        #set interface to zero, assuming the interface is along the edges/faces
+        if self.interface[0] == 1:
             xd1[0,1:-1]    = 0.0 # Reset xd to zero
-            xd2[-1,1:-1]   = 0.0 # Reset xd to zero
-        elif self.interface[0] == 3 and self.interface[1] == 4 :
+        elif self.interface[0] == 2:
+            xd1[-1,1:-1]   = 0.0 # Reset xd to zero
+        elif self.interface[0] == 3:
             xd1[1:-1,0]    = 0.0 # Reset xd to zero
-            xd2[1:-1,-1]   = 0.0 # Reset xd to zero
-        elif self.interface[0] == 4 and self.interface[1] == 3 :
+        elif self.interface[0] == 4:
             xd1[1:-1,-1]   = 0.0
+        else:
+            raise ValueError("Invalid interface configuration")
+        #... similarly for the second patch
+        if self.interface[1] == 1:
+            xd2[0,1:-1]    = 0.0 # Reset xd to zero
+        elif self.interface[1] == 2:
+            xd2[-1,1:-1]   = 0.0 # Reset xd to zero
+        elif self.interface[1] == 4 :
+            xd2[1:-1,-1]   = 0.0 # Reset xd to zero
+        elif self.interface[1] == 3 :
             xd2[1:-1,0]    = 0.0 # Reset xd to zero
         else:
             raise ValueError("Invalid interface configuration")
