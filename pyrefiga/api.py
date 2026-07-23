@@ -829,9 +829,9 @@ class StencilNitsche(object):
                 nS    = 1.
                 self.assemble_nitsche2dDirichlet(self._Alldomain, fields=[u11_mph, u12_mph, self.u_d[patch_nb-1]], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, 0.*self.Kappa, 0.*self.normS, nS], out = u_tmp)
                 u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
-                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = u_tmp[:]
+                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += u_tmp[:]
             # ...
-            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = rhs[:]
+            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
         else:
             if Nitsche_dir:
                 print("Dirichlet Nitsche contribution is assembled in strong form, not tested yet")
@@ -849,9 +849,9 @@ class StencilNitsche(object):
                 self.assemble_nitsche2dDirichlet(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph, self.u_d[patch_nb-1]], knots=True, value=[spansx, spansy, basisx, basisy, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, 0.*self.Kappa, 0.*self.normS, nS], out = u_tmp)
                 assert not np.isnan(u_tmp._data).any(), "Dirichlet Nitsche Stencile vector contains NaNs"
                 u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
-                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = u_tmp[:]
+                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += u_tmp[:]
             # ...
-            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = rhs[:]
+            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
         # ...
         return
     #...

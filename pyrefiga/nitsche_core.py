@@ -1476,7 +1476,7 @@ def assemble_matrix_DiffSpaceoffdiagnitsche(
                         wvol  = weights_2[ie2, g2]
                         # ... 0.5*u2*v1_n
                         v    +=  normalS * (bj_0 * comp_1)  * wvol
-                         # ... 0.5*u2*v1_n
+                        # ... 0.5*u2*v1_n
                         vip  +=  normalS * (bj_0 * comp_3)  * wvol
                     matrix[p1+spans_1[ne1-1], p2+i2, p1, p2+j2-i2]   += v
                     matrix[p1+spans_1[ne1-1]-1, p2+i2, p1+1, p2+j2-i2] += vip

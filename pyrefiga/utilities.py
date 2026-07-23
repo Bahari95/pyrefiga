@@ -1426,7 +1426,16 @@ class pyref_multipatch(object):
     #         patch_tmp = self.patch_connection(num_patch)
     #     return 0
 
-    #.. get interfaces for a given patch
+    #... get neighbors for a given patch : list of [patch_nb, interface_nb]
+    def getNeighbors(self, num_patch):
+        neighbors = []
+        for interface in self.interfaces:
+            if interface[0] == num_patch:
+                neighbors.append([interface[1], interface[2][0]])
+            if interface[1] == num_patch:
+                neighbors.append([interface[0], interface[2][1]])
+        return np.asarray(neighbors)    
+    #... get interfaces for a given patch
     def getInterfacePatch(self, num_patch):
         interface_patch = []
         for interface in self.interfaces:
