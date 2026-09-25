@@ -108,7 +108,8 @@ from pyrefiga.api import (assemble_matrix,
                           assemble_scalar, 
                           compile_kernel,
                           StencilNitsche, 
-                          apply_dirichlet, 
+                          apply_dirichlet,
+                          apply_zeros,
                           apply_periodic)
 
 from pyrefiga.interpolation import (least_square_NURBspline,

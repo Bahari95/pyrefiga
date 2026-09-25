@@ -92,7 +92,7 @@ def assemble_matrix_ad_ex11(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'i
                                     bj_y = arr_J_mat1[g1,g2] * bj_x2 - arr_J_mat2[g1,g2] * bj_x1 
 
                                     # ...
-                                    wvol = weights_2[ie1, g1] * weights_2[ie2, g2] / J_mat[g1,g2]
+                                    wvol = weights_1[ie1, g1] * weights_2[ie2, g2] / J_mat[g1,g2]
                                     # ...mu, lanbda
                                     v += (lanbda * bj_x * bi_x + mu * bj_y * bi_y) * wvol
 
@@ -185,7 +185,7 @@ def assemble_matrix_ad_ex12(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'i
                                     bj_y = arr_J_mat1[g1,g2] * bj_x2 - arr_J_mat2[g1,g2] * bj_x1 
 
                                     # ...
-                                    wvol = weights_2[ie1, g1] * weights_2[ie2, g2] / J_mat[g1,g2]
+                                    wvol = weights_1[ie1, g1] * weights_2[ie2, g2] / J_mat[g1,g2]
                                     # ...mu, lanbda
                                     v += (mu * bj_x * bi_y + lanbda * bj_y * bi_x) * wvol
 

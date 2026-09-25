@@ -7,7 +7,7 @@ from .linalg import StencilMatrix
 from .linalg import StencilVector
 from .spaces import TensorSpace
 
-__all__ = ['assemble_matrix', 'assemble_vector', 'assemble_scalar', 'compile_kernel', 'StencilNitsche', 'apply_dirichlet', 'apply_periodic']
+__all__ = ['assemble_matrix', 'assemble_vector', 'assemble_scalar', 'compile_kernel', 'StencilNitsche', 'apply_dirichlet', 'apply_zeros', 'apply_periodic']
 
 #==============================================================================
 def assemble_matrix(core, V, fields=None, knots = None, value = None, out=None):
@@ -807,7 +807,7 @@ class StencilNitsche(object):
     #-------------------------------------------------
     # assemble Nitsche's Dirichlet contribution
     #-------------------------------------------------
-    def assemble_nitsche_dirichlet(self, rhs, patch_nb, Nitsche_dir = False):
+    def assemble_nitsche_dirichlet(self, rhs, patch_nb, accumulate = False, Nitsche_dir = False):
         '''
         Docstring for assemble_nitsche_dirichlet: assemble rhs vector for Laplace operator
         
@@ -815,6 +815,7 @@ class StencilNitsche(object):
         :param u_d: stencile vector
         :param patch_nb: patch number start from 1
         ! param Nitsche_dir:  Nitsche Dirichlet contribution
+        ! param accumulate: whether to accumulate the result into the existing rhs
         '''
         # assert isinstance(u_d, StencilVector)
         if self.admp is None:
@@ -831,7 +832,10 @@ class StencilNitsche(object):
                 u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += u_tmp[:]
             # ...
-            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
+            if accumulate:
+                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
+            else:
+                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = rhs[:]
         else:
             if Nitsche_dir:
                 print("Dirichlet Nitsche contribution is assembled in strong form, not tested yet")
@@ -851,7 +855,10 @@ class StencilNitsche(object):
                 u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += u_tmp[:]
             # ...
-            self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
+            if accumulate:
+                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
+            else:
+                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = rhs[:]
         # ...
         return
     #...
@@ -1201,6 +1208,44 @@ def apply_dirichlet(V, x, dirichlet = True, update = None, periodic = [False, Fa
             return  u
         else:
             raise NotImplementedError('Only 1d, 2d and 3d are available')
+
+
+def apply_zeros(V, x, row_dirichlet=True, col_dirichlet=None):
+    """Remove selected rows and columns from a stencil matrix."""
+    if not isinstance(x, StencilMatrix):
+        raise TypeError('Expecting a StencilMatrix')
+
+    if col_dirichlet is None:
+        col_dirichlet = row_dirichlet
+
+    if V.dim == 1:
+        npts = (V.nbasis,)
+    elif V.dim == 2:
+        npts = tuple(V.nbasis)
+    elif V.dim == 3:
+        npts = tuple(V.nbasis)
+    else:
+        raise NotImplementedError('Only 1d, 2d and 3d are available')
+
+    def free_indices(dirichlet):
+        if V.dim == 1:
+            if isinstance(dirichlet, bool):
+                dirichlet = [dirichlet, dirichlet]
+            starts = [1 if dirichlet[0] else 0]
+            stops = [npts[0] - 1 if dirichlet[1] else npts[0]]
+        else:
+            if isinstance(dirichlet, bool):
+                dirichlet = [[dirichlet, dirichlet] for _ in range(V.dim)]
+            starts = [1 if boundary[0] else 0 for boundary in dirichlet]
+            stops = [n - 1 if boundary[1] else n for n, boundary in zip(npts, dirichlet)]
+
+        grid = np.arange(np.prod(npts)).reshape(npts)
+        return grid[tuple(slice(start, stop) for start, stop in zip(starts, stops))].ravel()
+
+    matrix = x.tosparse().tocsr()
+    rows = free_indices(row_dirichlet)
+    cols = free_indices(col_dirichlet)
+    return matrix[rows][:, cols].tocoo()
 
 
 #============================================================================== TODO SHOULD STAY IN STENCIL FORMAT

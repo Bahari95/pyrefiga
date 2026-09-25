@@ -102,7 +102,7 @@ def projection_solve(V, pyrefMP):
         # ... extract solution
         u1              = Ni.extract_sol(x, patch_nb)
         # ... to array
-        x1              = u1.toarray().reshape(V.nbasis)
+        x1              = u1.tensor
         x_sol.append(x1)
         u_sol.append(u1)
         #... mapping in Stencil format
@@ -153,7 +153,7 @@ g         = ['x**2+y**2']
 # geometry = load_xml('quart_annulus.xml')
 # idmp     = (0,1)
 geometry = load_xml('annulus.xml')
-idmp     = (0,1,2,3)
+idmp     = (1,2,0)
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)
 

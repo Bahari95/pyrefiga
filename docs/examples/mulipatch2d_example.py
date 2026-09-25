@@ -160,7 +160,7 @@ g         = ['np.sin(4.*np.pi*x)*np.sin(4.*np.pi*y)']
 # geometry = load_xml('quart_annulus.xml')
 # idmp     = (0,1)
 geometry = load_xml('annulus.xml')
-idmp     = (0,1,2,3)
+idmp     = (0,1,2)
 # ...
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)

@@ -14,16 +14,16 @@ from pyrefiga import StencilMatrix
 from pyrefiga import StencilVector
 from pyrefiga import sol_field_NURBS_2d
 from pyrefiga import prolongation_matrix
-from pyrefiga import getGeometryMap
+from pyrefiga import load_xml,pyref_patch
 
 import time
 
 # Import assembly routines for elasticity equation
-from examples.gallery.gallery_section_05 import assemble_matrix_ad_ex11  
-from examples.gallery.gallery_section_05 import assemble_matrix_ad_ex12  
-from examples.gallery.gallery_section_05 import assemble_vector_ex12
-from examples.gallery.gallery_section_05 import assemble_vector_ex22
-from examples.gallery.gallery_section_05 import assemble_norm_ex02  
+from gallery.gallery_section_05 import assemble_matrix_ad_ex11  
+from gallery.gallery_section_05 import assemble_matrix_ad_ex12  
+from gallery.gallery_section_05 import assemble_vector_ex12
+from gallery.gallery_section_05 import assemble_vector_ex22
+from gallery.gallery_section_05 import assemble_norm_ex02  
 
 assemble11_stiffness  = compile_kernel( assemble_matrix_ad_ex11, arity=2)
 assemble12_stiffness  = compile_kernel( assemble_matrix_ad_ex12, arity=2)
@@ -60,8 +60,8 @@ def Elasticity_solve(V1, V2 , V, En, nu, Tx, u11_mae = None, u12_mae = None):
     lanbda_3d       = nu*En/((1+nu)*(1-2.*nu))
     lanbda          = 2.*lanbda_3d*mu/(lanbda_3d+2.*mu)
 
-    n_basis         = V1.nbasis*(V2.nbasis-1+1)
-    V_basis         = (V1.nbasis,V2.nbasis-1+1)
+    n_basis         = V1.nbasis*(V2.nbasis-1)
+    V_basis         = (V1.nbasis,V2.nbasis-1)
     u1              = StencilVector(V.vector_space)
     u2              = StencilVector(V.vector_space)
 
@@ -70,10 +70,14 @@ def Elasticity_solve(V1, V2 , V, En, nu, Tx, u11_mae = None, u12_mae = None):
     stiffness11     = apply_dirichlet(V, stiffness11, dirichlet = [[False,False], [False,True]])    
 
     stiffness12     = assemble12_stiffness(V, fields=[u11_mae, u12_mae], value = [ mu, lanbda])
-    stiffness12     = apply_zeros(V, stiffness12, app_zeros = [[False,False], [False,True]])
+    stiffness12     = apply_zeros(V, stiffness12,
+                                  row_dirichlet = [[False,False], [False,True]],
+                                  col_dirichlet = [[False,False], [True,False]])
 
     stiffness21     = assemble12_stiffness(V, fields=[u11_mae, u12_mae], value = [ lanbda, mu])
-    stiffness21     = apply_zeros(V, stiffness21, app_zeros = [[False,False], [True,False]])
+    stiffness21     = apply_zeros(V, stiffness21,
+                                  row_dirichlet = [[False,False], [True,False]],
+                                  col_dirichlet = [[False,False], [False,True]])
 
     stiffness22     = assemble11_stiffness(V, fields=[u11_mae, u12_mae], value = [ (2.*mu+lanbda), mu])
     stiffness22     = apply_dirichlet(V, stiffness22, dirichlet = [[False,False], [True,False]])
@@ -87,14 +91,14 @@ def Elasticity_solve(V1, V2 , V, En, nu, Tx, u11_mae = None, u12_mae = None):
 
     # Build global linear system
     M                          = zeros((n_basis*2,n_basis*2))
-    M[:n_basis,:n_basis]       = (stiffness11.tosparse()).toarray()[:,:]
-    M[:n_basis,n_basis:]       = (stiffness12.tosparse()).toarray()[:,:]
-    M[n_basis:,:n_basis]       = (stiffness21.tosparse()).toarray()[:,:]
-    M[n_basis:,n_basis:]       = (stiffness22.tosparse()).toarray()[:,:]
+    M[:n_basis,:n_basis]       = stiffness11.toarray()
+    M[:n_basis,n_basis:]       = stiffness12.toarray()
+    M[n_basis:,:n_basis]       = stiffness21.toarray()
+    M[n_basis:,n_basis:]       = stiffness22.toarray()
 
     b                          = zeros(n_basis*2)
-    b[:n_basis]                = rhs1.toarray()[:] 
-    b[n_basis:]                = rhs2.toarray()[:]
+    b[:n_basis]                = rhs1[:]
+    b[n_basis:]                = rhs2[:]
 
     # Solve the linear system using GMRES
     M               =  csc_matrix(M)
@@ -102,11 +106,11 @@ def Elasticity_solve(V1, V2 , V, En, nu, Tx, u11_mae = None, u12_mae = None):
 
     # Extract solution and convert to field representation
     x1             = zeros(V.nbasis)
-    x1[:,:]        = (x[:n_basis]).reshape(V_basis)
+    x1[:,:-1]      = (x[:n_basis]).reshape(V_basis)
     u1.from_array(V, x1)
 
-    x2             = zeros(V.nbasis)    
-    x2[:,:]        = (x[n_basis:]).reshape(V_basis)
+    x2             = zeros(V.nbasis)
+    x2[:,1:]       = (x[n_basis:]).reshape(V_basis)
     u2.from_array(V, x2)
 
     # Compute L2 norm of the error
@@ -138,7 +142,8 @@ order_cv        = 0. # Convergence order
 #------------------------------------------------------------------------------
 # Geometry mapping and mesh refinement loop
 start          = time.time()
-mp             = getGeometryMap('../fields/elasticity.xml', 0)
+geometry       = load_xml('annulus.xml')
+mp             = pyref_patch(geometry, 0)
 
 mp.nurbs_check = True # Use NURBS mapping
 degree         = mp.degree
