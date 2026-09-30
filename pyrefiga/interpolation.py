@@ -336,6 +336,7 @@ def cubic_bspline_interpolation_1D(xgrid, g, gprime0, gprimeN, space = False):
     rhs[N+2]= gprimeN
     # 2. Interpolation at nodes
     cubic_Hmatrix(V, N+1, xgrid, A)
+    print(A.tosparse())
     rhs[1:-1] = g[:]    
 
     # solve for spline coefficients
@@ -385,10 +386,10 @@ def cubic_bspline_interpolation_2D(xgrid, ygrid, g, gprimex, gprimey, corners, s
     # ... rhs for cubic interpolation
     rhs[1:-1,1:-1] = g[:,:] # points interpolation
     # ... derivatives
-    rhs[0, 1:-1] = gprimex0[0] # dx at x=0
-    rhs[-1,1:-1] = gprimexN[1] # dx at x=1
-    rhs[1:-1, 0] = gprimey0[0] # dy at y=0
-    rhs[1:-1,-1] = gprimeyN[1] # dy at y=1
+    rhs[0, 1:-1] = gprimex0 # dx at x=0
+    rhs[-1,1:-1] = gprimexN # dx at x=1
+    rhs[1:-1, 0] = gprimey0 # dy at y=0
+    rhs[1:-1,-1] = gprimeyN # dy at y=1
     # corners
     rhs[ 0, 0]   = corners[0]
     rhs[ 0,-1]   = corners[1]

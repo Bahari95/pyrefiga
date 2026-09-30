@@ -11,13 +11,14 @@ from pyrefiga           import cubic_bspline_interpolation_2D
 import numpy            as np
 from pyrefiga           import pyccel_sol_field_1d
 from pyrefiga           import pyccel_sol_field_2d
+import matplotlib.pyplot as plt
 
 # ---------------------------------------------
 # Example usage
 # ---------------------------------------------
 if __name__ == "__main__":
     # uniform grid
-    N = 50
+    N = 10
     x0, xN = 0.0, 1.0
     xgrid = np.linspace(x0, xN, N+1)
     h = xgrid[1]-xgrid[0]
@@ -46,7 +47,7 @@ if __name__ == "__main__":
 # ---------------------------------------------
 if __name__ == "__main__":
     # uniform grid
-    N      = 50
+    N      = 10
     x0, xN = 0.0, 1.0
     xgrid  = np.linspace(x0, xN, N+1)
     h      = xgrid[1]-xgrid[0]
@@ -55,12 +56,17 @@ if __name__ == "__main__":
     # function and derivative at boundaries
     f       = lambda x,y : np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
     dxf     = lambda x,y : 2*np.pi*np.cos(2*np.pi*x)*np.sin(2*np.pi*y)
+    dxxf    = lambda x,y : -4*np.pi**2*np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
     dyf     = lambda x,y : 2*np.pi*np.sin(2*np.pi*x)*np.cos(2*np.pi*y)
+    dyyf    = lambda x,y : -4*np.pi**2*np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
     dxyf    = lambda x,y : 2*np.pi*2*np.pi*np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
-
-    g       = f(X.T, Y.T) 
+    g       = np.zeros((N+1, N+1))
+    for i in range(N+1):
+        for j in range(N+1):
+            g[i,j] = f(xgrid[i], xgrid[j])
+    # g       = f(X.T, Y.T) 
     gprimex = [dxf(xgrid[0],xgrid),dxf(xgrid[-1],xgrid)]
-    gprimey = [dxf(xgrid, xgrid[-1]), dxf(xgrid, xgrid[-1])]
+    gprimey = [dyf(xgrid, xgrid[0]), dyf(xgrid, xgrid[-1])]
 
     corners = [dxyf(xgrid[0], xgrid[0]), 
                dxyf(xgrid[0], xgrid[-1]), 
