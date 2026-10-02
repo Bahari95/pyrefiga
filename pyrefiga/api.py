@@ -297,21 +297,15 @@ class StencilNitsche(object):
         # .. assemble Nitsche's matrices
         #-------------------------------
         if ad_mapping is None:
-            if W.dim == V.dim:
-                #If True, use the same space for geometry and solution (default is True).
-                #... using same spaces for FE analysis V and  Multipatch W
-                self.assemble_nitsche2dDiag        = partial(assemble_matrix, core.assemble_matrix_diagnitsche)
-                self.assemble_nitsche2dUnderDiag   = partial(assemble_matrix, core.assemble_matrix_offdiagnitsche)        
-            else:
-                #... using different spaces for FE analysis V and  Multipatch W
-                self.assemble_nitsche2dDiag        = partial(assemble_matrix, core.assemble_matrix_DiffSpacediagnitsche)
-                self.assemble_nitsche2dUnderDiag   = partial(assemble_matrix, core.assemble_matrix_DiffSpaceoffdiagnitsche)
-                self.assemble_nitsche2dDirichlet   = partial(assemble_vector, core.assemble_vector_Dirichlet)
+            assert (V.dim != W.dim), ' please don t use the same space for geometry and solution (default is True)'
+            #... using different spaces for FE analysis V and  Multipatch W
+            self.assemble_nitsche2dDiag        = partial(assemble_matrix, core.assemble_matrix_DiffSpacediagnitsche)
+            self.assemble_nitsche2dUnderDiag   = partial(assemble_matrix, core.assemble_matrix_DiffSpaceoffdiagnitsche)
+            # self.assemble_nitsche2dDirichlet   = partial(assemble_vector, core.assemble_vector_Dirichlet)
         else:
             #... using different spaces for FE analysis V and  Multipatch W
             self.assemble_nitsche2dDiag        = partial(assemble_matrix, adcore.assemble_matrix_DiffSpacediagnitsche)
             self.assemble_nitsche2dUnderDiag   = partial(assemble_matrix, adcore.assemble_matrix_DiffSpaceoffdiagnitsche)
-            self.assemble_nitsche2dDirichlet   = partial(assemble_vector, adcore.assemble_vector_Dirichlet)
         self._newdim    = (0,0)
         self.new_id     = {}
         self.old_id     = {}
@@ -617,6 +611,7 @@ class StencilNitsche(object):
         d2 = self.elim_index[patch_nb-1,0,1]
         d3 = self.elim_index[patch_nb-1,1,0]
         d4 = self.elim_index[patch_nb-1,1,1]
+        # same problem here i suppose always 1-2 and 3-4 
         # Range of data owned by local process (no ghost regions)
         local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
         index_coll = 0
@@ -705,6 +700,7 @@ class StencilNitsche(object):
                 patch_nb_n     = interface[1]
                 # ... get interface mappings
                 interface_like = interface[2][0]
+                interface_likeL= interface[2][1]
                 # assemble mappings for patches
                 u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
                 u21_mph, u22_mph = self.mp.stencil_mapping(patch_nb_n)
