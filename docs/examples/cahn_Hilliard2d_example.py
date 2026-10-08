@@ -7,6 +7,7 @@ Example:
 Use --plot to export and open the resulting .pvd file in ParaView.
 Periodic reduction retains stencil storage; convert explicitly at the SciPy
 solver boundary. Exported coefficients include their periodic copies.
+Author: M. BAHARI
 """
 
 import argparse

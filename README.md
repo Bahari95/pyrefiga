@@ -16,13 +16,13 @@ This project is licensed under the GNU GPL v3.0, as it includes and modifies cod
 
     Fast solvers
 
-    Examples on Poisson, Cahn-Hilliard, and Elasticity problems ...
+    Examples on Poisson, Cahn-Hilliard, and Elasticity problems(not yet!) ...
 
     It supports mappings defined by composition.
 
     Adaptation to complex 2D and 3D geometries
 
-    Enhancements for multipatch domains (coming soon)
+    Enhancements for multipatch domains (2D)
 
     Improvements to solver stability and adaptive mesh refinement
 
@@ -60,5 +60,18 @@ You can explore and run some tests in the "tests" folder or review the content i
 You may work in the **newFolder** for your tasks, as it has been created automatically for you.
 
 ## Example
+
+The [periodic curl-curl example](docs/examples/curlcurl2d_example.py) uses
+compatible IGA H(curl) spaces and leapfrog time stepping. See
+[the solver documentation](docs/curlcurl.md) for periodic boundary conditions,
+source terms and ParaView output.
+
+The [generalized-alpha Cahn–Hilliard example](docs/examples/cahn_Hilliard2d_Galpha_example.py)
+adds adaptive time stepping and ParaView export. See
+[its documentation](docs/cahn_hilliard_galpha.md) for time-step tolerances and controls.
+
+```bash
+PYTHONPATH=. python docs/examples/curlcurl2d_example.py --nelements 8 --steps 20 --export
+```
 
 ![PNG](https://github.com/Bahari95/pyrefiga/blob/main/r_adaptive_refinement/adaptive_meshes.png)

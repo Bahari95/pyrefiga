@@ -124,3 +124,5 @@ from pyrefiga.post_processing_paraview import(paraview_nurbsAdMeshMultipatch,
                                             paraview_nurbsSolutionMultipatch,
                                             paraview_TimeSolutionMultipatch,
                                             ViewGeo)
+
+from pyrefiga.maxwell import PeriodicCurlCurl2D, CurlCurlLeapfrog

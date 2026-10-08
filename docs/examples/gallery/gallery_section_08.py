@@ -7,7 +7,7 @@ __all__ = ['assemble_matrix_ex03',
 
 #==============================================================================
 #---2 : In adapted mesh
-def assemble_matrix_ex03(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', dt:'float', alpha:'int', matrix:'float64[:,:,:,:]'):
+def assemble_matrix_ex03(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[:]', spans_2:'int[:]', basis_1:'float64[:,:,:,:]', basis_2:'float64[:,:,:,:]', weights_1:'float64[:,:]', weights_2:'float64[:,:]', points_1:'float64[:,:]', points_2:'float64[:,:]', vector_u:'float64[:,:]', dt:'float', alpha:'int', rho_inf:'float', matrix:'float64[:,:,:,:]'):
 
     # ... sizes
     from numpy import zeros
@@ -23,7 +23,6 @@ def assemble_matrix_ex03(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[
     arr_uxx    = zeros((k1,k2))
     arr_uyy    = zeros((k1,k2))
     #...
-    rho_inf    = 0.5
     alpha_m    = 0.5 * ((3. - rho_inf)/(1. + rho_inf))
     alpha_f    = 1/(1. + rho_inf)
     gamma      = 0.5 + alpha_m - alpha_f
@@ -106,10 +105,10 @@ def assemble_matrix_ex03(ne1:'int', ne2:'int', p1:'int', p2:'int', spans_1:'int[
                                     uyy  = arr_uyy[g1,g2]                                    
                                     #..
                                     R_1  = ( (3.*alpha/(2.*theta))*(1.-4.*theta*u*(1.-u)) + (1.-2.*u)*(uxx+uyy) ) * (bj_x1*bi_x1 + bj_x2 * bi_x2)
-                                    R_2  = ( (-6.*alpha)*(1.-2.*u)*bi_0 - 2.*bi_0*(uxx+uyy) + (1.-2.*u)*(bi_xx+bi_yy) ) * (bj_x1*ux + bj_x2 * uy)
+                                    R_2  = ( (-6.*alpha)*(1.-2.*u)*bj_0 - 2.*bj_0*(uxx+uyy) + (1.-2.*u)*(bj_xx+bj_yy) ) * (bi_x1*ux + bi_x2 * uy)
                                     #...
                                     R_3  = (bj_xx+bj_yy)*(bi_xx+bi_yy)*u*(1.-u)
-                                    R_4  = (bj_xx+bj_yy)*(uxx+uyy)*(1.-2.*u)*bi_0
+                                    R_4  = (bi_xx+bi_yy)*(uxx+uyy)*(1.-2.*u)*bj_0
                                     
                                     wvol  = weights_1[ie1, g1] * weights_2[ie2, g2]
 
