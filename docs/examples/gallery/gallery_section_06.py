@@ -103,7 +103,7 @@ def assemble_matrix_un_ex01(ne1:'int', ne2:'int', p1:'int', p2:'int', p3:'int', 
 
                                     wvol  = weights_1[ie1, g1] * weights_2[ie2, g2]
 
-                                    v    += (bi_x * bj_x + bi_y * bj_y ) * wvol / J_mat[g1,g2] + (bi_0 * -1 * bj_x + bi_0 * 0.*bj_y ) * wvol
+                                    v    += (bi_x * bj_x + bi_y * bj_y ) * wvol / J_mat[g1,g2]
 
                             matrix[p1+i1, p2+i2, p1+j1-i1, p2+j2-i2]  += v
     # ...

@@ -84,7 +84,7 @@ def projection_solve(V, pyrefMP):
         rhs        = apply_dirichlet(V, rhs, dirichlet = False)
         # print("shape in ", patch_nb, "is", rhs.shape)
         # ...
-        Ni.assemble_nitsche_dirichlet(rhs, patch_nb, False)
+        Ni.assemble_nitsche_rhs(rhs, patch_nb, False)
         # ...
     #=============================================
     # # # Assemble Nitsche's off diagonal matrices

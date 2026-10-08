@@ -56,9 +56,7 @@ if __name__ == "__main__":
     # function and derivative at boundaries
     f       = lambda x,y : np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
     dxf     = lambda x,y : 2*np.pi*np.cos(2*np.pi*x)*np.sin(2*np.pi*y)
-    dxxf    = lambda x,y : -4*np.pi**2*np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
     dyf     = lambda x,y : 2*np.pi*np.sin(2*np.pi*x)*np.cos(2*np.pi*y)
-    dyyf    = lambda x,y : -4*np.pi**2*np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
     dxyf    = lambda x,y : 2*np.pi*2*np.pi*np.sin(2*np.pi*x)*np.sin(2*np.pi*y)
     g       = np.zeros((N+1, N+1))
     for i in range(N+1):
@@ -81,7 +79,7 @@ if __name__ == "__main__":
     # g    = f(X.T, Y.T)
     # eta  = least_square_2dNURBspline(Vh.degree[0], Vh.degree[1], Vh.knots[0], Vh.knots[1], Vh.omega[0], Vh.omega[1], g)
 
-    S, Sx, Sy, X, Y = pyccel_sol_field_2d((100,100),  eta, Vh.knots, Vh.degree) 
+    S, Sx, Sy, X, Y = pyccel_sol_field_2d((100,100),  eta, Vh.knots, Vh.degree)
 
     plt.figure()
     plt.contourf(X, Y, S)

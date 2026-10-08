@@ -1249,6 +1249,7 @@ class pyref_multipatch(object):
         num_patches         = len(mp)
         #... list of interfaces (patch1, patch2, [edge_patch1, edge_patch2])
         interfaces          = []
+        interface_reversed  = {}
         #... list of patches connection (interface, pach next)
         # patch_connection = {} TODO L shape
         #... First we assume all boundaries are Dirichlet
@@ -1264,6 +1265,7 @@ class pyref_multipatch(object):
                     continue
                 # ...
                 interfaces.append( (i+1, j+1, interface_obj.interface) )
+                interface_reversed[(i+1, j+1)] = getattr(interface_obj, 'reversed', False)
                 #... set the Dirichlet BCs False for the interface edges
                 dirichlet[i,idmapping[interface_obj.interface[0]][0],idmapping[interface_obj.interface[0]][1]] = False
                 dirichlet[j,idmapping[interface_obj.interface[1]][0],idmapping[interface_obj.interface[1]][1]] = False
@@ -1276,6 +1278,7 @@ class pyref_multipatch(object):
         # ...
         self.num_patches      = num_patches
         self.interfaces       = interfaces
+        self.interface_reversed = interface_reversed
         self.dirichlet        = dirichlet.tolist()
         self.geometryname     = geometryname
         self.id_list          = id_list
@@ -1415,6 +1418,58 @@ class pyref_multipatch(object):
     #.. get interfaces
     def getInterfaces(self):
         return self.interfaces
+
+    def isInterfaceReversed(self, interface):
+        """Whether increasing trace parameters run in opposite directions."""
+        return self.interface_reversed[(interface[0], interface[1])]
+
+    def getCornerGroups(self):
+        """Connected copies of patch vertices, including interface junctions."""
+        if self.dim != 2:
+            return []
+        parent = {(p, u, v): (p, u, v)
+                  for p in range(1, self.nb_patches+1) for u in (0, 1) for v in (0, 1)}
+
+        def find(vertex):
+            while parent[vertex] != vertex:
+                parent[vertex] = parent[parent[vertex]]
+                vertex = parent[vertex]
+            return vertex
+
+        for interface in self.getInterfaces():
+            p, q, edges = interface
+            reverse = self.isInterfaceReversed(interface)
+            for endpoint in (0, 1):
+                vertices = []
+                for patch_nb, edge, t in ((p, edges[0], endpoint),
+                                          (q, edges[1], 1-endpoint if reverse else endpoint)):
+                    axis, side = (edge-1)//2, (edge-1)%2
+                    uv = [t, t]
+                    uv[axis] = side
+                    vertices.append((patch_nb, *uv))
+                parent[find(vertices[1])] = find(vertices[0])
+        groups = {}
+        for vertex in parent:
+            groups.setdefault(find(vertex), []).append(vertex)
+        return list(groups.values())
+
+    def getDirichletCornerGroups(self):
+        """A vertex is prescribed if any connected patch has a Dirichlet edge."""
+        return [group for group in self.getCornerGroups()
+                if any(self.getDirPatch(p)[0][u] or self.getDirPatch(p)[1][v]
+                       for p, u, v in group)]
+
+    def propagate_dirichlet_corners(self, V, u_d):
+        """Copy prescribed vertex values to patches with only interface edges there."""
+        for group in self.getDirichletCornerGroups():
+            donors = [(p, u, v) for p, u, v in group
+                      if self.getDirPatch(p)[0][u] or self.getDirPatch(p)[1][v]]
+            values = [u_d[p-1][u*(V.nbasis[0]-1), v*(V.nbasis[1]-1)]
+                      for p, u, v in donors]
+            if not np.allclose(values, values[0], rtol=1e-10, atol=1e-12):
+                raise ValueError("Incompatible Dirichlet values at a shared patch corner")
+            for p, u, v in group:
+                u_d[p-1][u*(V.nbasis[0]-1), v*(V.nbasis[1]-1)] = values[0]
     
     #.. get dirichlet BCs for a given patch
     def getDirPatch(self, num_patch):
@@ -1471,6 +1526,7 @@ class pyref_multipatch(object):
                 # Assemble Dirichlet boundary conditions
                 u_d1 = build_dirichlet(V, g, map = (xmp, ymp, self.space), Boundaries  = self.getDirichletBoundaries(patch_nb))[1]
                 u_d.append(u_d1)
+            self.propagate_dirichlet_corners(V, u_d)
             return u_d
         else:
             raise TypeError('Expecting two dimensions TensorSpace')
@@ -1624,6 +1680,10 @@ class pyrefInterface(object):
                 for j, edge_j in enumerate(edges_mp1, start=1):
                     if _coords_match_with_orientation(edge_i, edge_j):
                         self.interface = [i, j]
+                        self.reversed = not all(
+                            np.allclose(a, b, rtol=0.0, atol=1e-15)
+                            for a, b in zip(edge_i, edge_j)
+                        )
 
                         self.dirichlet_1 = [[True, True], [True, True]]
                         self.dirichlet_2 = [[True, True], [True, True]]

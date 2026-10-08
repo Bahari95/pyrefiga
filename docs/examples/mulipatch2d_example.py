@@ -87,7 +87,7 @@ def poisson_solve(V, pyrefMP, u_d):
         rhs        = apply_dirichlet(V, rhs, dirichlet = pyrefMP.getDirPatch(patch_nb))
         # print("shape in ", patch_nb, "is", rhs.shape)
         # ...
-        Ni.assemble_nitsche_dirichlet(rhs, patch_nb)
+        Ni.assemble_nitsche_rhs(rhs, patch_nb)
         # ...
     #=============================================
     # # # Assemble Nitsche's off diagonal matrices
@@ -95,7 +95,9 @@ def poisson_solve(V, pyrefMP, u_d):
     M       = Ni.nitsche_merge()
     b       = Ni.nitsche_merge_rhs()
     # print("after merge", b.shape, b)
-    x, inf  = sla.cg(M, b, rtol=1e-30)
+    lu      = sla.splu(M.tocsc())
+    x       = lu.solve(b)
+    # x, inf  = sla.cg(M, b, rtol=1e-30)
     l2_norm = 0.
     H1_norm = 0.
     x_sol   = []
@@ -105,7 +107,7 @@ def poisson_solve(V, pyrefMP, u_d):
         # ... extract solution
         u1              = Ni.extract_sol(x, patch_nb)
         # ... to array
-        x1              = u1.toarray().reshape(V.nbasis)
+        x1              = u1.tensor
         x_sol.append(x1)
         u_sol.append(u1)
         #... mapping in Stencil format
@@ -140,7 +142,7 @@ print("(#=assembled Dirichlet, #=solve poisson)\n")
 # Define exact solution and Dirichlet boundary condition
 #------------------------------------------------------------------------------
 # Test 0
-g         = ['np.sin(4.*np.pi*x)*np.sin(4.*np.pi*y)']
+g         = ['np.sin(1.*np.pi*x)*np.sin(1.*np.pi*y)']
 # Test 1
 #g         = ['1./(1.+np.exp((x + y  - 0.5)/0.01) )']
 # Test 2
@@ -151,16 +153,16 @@ g         = ['np.sin(4.*np.pi*x)*np.sin(4.*np.pi*y)']
 #------------------------------------------------------------------------------
 # Load CAD geometry
 #------------------------------------------------------------------------------
-# geometry = load_xml('unitSquare.xml')
-# idmp = (0,1, 2, 3) # L shape TODO
+geometry = load_xml('unitSquare.xml')
+idmp = (0,1,2,3) # L shape TODOk
 # geometry = load_xml('triangle.xml')
-# idmp = (0,1, 2) # L shape TODO
+# idmp = ( 0, 1, 2)
 # geometry = load_xml('lshape.xml')
 # idmp = (0,1)
 # geometry = load_xml('quart_annulus.xml')
 # idmp     = (0,1)
-geometry = load_xml('annulus.xml')
-idmp     = (0,1,2)
+# geometry = load_xml('annulus.xml')
+# idmp     = (0,1,2, 3)
 # ...
 print('#---IN-UNIFORM--MESH-Poisson equation', geometry)
 print("Dirichlet boundary conditions", g)

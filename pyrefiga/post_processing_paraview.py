@@ -571,7 +571,7 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
 
 
             rel_path = os.path.basename(vtm_filename)
-            f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
+            f.write(f'    <DataSet timestep="{float(LStime[t_ix]):.17g}" group="" part="0" file="{rel_path}"/>\n')
       elif pyrefGeometry.dim == 3: #.. z is not none 3D case
          for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
             multiblock = pv.MultiBlock()
@@ -612,7 +612,7 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
 
 
             rel_path = os.path.basename(vtm_filename)
-            f.write(f'    <DataSet timestep="{t_ix}" group="" part="0" file="{rel_path}"/>\n')
+            f.write(f'    <DataSet timestep="{float(LStime[t_ix]):.17g}" group="" part="0" file="{rel_path}"/>\n')
       else: #.. z is not none
          for t_ix in range(len(LStime)): # assuming time is the 2nd dimension of solution["data"][i][t]
             multiblock = pv.MultiBlock()
@@ -651,7 +651,7 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
       f.write('  </Collection>\n')
       f.write('</VTKFile>\n')
    # Save multiblock dataset
-   print(f"Saved all patches with solution to {filename}.vtm")
+   print(f"Saved {len(LStime)} time steps to {filename}_t*.vtm")
    print(f"PVD time-series file written to {output_pvd_path}")
    print("👉 Open this .pvd file in ParaView to view the animation.")
    if plot:

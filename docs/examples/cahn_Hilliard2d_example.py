@@ -1,310 +1,150 @@
+"""Periodic 2D Cahn–Hilliard solver with ParaView time-series output.
+
+Example:
+    PYTHONPATH=. python docs/examples/cahn_Hilliard2d_example.py \
+        --nelements 8 --steps 10 --export --save-every 2
+
+Use --plot to export and open the resulting .pvd file in ParaView.
+Periodic reduction retains stencil storage; convert explicitly at the SciPy
+solver boundary. Exported coefficients include their periodic copies.
 """
-cahn_Hilliard2d_example.py
 
+import argparse
+from pathlib import Path
 
- implicit 2D Cahn–Hilliard solver using pyrefiga
+import numpy as np
+from scipy.sparse import kron, linalg as sla
 
-Purpose
-  Demonstrates an isogeometric discretisation and a two-stage
-  predictor–multicorrector algorithm for the Cahn–Hilliard equation.
-
-Main components
-  - Proj_solve(V1, V2, V, alpha)
-      Projects a small random perturbation onto the spline space,
-      assembles 1D mass matrices and returns the initial field,
-      the mass matrix (kron product) and the initial GL free energy.
-
-  - Cahn_Hliard_solve(V1, V2, V, u, xh, dt, alpha, N_iter=None)
-      Performs one time step using a nonlinear iterative solver:
-      builds stiffness and RHS kernels via compiled assembly routines,
-      solves the linear(ised) system and updates the control points.
-
-Usage
-  - Configure degree, nelements, dt, alpha and ii_max near the bottom
-    of the file and run as a script.
-  - The script saves contour plots in the ./figs directory and produces
-    an animated GIF cahn_haliard.gif if imageio is available.
-
-Notes and recommendations
-  - Periodic boundary conditions are assumed in both directions.
-  - Stability and convergence depend strongly on dt, alpha and spatial
-    resolution; reduce dt or increase resolution if iterations diverge.
-  - Assembly kernels are provided by gallery.gallery_section_09 and are
-    compiled via pyrefiga.compile_kernel.
-
-Dependencies
-  pyrefiga, numpy, scipy, matplotlib, imageio (optional)
-
-author :  M. BAHARI
-"""
-from pyrefiga import compile_kernel, apply_periodic
-
-from pyrefiga import SplineSpace
-from pyrefiga import TensorSpace
-from pyrefiga import StencilMatrix
-from pyrefiga import StencilVector
-from pyrefiga import pyccel_sol_field_2d
-from pyrefiga import assemble_mass1D
-# ...
-import matplotlib                   as     mpl
-import matplotlib.pyplot            as     plt
-from   mpl_toolkits.axes_grid1      import make_axes_locatable
-from   mpl_toolkits.mplot3d         import axes3d
-from   matplotlib                   import cm
-from   mpl_toolkits.mplot3d.axes3d  import get_test_data
-from   matplotlib.ticker            import LinearLocator, FormatStrFormatter
-import time
-
-# .. for the initialisation
-from gallery.gallery_section_09 import assemble_vector_ex01 #---1 : Projection L2
-assemble_rhs         = compile_kernel(assemble_vector_ex01, arity=1)
-
-# ---. for cahn-haliard
-from gallery.gallery_section_09 import assemble_matrix_ex03 
-from gallery.gallery_section_09 import assemble_vector_ex03
-from gallery.gallery_section_09 import assemble_norm_ex01 
+from pyrefiga import (
+    SplineSpace, TensorSpace, StencilVector, apply_periodic,
+    assemble_mass1D, compile_kernel, load_xml, pyref_multipatch,
+    paraview_TimeSolutionMultipatch,
+)
+from gallery.gallery_section_09 import (
+    assemble_matrix_ex03, assemble_vector_ex03, assemble_norm_ex01,
+)
 
 assemble2_stiffness = compile_kernel(assemble_matrix_ex03, arity=2)
-assemble2_rhs       = compile_kernel(assemble_vector_ex03, arity=1)
-assemble_norm_l2    = compile_kernel(assemble_norm_ex01, arity=1)
-
-# ---
-from scipy.sparse        import kron
-from scipy.sparse        import csr_matrix
-from scipy.sparse        import csc_matrix, linalg as sla
-from numpy               import zeros, linalg, asarray, linspace
-#++
-import numpy as np
-
-#  for figures 
-import os
-# Create the folder
-os.makedirs("figs", exist_ok=True)  # 'exist_ok=True' prevents errors if the folder already exists
+assemble2_rhs = compile_kernel(assemble_vector_ex03, arity=1)
+assemble_norm_l2 = compile_kernel(assemble_norm_ex01, arity=1)
 
 
-#==============================================================================
-#.......Poisson ALGORITHM
-def Proj_solve(V1, V2 , V, alpha):
-       # ... periodic boundary in all directions
-       periodic = [True, True]
-
-       u                 = StencilVector(V.vector_space)
-       #dtu              = StencilVector(V.vector_space)
-
-       M1                = assemble_mass1D(V1)
-       M1                = apply_periodic(V1, M1)
-       M1                = csr_matrix(M1)
-
-       M2                = assemble_mass1D(V2)
-       M2                = apply_periodic(V1, M2)
-       M2                = csr_matrix(M2)
-       
-       M_res             = kron(M1,M2)
-       # ... assemble random control Points
-       xh                = (np.random.rand(V1.nbasis-V1.degree,V2.nbasis-V2.degree)-1.)*0.05 +0.63
-       xh                = apply_periodic(V, xh, periodic, update = True)
-       u.from_array(V, xh)
-       # ... GL-FREE-ENERGY
-       Norm             = assemble_norm_l2(V, fields=[u], value = [alpha])
-       norm             = Norm.toarray()[0]
-       return u, xh,  M_res, norm
-
-#============================================================
-#... two-stage pre-dictor–multicorrector algorithm
-def Cahn_Hliard_solve(V1, V2, V, u, xh, dt, alpha, N_iter = None):
-       
-       # ... periodic boundary in all directions
-       periodic = [True, True]
-
-       if N_iter is None:
-          N_iter  = 100
-       tol        = 1e-7
-       
-       u_f        = StencilVector(V.vector_space)
-       
-       #... Step 1 : Initialization
-       xu_n       = zeros(V.nbasis)
-       xu_n[:,:]  = xh[:,:]
-       
-       # ...    
-       u_f.from_array(V, xu_n )
-       #... step 2 : Multicoerrector :
-       for i in range(0, N_iter): 
-             
-          #___ step (b): Genralized alpha level
-           
-          stiffness  = assemble2_stiffness(V, fields=[u_f], value = [dt, alpha])
-          M          = apply_periodic(V, stiffness, periodic)
-          #...
-          rhs        = assemble2_rhs( V, fields=[u_f, u], value = [dt, alpha])
-          rhs        = apply_periodic(V, rhs, periodic)
-          # ---
-          b          = -1.*rhs
-          #--Solve a linear system
-         #  lu         = sla.splu(csc_matrix(M))
-         #  d_thx      = lu.solve(b)
-          d_thx      = sla.cgs(M, b, rtol = 1e-10)[0]
-          # --- update and apply periodic boundary conditions
-          d_tx       = d_thx.reshape((V1.nbasis-V1.degree, V2.nbasis-V2.degree))                    
-          d_tx       = apply_periodic(V, d_tx, periodic, update= True)
-          #___ step (c): update
-          xu_n[:,:] = xu_n[:,:] + d_tx[:,:]
-          Res        = np.max(np.absolute(d_thx))
-          #___ step (d)
-          u_f.from_array(V, xu_n )
-          if Res < tol or Res > 1e3:
-             break
-       u.from_array(V, xu_n)
-       print('perform the iteration number : = {} Residual  = {}'.format( i, Res))
-       # ... GL-FREE-ENERGY
-       Norm             = assemble_norm_l2(V, fields=[u], value = [alpha])
-       norm             = Norm.toarray()[0]
-       return u, xu_n, Res, norm
-
-degree          = 2
-nelements       = 32
-# ...
-dt              = 1e-8
-alpha           = 6000
-t               = 0.
-levels          = list(linspace(-0.1,1.1,100))
-# ...
-nbpts           = 100    # for plot
-ii_max          = 10000  # for time iter
-stat_mement     = []
-GL_free_energy  = []
-n_iter          = []
-
-#-------------------------------------------
-# create the spline space for each direction
-grids      = linspace(0., 1.,  nelements + 1)
-VP1        = SplineSpace(degree=degree, nelements= nelements, grid = grids, nderiv = 2, periodic=True)
-VP2        = SplineSpace(degree=degree, nelements= nelements, grid = grids, nderiv = 2, periodic=True)
-# create the tensor space
-VPh        = TensorSpace(VP1, VP2)
-
-#-------------------------------------------
-# --- Initialisation
-u_ch, xu_ch, M_ms, norm = Proj_solve(VP1, VP2, VPh, alpha)
-# ...
-u_Pr0 = xu_ch
-
-#-------------------------------------------
-u_Pr, u_xPr, u_yPr, X, Y = pyccel_sol_field_2d((nbpts,nbpts),  xu_ch, VPh.knots, VPh.degree)
-
-if True :
-   #-------------------------------------------------------------------------------------------
-   u_Pr, u_xPr, u_yPr, Y, X = pyccel_sol_field_2d((nbpts,nbpts),  xu_ch, VPh.knots, VPh.degree)
-   u_Pr = u_Pr.T
-   #+++++++++++++++++++++++++++++
-   du_ch     = (u_Pr0[:-degree,:-degree]-xu_ch[:-degree,:-degree]).reshape((VP1.nbasis-degree)*(VP2.nbasis-degree))
-   stat_mement.append((M_ms.dot(du_ch)).dot(du_ch) )
-   GL_free_energy.append(norm)
-   n_iter.append(t)   
-   #+++-----------------------------------------------------------------------------------
-   # ... Statistical moment
-   plt.figure() 
-   plt.subplot(121)
-   plt.title( '$\mathbf{||c-c_0||_{L^2}}$')
-   plt.plot(n_iter, stat_mement, 'o-b', linewidth = 2.)
-   plt.xscale('log')
-   plt.xlabel('time',  fontweight ='bold')
-   plt.grid(True)
-   #plt.legend()
-   
-   axes = plt.subplot(122)
-   axes.set_aspect(1)
-   plt.title( '$GL-Free-Energy$')
-   plt.plot(n_iter, GL_free_energy,  'o--r', linewidth = 2.)
-   plt.xscale('log')
-   plt.xlabel('time',  fontweight ='bold')
-   plt.grid(True)
-   #plt.legend()
-   plt.subplots_adjust(wspace=0.3)
-   #plt.savefig('figs/Pu.png')
-   plt.show(block=True)
-   #plt.pause(0.3)
-   plt.close()
-   # ...
-   figtitle        = 'Cahn_haliard_equation'
-   fig, axes       = plt.subplots( 1, 1, figsize=[12,12], num=figtitle )
-   axes.set_aspect('equal')
-   axes.set_title( 'Approximate solution at t= {}'.format(t) )
-   im2 = axes.contourf( X, Y, u_Pr, levels, cmap= 'jet')
-   divider = make_axes_locatable(axes) 
-   cax   = divider.append_axes("right", size="5%", pad=0.05, aspect = 40) 
-   plt.colorbar(im2, cax=cax)
-   
-   fig.tight_layout()
-   plt.subplots_adjust(wspace=0.3)
-   #plt.savefig('figs/u_{}.png'.format(0))
-   plt.show(block=True)
-   #plt.pause(0.3)
-   plt.close()
+def Proj_solve(V1, V2, V, alpha, rng=None):
+    """Initialize the periodic field, mass matrix and GL free energy."""
+    rng = np.random.default_rng() if rng is None else rng
+    M1 = apply_periodic(V1, assemble_mass1D(V1))
+    M2 = apply_periodic(V2, assemble_mass1D(V2))
+    mass = kron(M1.tosparse(), M2.tosparse(), format='csr')
+    independent_shape = (V1.nbasis-V1.degree, V2.nbasis-V2.degree)
+    initial = (rng.random(independent_shape)-1.0)*0.05+0.63
+    xh = apply_periodic(V, initial, [True, True], update=True)
+    u = StencilVector(V.vector_space)
+    u.from_array(V, xh)
+    energy = assemble_norm_l2(V, fields=[u], value=[alpha]).toarray()[0]
+    return u, xh, mass, energy
 
 
-for ii in range(0, ii_max):
-   # ... update time
-   t           += dt
-   print('In time : ', t)
-   #-------------------------------------------
-   u_ch, xu_ch, Res, norm = Cahn_Hliard_solve(VP1, VP2, VPh, u_ch, xu_ch, dt, alpha)
-   
-   #------------
-   if  Res > 1e10 :
-        print("Sorry. Your settings or the regularity assumption are not working !!!")
-        break   
+def Cahn_Hliard_solve(V1, V2, V, u, xh, dt, alpha, N_iter=None):
+    """Perform one nonlinear step; return field, coefficients, residual, energy."""
+    N_iter = 100 if N_iter is None else N_iter
+    if N_iter < 1:
+        raise ValueError('N_iter must be positive')
+    tol = 1e-7
+    periodic = [True, True]
+    xu_n = xh.copy()
+    u_f = StencilVector(V.vector_space)
+    u_f.from_array(V, xu_n)
+    for i in range(N_iter):
+        stiffness = assemble2_stiffness(V, fields=[u_f], value=[dt, alpha])
+        matrix = apply_periodic(V, stiffness, periodic)
+        rhs = assemble2_rhs(V, fields=[u_f, u], value=[dt, alpha])
+        rhs = apply_periodic(V, rhs, periodic)
+        # Stencil objects are retained until the external solver call.
+        sparse_matrix = matrix.tosparse().tocsr()
+        b = -rhs.toarray()
+        correction, info = sla.cgs(sparse_matrix, b, rtol=1e-30)
+        if info != 0:
+            # The very strict CGS tolerance can cause numerical breakdown.
+            # Fall back to sparse LU rather than using an unconverged update.
+            correction = sla.splu(sparse_matrix.tocsc()).solve(b)
+        d_tx = apply_periodic(V, correction, periodic, update=True)
+        xu_n += d_tx
+        residual = np.max(np.abs(correction))
+        if not np.isfinite(residual) or residual > 1e3:
+            raise RuntimeError(f'Cahn–Hilliard nonlinear iteration diverged: {residual}')
+        u_f.from_array(V, xu_n)
+        if residual < tol:
+            break
+    else:
+        raise RuntimeError(f'Cahn–Hilliard nonlinear solve did not converge in {N_iter} iterations')
+    u.from_array(V, xu_n)
+    print(f'Iterations: {i+1}; residual: {residual:.3e}')
+    energy = assemble_norm_l2(V, fields=[u], value=[alpha]).toarray()[0]
+    return u, xu_n, residual, energy
 
-   #+++++++++++++++++++++++++++++
-   u_Pr = pyccel_sol_field_2d((nbpts,nbpts),  xu_ch, VPh.knots, VPh.degree)[0]
-   # ...
-   du_ch     = (u_Pr0[:-degree,:-degree]-xu_ch[:-degree,:-degree]).reshape((VP1.nbasis-degree)*(VP2.nbasis-degree))
-   stat_mement.append((M_ms.dot(du_ch)).dot(du_ch) )
-   GL_free_energy.append(norm)
-   n_iter.append(t)   
-   #+++-----------------------------------------------------------------------------------
-   # ... Statistical moment
-   plt.figure() 
-   plt.subplot(121)
-   plt.title( '$\mathbf{||c-c_0||_{L^2}}$')
-   plt.plot(n_iter, stat_mement, 'o-b', linewidth = 2.)
-   plt.xscale('log')
-   plt.xlabel('time',  fontweight ='bold')
-   plt.grid(True)
-   #plt.legend()
-   
-   axes = plt.subplot(122)
-   axes.set_aspect(1)
-   plt.title( '$GL-Free-Energy$')
-   plt.plot(n_iter, GL_free_energy,  'o--r', linewidth = 2.)
-   plt.xscale('log')
-   plt.xlabel('time',  fontweight ='bold')
-   plt.grid(True)
-   #plt.legend()
-   plt.subplots_adjust(wspace=0.3)
-   plt.savefig('figs/Pu.png')
-   plt.show(block=False)
-   plt.close()
-   # ...
-   figtitle        = 'Cahn_haliard_equation'
-   fig, axes       = plt.subplots( 1, 1, figsize=[12,12], num=figtitle )
-   axes.set_aspect('equal')
-   axes.set_title( 'Approximate solution at t= {}'.format(t) )
-   im2 = axes.contourf( X, Y, u_Pr, levels, cmap= 'jet')
-   divider = make_axes_locatable(axes) 
-   cax   = divider.append_axes("right", size="5%", pad=0.05, aspect = 40) 
-   plt.colorbar(im2, cax=cax)
-   
-   fig.tight_layout()
-   plt.subplots_adjust(wspace=0.3)
-   plt.savefig('figs/u_{}.png'.format(ii))
-   plt.show(block=False)
-   plt.close()
 
-#... Turn pictures to .gif
-if True :   
- import imageio 
- with imageio.get_writer('cahn_haliard.gif', mode='I') as writer: 
-     for filename in ['figs/u_{}.png'.format(i) for i in range(1,ii_max)]: 
-         image = imageio.imread(filename) 
-         writer.append_data(image) 
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--degree', type=int, default=2)
+    parser.add_argument('--nelements', type=int, default=32)
+    parser.add_argument('--steps', type=int, default=10000)
+    parser.add_argument('--dt', type=float, default=1e-8)
+    parser.add_argument('--alpha', type=int, default=6000)
+    parser.add_argument('--max-iterations', type=int, default=100)
+    parser.add_argument('--seed', type=int, default=None)
+    parser.add_argument('--nbpts', type=int, default=100, help='ParaView sampling points per direction')
+    parser.add_argument('--save-every', type=int, default=100, help='Export interval; initial/final states are included')
+    parser.add_argument('--export', action='store_true', help='Save a ParaView .pvd time series without opening it')
+    parser.add_argument('--plot', action='store_true', help='Export and open the time series in ParaView')
+    parser.add_argument('--output', default='figs/cahn_hilliard', help='Output path prefix')
+    args = parser.parse_args(argv)
+    if args.degree < 2 or args.nelements <= args.degree:
+        parser.error('Use degree >= 2 and nelements > degree')
+    if args.steps < 0 or args.dt <= 0 or args.max_iterations < 1:
+        parser.error('Use steps >= 0, dt > 0 and max-iterations >= 1')
+    if args.save_every < 1 or args.nbpts < 2:
+        parser.error('Use save-every >= 1 and nbpts >= 2')
+
+    grid = np.linspace(0, 1, args.nelements+1)
+    V1 = SplineSpace(degree=args.degree, grid=grid, nderiv=2, periodic=True)
+    V2 = SplineSpace(degree=args.degree, grid=grid, nderiv=2, periodic=True)
+    V = TensorSpace(V1, V2)
+    u, coefficients, mass, energy = Proj_solve(V1, V2, V, args.alpha, np.random.default_rng(args.seed))
+    initial = coefficients.copy()
+    independent = (slice(0, V1.nbasis-V1.degree), slice(0, V2.nbasis-V2.degree))
+    times, energies, moments = [0.0], [energy], [0.0]
+    export = args.export or args.plot
+    saved_times = [0.0] if export else []
+    saved_fields = [[coefficients.copy()]] if export else []
+    print(f'Time: 0; GL energy: {energy:.8e}; L2 change squared: 0')
+    for step in range(1, args.steps+1):
+        u, coefficients, residual, energy = Cahn_Hliard_solve(
+            V1, V2, V, u, coefficients, args.dt, args.alpha, args.max_iterations,
+        )
+        t = step*args.dt
+        difference = (initial[independent]-coefficients[independent]).ravel()
+        moment = float(difference @ (mass @ difference))
+        times.append(t)
+        energies.append(energy)
+        moments.append(moment)
+        print(f'Time: {t:.8e}; GL energy: {energy:.8e}; L2 change squared: {moment:.8e}')
+        if export and (step % args.save_every == 0 or step == args.steps):
+            saved_times.append(t)
+            saved_fields.append([coefficients.copy()])
+
+    if export:
+        prefix = Path(args.output)
+        prefix.parent.mkdir(parents=True, exist_ok=True)
+        geometry = pyref_multipatch(load_xml('unitSquare.xml'), (0,))
+        solutions = [{'name': 'Concentration', 'data': saved_fields, 'space': V}]
+        paraview_TimeSolutionMultipatch(
+            args.nbpts, geometry, LStime=saved_times, solution=solutions,
+            filename=str(prefix), plot=args.plot,
+        )
+        np.savetxt(str(prefix)+'_history.csv', np.column_stack((times, energies, moments)),
+                   delimiter=',', header='time,GL_free_energy,L2_change_squared', comments='')
+    return u, coefficients, times, energies, moments
+
+
+if __name__ == '__main__':
+    main()

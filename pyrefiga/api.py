@@ -200,7 +200,7 @@ def compile_kernel(core, arity, pyccel=True):
 
 
 from scipy.sparse import coo_matrix
-from .            import nitsche_core   as  core
+from .            import nitsche_core   as  n_core
 from .            import adnitsche_core as  adcore
 from .utilities   import pyref_multipatch
 
@@ -211,6 +211,10 @@ class StencilNitsche(object):
 
     Diagonal blocks: standard single-patch StencilMatrix.
     Off-diagonal blocks: Nitsche interface coupling (can be diagonal or sparse).
+    Fixed two-dimensional mappings support all edge pairs (1 through 4),
+    including reversed traces. Merged trace bases must have matching degrees,
+    normalized knots and rational weights. Adaptive mappings use the legacy
+    assembly path.
     Parameters
     ----------
     V : TensorSpace
@@ -240,6 +244,7 @@ class StencilNitsche(object):
         # -------
         if u_d is None:
             u_d = [StencilVector(V.vector_space) for _ in range(nb_patches)]
+        pyrefMP.propagate_dirichlet_corners(V, u_d)
         self.u_d         = u_d
         self._pads       = V.degree
         self._ndim       = V.dim
@@ -269,6 +274,18 @@ class StencilNitsche(object):
         self._nbasis      = nbasis
         self._block_index = block_index # position of each block
         self.elim_index   = elim_index # [nb_patches, dim, 2] local matrix start from
+        # Edge elimination is rectangular. Isolated prescribed vertices are
+        # removed later from the merged correction system, not from whole edges.
+        self._corner_dofs = set()
+        self._corner_indices = [[] for _ in range(nb_patches)]
+        for group in pyrefMP.getDirichletCornerGroups():
+            for patch_nb, u, v in group:
+                i, j = u*(V.nbasis[0]-1), v*(V.nbasis[1]-1)
+                lo, hi = elim_index[patch_nb-1, :, 0], elim_index[patch_nb-1, :, 1]
+                if lo[0] <= i < hi[0] and lo[1] <= j < hi[1]:
+                    self._corner_indices[patch_nb-1].append((i, j))
+                    self._corner_dofs.add(block_index[patch_nb-1]
+                                          + (i-lo[0])*(hi[1]-lo[1])+j-lo[1])
         self.mp           = pyrefMP
         self.admp         = ad_mapping
         #... computes coeffs for Nitsche's method
@@ -296,13 +313,7 @@ class StencilNitsche(object):
         #-------------------------------
         # .. assemble Nitsche's matrices
         #-------------------------------
-        if ad_mapping is None:
-            assert (V.dim != W.dim), ' please don t use the same space for geometry and solution (default is True)'
-            #... using different spaces for FE analysis V and  Multipatch W
-            self.assemble_nitsche2dDiag        = partial(assemble_matrix, core.assemble_matrix_DiffSpacediagnitsche)
-            self.assemble_nitsche2dUnderDiag   = partial(assemble_matrix, core.assemble_matrix_DiffSpaceoffdiagnitsche)
-            # self.assemble_nitsche2dDirichlet   = partial(assemble_vector, core.assemble_vector_Dirichlet)
-        else:
+        if ad_mapping is not None:
             #... using different spaces for FE analysis V and  Multipatch W
             self.assemble_nitsche2dDiag        = partial(assemble_matrix, adcore.assemble_matrix_DiffSpacediagnitsche)
             self.assemble_nitsche2dUnderDiag   = partial(assemble_matrix, adcore.assemble_matrix_DiffSpaceoffdiagnitsche)
@@ -317,7 +328,7 @@ class StencilNitsche(object):
         Compute representative DOF -> set(equivalent DOFs) and mappings.
 
         Builds:
-          - self.new_id: mapping old_dof -> new_dof
+          - self.new_id: mapping old_dof -> new_dof (-1 for prescribed corners)
           - self.old_id: mapping new_dof -> set(old_dofs)
           - self._newdim: new global dimension (n,n)
         '''
@@ -327,8 +338,15 @@ class StencilNitsche(object):
             # ... get interface and patch numbers
             patch_nb       = interface[0] 
             patch_nb_n     = interface[1]
-            # ... get interface mappings
-            interface_like = interface[2][1]
+            source_edge = interface[2][0]
+            neighbor_edge = interface[2][1]
+            source_axis = (source_edge - 1) // 2
+            neighbor_axis = (neighbor_edge - 1) // 2
+            source_tangent = 1 - source_axis
+            neighbor_tangent = 1 - neighbor_axis
+            from .interfaces import validate_trace_space
+            reversed_trace = self.mp.isInterfaceReversed(interface)
+            validate_trace_space(self._domain, source_edge, neighbor_edge, reversed_trace)
             #...rows
             pd1 = self.elim_index[patch_nb_n-1,0,0]# for x
             pd2 = self.elim_index[patch_nb_n-1,0,1]
@@ -341,144 +359,55 @@ class StencilNitsche(object):
             d4 = self.elim_index[patch_nb-1,1,1]
             pw = self._block_index[patch_nb-1]
             cpw= self._block_index[patch_nb_n-1]
-            #... [patche1: 2, patche2 : 1]
-            if interface_like == 1: # x = 0
-                # add test if 
-                assert(pd3==d3 and pd4==d4) # conform multipatch
-                for j in range(0,pd4-pd3):
-                    dof_p = cpw + 0*(pd4-pd3)      + j
-                    dof_q = pw + (d2-d1-1)*(d4-d3) + j
+            source_starts = (d1, d3)
+            source_stops = (d2, d4)
+            neighbor_starts = (pd1, pd3)
+            neighbor_stops = (pd2, pd4)
+            for tangent_index in range(self._nbs[source_tangent]):
+                source_coordinates = [0, 0]
+                neighbor_coordinates = [0, 0]
+                source_coordinates[source_axis] = ((source_edge-1) % 2)*(self._nbs[source_axis]-1)
+                neighbor_coordinates[neighbor_axis] = ((neighbor_edge-1) % 2)*(self._nbs[neighbor_axis]-1)
+                source_coordinates[source_tangent] = tangent_index
+                neighbor_index = (self._nbs[neighbor_tangent]-1-tangent_index
+                                  if reversed_trace else tangent_index)
+                neighbor_coordinates[neighbor_tangent] = neighbor_index
+                source_free = all(source_starts[a] <= source_coordinates[a] < source_stops[a]
+                                  for a in (0, 1))
+                neighbor_free = all(neighbor_starts[a] <= neighbor_coordinates[a] < neighbor_stops[a]
+                                    for a in (0, 1))
+                dof_q = pw + (source_coordinates[0]-d1)*(d4-d3) + source_coordinates[1]-d3
+                dof_p = cpw + (neighbor_coordinates[0]-pd1)*(pd4-pd3) + neighbor_coordinates[1]-pd3
+                if not source_free or not neighbor_free:
+                    if ((source_free and dof_q not in self._corner_dofs)
+                            or (neighbor_free and dof_p not in self._corner_dofs)):
+                        raise ValueError("Interface endpoints have incompatible Dirichlet constraints")
+                    continue
+                if dof_p in self._corner_dofs or dof_q in self._corner_dofs:
+                    continue
 
-                    # --- find current representatives
-                    rep_p = dof_to_rep.get(dof_p, dof_p)
-                    rep_q = dof_to_rep.get(dof_q, dof_q)
+                rep_p = dof_to_rep.get(dof_p, dof_p)
+                rep_q = dof_to_rep.get(dof_q, dof_q)
+                rep = min(rep_p, rep_q)
 
-                    # --- choose final representative
-                    rep = min(rep_p, rep_q)
+                set_p = equiv.get(rep_p, {rep_p})
+                set_q = equiv.get(rep_q, {rep_q})
+                merged = set_p | set_q | {dof_p, dof_q}
+                equiv[rep] = merged
 
-                    # --- merge sets
-                    set_p = equiv.get(rep_p, {rep_p})
-                    set_q = equiv.get(rep_q, {rep_q})
+                for dof in merged:
+                    dof_to_rep[dof] = rep
 
-                    merged = set_p | set_q | {dof_p, dof_q}
-
-                    equiv[rep] = merged
-
-                    # --- update all DoFs to new representative
-                    for d in merged:
-                        dof_to_rep[d] = rep
-
-                    # --- clean old representatives
-                    if rep_p != rep:
-                        equiv.pop(rep_p, None)
-                    if rep_q != rep:
-                        equiv.pop(rep_q, None)
-                        
-            if interface_like == 2: # x = 1
-                assert(pd3==d3 and pd4==d4) # conform multipatch
-                for j in range(0,pd4-pd3):
-                    dof_p = cpw + (pd2-pd1-1)*(pd4-pd3) + j
-                    dof_q = pw +   0*(d4-d3)            + j
-
-                    # --- find current representatives
-                    rep_p = dof_to_rep.get(dof_p, dof_p)
-                    rep_q = dof_to_rep.get(dof_q, dof_q)
-
-                    # --- choose final representative
-                    rep = min(rep_p, rep_q)
-
-                    # --- merge sets
-                    set_p = equiv.get(rep_p, {rep_p})
-                    set_q = equiv.get(rep_q, {rep_q})
-
-                    merged = set_p | set_q | {dof_p, dof_q}
-
-                    equiv[rep] = merged
-
-                    # --- update all DoFs to new representative
-                    for d in merged:
-                        dof_to_rep[d] = rep
-
-                    # --- clean old representatives
-                    if rep_p != rep:
-                        equiv.pop(rep_p, None)
-                    if rep_q != rep:
-                        equiv.pop(rep_q, None)
-
-            if interface_like == 3: # y = 0
-                assert(pd1==d1 and pd2==d2) # conform multipatch
-                for i in range(0,pd2-pd1):
-                    dof_p = cpw + i*(pd4-pd3) + 0
-                    dof_q = pw +  i*(d4-d3)   + (d4-d3-1)
-
-                    # --- find current representatives
-                    rep_p = dof_to_rep.get(dof_p, dof_p)
-                    rep_q = dof_to_rep.get(dof_q, dof_q)
-
-                    # --- choose final representative
-                    rep = min(rep_p, rep_q)
-
-                    # --- merge sets
-                    set_p = equiv.get(rep_p, {rep_p})
-                    set_q = equiv.get(rep_q, {rep_q})
-
-                    merged = set_p | set_q | {dof_p, dof_q}
-
-                    equiv[rep] = merged
-
-                    # --- update all DoFs to new representative
-                    for d in merged:
-                        dof_to_rep[d] = rep
-
-                    # --- clean old representatives
-                    if rep_p != rep:
-                        equiv.pop(rep_p, None)
-                    if rep_q != rep:
-                        equiv.pop(rep_q, None)
-
-            if interface_like == 4: # y = 1
-                assert(pd1==d1 and pd2==d2) # conform multipatch
-                for i in range(0,pd2-pd1):
-                    dof_p = cpw + i*(pd4-pd3) + (pd4-pd3-1)
-                    dof_q = pw +  i*(d4-d3)   + 0
-
-                    # --- find current representatives
-                    rep_p = dof_to_rep.get(dof_p, dof_p)
-                    rep_q = dof_to_rep.get(dof_q, dof_q)
-
-                    # --- choose final representative
-                    rep = min(rep_p, rep_q)
-
-                    # --- merge sets
-                    set_p = equiv.get(rep_p, {rep_p})
-                    set_q = equiv.get(rep_q, {rep_q})
-
-                    merged = set_p | set_q | {dof_p, dof_q}
-
-                    equiv[rep] = merged
-
-                    # --- update all DoFs to new representative
-                    for d in merged:
-                        dof_to_rep[d] = rep
-
-                    # --- clean old representatives
-                    if rep_p != rep:
-                        equiv.pop(rep_p, None)
-                    if rep_q != rep:
-                        equiv.pop(rep_q, None)
-
-                    # rep = min(dof_p, dof_q)
-                    # equiv.setdefault(rep, set()).update({dof_p, dof_q})
-
-                    # dof_to_rep[dof_p] = rep
-                    # dof_to_rep[dof_q] = rep
-        new_id  = {}
+                if rep_p != rep:
+                    equiv.pop(rep_p, None)
+                if rep_q != rep:
+                    equiv.pop(rep_q, None)
+        new_id  = {dof: -1 for dof in self._corner_dofs}
         old_id  = {}
         current = 0
-        # IMPORTANT: iterate over all DOFs appearing in matrix
-        all_dofs = set(self.stencilNitsche.tocoo().row) | set(self.stencilNitsche.tocoo().col)
-        for old_dof in sorted(all_dofs):
-            # for old_dof in range(self._Nitshedim[0]):
+        # Include every free DOF, even if its assembled row is currently zero.
+        all_dofs = range(self._Nitshedim[0])
+        for old_dof in all_dofs:
             if old_dof in new_id:
                 continue
             if old_dof in dof_to_rep:
@@ -525,6 +454,8 @@ class StencilNitsche(object):
         for i, j, v in zip(self.stencilNitsche.tocoo().row,
                         self.stencilNitsche.tocoo().col,
                         self.stencilNitsche.data):
+            if self.new_id[i] < 0 or self.new_id[j] < 0:
+                continue
             rows.append(self.new_id[i])
             cols.append(self.new_id[j])
             data.append(v)
@@ -547,6 +478,8 @@ class StencilNitsche(object):
 
         for old_dof, value in enumerate(self.b_dir):
             I = self.new_id[old_dof]
+            if I < 0:
+                continue
             rhsMerged[I] += value   # SUM contributions
 
         return rhsMerged
@@ -567,10 +500,14 @@ class StencilNitsche(object):
         if u_last is not None:
             x_tmp = SolExtracted[self._block_index[patch_nb-1]:self._block_index[patch_nb]]
             u_sol = apply_dirichlet(self._domain, x_tmp, dirichlet = self.mp.getDirPatch(patch_nb), update = u_last)
+            for i, j in self._corner_indices[patch_nb-1]:
+                u_sol[i, j] = self.u_d[patch_nb-1][i, j]
             return u_sol
         else:
             x_tmp = SolExtracted[self._block_index[patch_nb-1]:self._block_index[patch_nb]]
             u_sol = apply_dirichlet(self._domain, x_tmp, dirichlet = self.mp.getDirPatch(patch_nb), update= self.u_d[patch_nb-1])
+            for i, j in self._corner_indices[patch_nb-1]:
+                u_sol[i, j] = self.u_d[patch_nb-1][i, j]
             return u_sol
     #====================================
     #... collect off diag NItsch matrices
@@ -588,6 +525,7 @@ class StencilNitsche(object):
         patch_nb_n     = interface[1]
         # ... get interface mappings
         interface_like = interface[2][0]
+        interface_likeL = interface[2][1]
         # Shortcuts
         nr = stiffnessoffdiag._codomain.npts
         nd = stiffnessoffdiag._ndim
@@ -611,14 +549,12 @@ class StencilNitsche(object):
         d2 = self.elim_index[patch_nb-1,0,1]
         d3 = self.elim_index[patch_nb-1,1,0]
         d4 = self.elim_index[patch_nb-1,1,1]
-        # same problem here i suppose always 1-2 and 3-4 
         # Range of data owned by local process (no ghost regions)
         local = tuple( [slice(p,-p) for p in pp] + [slice(None)] * nd )
-        index_coll = 0
-        if interface_like == 1 or interface_like == 2:
-            index_coll = 0
-        else:
-            index_coll = -1
+        source_normal = (interface_like - 1) // 2
+        source_side = (interface_like - 1) % 2
+        neighbor_normal = (interface_likeL - 1) // 2
+        neighbor_side = (interface_likeL - 1) % 2
         for (index,value) in np.ndenumerate( stiffnessoffdiag._data[local] ):
 
             # index = [i1-s1, i2-s2, ..., p1+j1-i1, p2+j2-i2, ...]
@@ -627,9 +563,15 @@ class StencilNitsche(object):
             ll = index[nd:]  # l=p+k
 
             ii = [s+x for s,x in zip(ss,xx)]
+            iiO = [s+x for s,x in zip(ss,xx)]
             jj = [(i+l-p) % n for (i,l,n,p) in zip(ii,ll,nc,self._pads)]
-            #...correct index ix -> nx-1-ix jj[0] = nc[0]-1-jj[0] #...correct index iy -> ny-1-iy//jj[-1] = nc[-1]-1-jj[-1]
-            jj[index_coll] = nc[index_coll]-1-jj[index_coll]
+            tangent_index = ii[1-source_normal]
+            source_opposite_boundary = (1-source_side) * (nc[source_normal] - 1)
+            row_depth = abs(ii[source_normal] - source_opposite_boundary)
+            ii[neighbor_normal] = neighbor_side * (nc[neighbor_normal] - 1) + (1-2*neighbor_side) * row_depth
+            ii[1-neighbor_normal] = tangent_index
+            column_depth = abs(jj[source_normal] - source_opposite_boundary)
+            jj[source_normal] = source_side * (nc[source_normal] - 1) + (1-2*source_side) * column_depth
             if ( pd1 <= ii[0] < pd2) and (pd3 <= ii[1] < pd4) and ( d1 <= jj[0] < d2) and (d3 <= jj[1] < d4):
                 # correct index
                 ii[0] = ii[0]-pd1
@@ -694,53 +636,40 @@ class StencilNitsche(object):
         # if not isinstance(Vh, TensorSpace):
         #     raise TypeError("Vh must be a TensorSpace")
         if self.admp is None:
-            for interface in self.mp.getInterfaces():
-                # ... get interface and patch numbers
-                patch_nb       = interface[0] 
-                patch_nb_n     = interface[1]
-                # ... get interface mappings
-                interface_like = interface[2][0]
-                interface_likeL= interface[2][1]
-                # assemble mappings for patches
-                u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
-                u21_mph, u22_mph = self.mp.stencil_mapping(patch_nb_n)
-                #... assemble off diagonal matrix
-                stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
-                self.assemble_nitsche2dUnderDiag(self._Alldomain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, 
-                                                value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interface_like, self.Kappa, self.normS], 
-                                                out = stiffnessoffdiag)
-                #... correct coo matrix
-                stiffnessoffdiag = self.collect_offdiag_stencil_matrix(stiffnessoffdiag, interface)
-                self.append_block(stiffnessoffdiag, patch_nb_n, patch_nb)
-                self.append_block(stiffnessoffdiag.T, patch_nb, patch_nb_n)
-        else:
-            for interface in self.mp.getInterfaces():
-                # ... get interface and patch numbers
-                patch_nb       = interface[0] 
-                patch_nb_n     = interface[1]
-                # ... get interface mappings
-                interface_like = interface[2][0]
-                # assemble mappings for patches
-                u_mae                                  = self.admp.stencil_mapping(patch_nb)
-                # asemble new basis and spans for geometry mapping
-                spansx, spansy, basisx, basisy         = self.admp.getBoundary_basis(self._domain, patch_nb)
-                # assemble mappings for patches _n 
-                u_maen                                 = self.admp.stencil_mapping(patch_nb_n)
-                # asemble new basis and spans for geometry mapping
-                spansx_n, spansy_n, basisx_n, basisy_n = self.admp.getBoundary_basis(self._domain, patch_nb_n)
-                # assemble mappings for patches
-                u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
-                u21_mph, u22_mph = self.mp.stencil_mapping(patch_nb_n)
-                #... assemble off diagonal matrix
-                stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
-                self.assemble_nitsche2dUnderDiag(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph , u_maen[0], u_maen[1], u21_mph, u22_mph], knots=True, 
-                                                value=[spansx, spansy, basisx, basisy, spansx_n, spansy_n, basisx_n, basisy_n, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interface_like, self.Kappa, self.normS], 
-                                                out = stiffnessoffdiag)
-                #... correct coo matrix
-                stiffnessoffdiag = self.collect_offdiag_stencil_matrix(stiffnessoffdiag, interface)
-                assert not np.isnan(stiffnessoffdiag.data).any(), "OFF diag Sparse matrix contains NaNs"
-                self.append_block(stiffnessoffdiag, patch_nb_n, patch_nb)
-                self.append_block(stiffnessoffdiag.T, patch_nb, patch_nb_n)
+            self._prepare_uniform_interfaces()
+            for interface, block in self._uniform_cross:
+                p, q = interface[:2]
+                block = block[self._uniform_keep[q-1]][:, self._uniform_keep[p-1]].tocoo()
+                self.append_block(block, q, p)
+                self.append_block(block.T, p, q)
+            return
+        for interface in self.mp.getInterfaces():
+            # ... get interface and patch numbers
+            patch_nb       = interface[0]
+            patch_nb_n     = interface[1]
+            # ... get interface mappings
+            interface_like = interface[2][0]
+            # assemble mappings for patches
+            u_mae                                  = self.admp.stencil_mapping(patch_nb)
+            # asemble new basis and spans for geometry mapping
+            spansx, spansy, basisx, basisy         = self.admp.getBoundary_basis(self._domain, patch_nb)
+            # assemble mappings for patches _n
+            u_maen                                 = self.admp.stencil_mapping(patch_nb_n)
+            # asemble new basis and spans for geometry mapping
+            spansx_n, spansy_n, basisx_n, basisy_n = self.admp.getBoundary_basis(self._domain, patch_nb_n)
+            # assemble mappings for patches
+            u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
+            u21_mph, u22_mph = self.mp.stencil_mapping(patch_nb_n)
+            #... assemble off diagonal matrix
+            stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
+            self.assemble_nitsche2dUnderDiag(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph , u_maen[0], u_maen[1], u21_mph, u22_mph], knots=True,
+                                            value=[spansx, spansy, basisx, basisy, spansx_n, spansy_n, basisx_n, basisy_n, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interface_like, self.Kappa, self.normS],
+                                            out = stiffnessoffdiag)
+            #... correct coo matrix
+            stiffnessoffdiag = self.collect_offdiag_stencil_matrix(stiffnessoffdiag, interface)
+            assert not np.isnan(stiffnessoffdiag.data).any(), "OFF diag Sparse matrix contains NaNs"
+            self.append_block(stiffnessoffdiag, patch_nb_n, patch_nb)
+            self.append_block(stiffnessoffdiag.T, patch_nb, patch_nb_n)
         #...
 
     # #...
@@ -755,12 +684,13 @@ class StencilNitsche(object):
         if not (1 <= patch_nb <= self._nb_patches):
             raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nb_patches}")
         if self.admp is None:
-            # assemble mappings for patches
-            u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
-            #... get interfaces for a given patch
-            interfaces_like = self.mp.getInterfacePatch(patch_nb)
-            # ... assemble diagonal matrix
-            self.assemble_nitsche2dDiag(self._Alldomain, fields=[u11_mph, u12_mph], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)
+            self._prepare_uniform_interfaces()
+            block = self._uniform_diagonal[patch_nb-1].tocoo()
+            for row, col, value in zip(block.row, block.col, block.data):
+                i, j = np.unravel_index(row, self._nbs)
+                k, l = np.unravel_index(col, self._nbs)
+                p, q = self._pads
+                stiffness._data[p+i, q+j, p+k-i, q+l-j] += value
         else:
             # assemble mappings for patches
             u_mae                          = self.admp.stencil_mapping(patch_nb)
@@ -774,7 +704,42 @@ class StencilNitsche(object):
             self.assemble_nitsche2dDiag(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph], knots=True, value=[spansx, spansy, basisx, basisy, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)            
         # ...
         return
-    
+
+    def _prepare_uniform_interfaces(self):
+        """Cache physical interface blocks before boundary elimination."""
+        if hasattr(self, '_uniform_diagonal'):
+            return
+        from .interfaces import assemble_interface
+        from scipy.sparse import csr_matrix
+        n = int(np.prod(self._nbs))
+        diagonal = [csr_matrix((n, n)) for _ in range(self._nb_patches)]
+        cross = []
+        keep = []
+        lift = [np.zeros(n) for _ in range(self._nb_patches)]
+        for patch_nb in range(self._nb_patches):
+            starts, stops = self.elim_index[patch_nb, :, 0], self.elim_index[patch_nb, :, 1]
+            indices = np.arange(n).reshape(self._nbs)
+            keep.append(indices[starts[0]:stops[0], starts[1]:stops[1]].ravel())
+        for interface in self.mp.getInterfaces():
+            p, q, edges = interface
+            pp, qq, qp = assemble_interface(
+                self._domain, self.mp.get_patch(p), self.mp.get_patch(q), edges,
+                self.mp.isInterfaceReversed(interface), self.Kappa, self.normS,
+                n_core.assemble_interface_quadrature,
+            )
+            diagonal[p-1] += pp
+            diagonal[q-1] += qq
+            cross.append((interface, qp))
+            dp, dq = self.u_d[p-1].tensor.ravel(), self.u_d[q-1].tensor.ravel()
+            lift[p-1] -= pp @ dp + qp.T @ dq
+            lift[q-1] -= qp @ dp + qq @ dq
+        # Publish the cache only after all interfaces have validated successfully.
+        self._uniform_diagonal = diagonal
+        self._uniform_cross = cross
+        self._uniform_keep = keep
+        self._uniform_lift = lift
+        self._uniform_rhs_lift_applied = [False]*self._nb_patches
+
     #--------------------------------------
     # ... assemble global Nitsche's matrix
     #--------------------------------------
@@ -803,106 +768,35 @@ class StencilNitsche(object):
     #-------------------------------------------------
     # assemble Nitsche's Dirichlet contribution
     #-------------------------------------------------
-    def assemble_nitsche_dirichlet(self, rhs, patch_nb, accumulate = False, Nitsche_dir = False):
+    def assemble_nitsche_rhs(self, rhs, patch_nb, accumulate = False):
         '''
-        Docstring for assemble_nitsche_dirichlet: assemble rhs vector for Laplace operator
+        Docstring for assemble_nitsche_rhs: assemble rhs vector for Laplace operator
         
         :param self: Description
-        :param u_d: stencile vector
+        :param rhs: array vector
         :param patch_nb: patch number start from 1
-        ! param Nitsche_dir:  Nitsche Dirichlet contribution
         ! param accumulate: whether to accumulate the result into the existing rhs
         '''
         # assert isinstance(u_d, StencilVector)
         if self.admp is None:
-            if Nitsche_dir:
-                print("Dirichlet Nitsche contribution is assembled in strong form, not tested yet")
-                # assemble mappings for patches
-                u11_mph, u12_mph = self.mp.stencil_mapping(patch_nb)
-                #... get interfaces for a given patch
-                interfaces_like = self.mp.getInterfacePatch(patch_nb)
-                # ...
-                u_tmp = StencilVector(self._domain.vector_space)
-                nS    = 1.
-                self.assemble_nitsche2dDirichlet(self._Alldomain, fields=[u11_mph, u12_mph, self.u_d[patch_nb-1]], knots=True, value=[self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, 0.*self.Kappa, 0.*self.normS, nS], out = u_tmp)
-                u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
-                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += u_tmp[:]
-            # ...
+            self._prepare_uniform_interfaces()
+            if not accumulate or not self._uniform_rhs_lift_applied[patch_nb-1]:
+                rhs = rhs[:] + self._uniform_lift[patch_nb-1][self._uniform_keep[patch_nb-1]]
+            self._uniform_rhs_lift_applied[patch_nb-1] = True
             if accumulate:
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
             else:
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = rhs[:]
         else:
-            if Nitsche_dir:
-                print("Dirichlet Nitsche contribution is assembled in strong form, not tested yet")
-                # assemble mappings for patches
-                u_mae                                      = self.admp.stencil_mapping(patch_nb)
-                # asemble new basis and spans for geometry mapping
-                spansx, spansy, basisx, basisy = self.admp.getBoundary_basis(self._domain, patch_nb)
-                # assemble mappings for patches
-                u11_mph, u12_mph                           =  self.mp.stencil_mapping(patch_nb)
-                #... get interfaces for a given patch
-                interfaces_like                            = self.mp.getInterfacePatch(patch_nb)
-                # ...
-                u_tmp = StencilVector(self._domain.vector_space)
-                nS    = 1.
-                self.assemble_nitsche2dDirichlet(self._Alldomain, fields=[u_mae[0], u_mae[1], u11_mph, u12_mph, self.u_d[patch_nb-1]], knots=True, value=[spansx, spansy, basisx, basisy, self._mpdomain.knots[0],self._mpdomain.knots[1], self._mpdomain.omega[0],self._mpdomain.omega[1], interfaces_like, 0.*self.Kappa, 0.*self.normS, nS], out = u_tmp)
-                assert not np.isnan(u_tmp._data).any(), "Dirichlet Nitsche Stencile vector contains NaNs"
-                u_tmp = apply_dirichlet(self._domain, u_tmp, dirichlet = self.mp.getDirPatch(patch_nb))
-                self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += u_tmp[:]
-            # ...
             if accumulate:
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] += rhs[:]
             else:
                 self.b_dir[self._block_index[patch_nb-1]:self._block_index[patch_nb]] = rhs[:]
         # ...
         return
-    #...
-    def add_nitsche_off_diag_same_space(self, u11_mph, u12_mph, u21_mph, u22_mph, interface):
-        '''
-        Docstring pour add_nitsche_off_diag for Laplace operator
 
-        # :param Vh: FE space & multipatch space
-        :param u11_mph: mapping component
-        :param u12_mph: Description
-        :param u21_mph: Description
-        :param u22_mph: Description
-        :param interface: (patch_nb, patch_nbnext, (patchBoundary,patchBoundary_next))
-        '''
-        # if not isinstance(Vh, TensorSpace):
-        #     raise TypeError("Vh must be a TensorSpace")
-        # ... get interface and patch numbers
-        patch_nb       = interface[0] 
-        patch_nb_n     = interface[1]
-        # ... get interface mappings
-        interface_like = interface[2][0]
-        #... assemble off diagonal matrix
-        stiffnessoffdiag = StencilMatrix(self._domain.vector_space, self._domain.vector_space)
-        self.assemble_nitsche2dUnderDiag(self._domain, fields=[u11_mph, u12_mph, u21_mph, u22_mph], knots=True, 
-                                            value=[self._domain.omega[0],self._domain.omega[1], interface_like, self.Kappa, self.normS], 
-                                            out = stiffnessoffdiag)
-        #... correct coo matrix
-        stiffnessoffdiag = self.collect_offdiag_stencil_matrix(stiffnessoffdiag, interface)
-        self.append_block(stiffnessoffdiag, patch_nb_n, patch_nb)
-        self.append_block(stiffnessoffdiag.T, patch_nb, patch_nb_n)
-    # #...
-    def apply_nitsche_same_space(self, stiffness, u11_mph, u12_mph, patch_nb):
-        '''
-        Docstring pour apply_nitsche for diagonal matrices for Laplace operator
-        
-        :param self: Description
-        :param stiffness: stifness matrix 
-        :param u11_mph: mapping correspond to patch_nb comp 1
-        :param u12_mph: mapping correspond to patch_nb comp 2
-        :param patch_nb: patch number start from 1
-        '''
-        if not (1 <= patch_nb <= self._nb_patches):
-            raise ValueError(f"patch_nb={patch_nb} out of range 1..{self._nb_patches}")
-        #... get interfaces for a given patch
-        interfaces_like = self.mp.getInterfacePatch(patch_nb)
-        #.. assemble diagonal matrix
-        self.assemble_nitsche2dDiag(self._domain, fields=[u11_mph, u12_mph], knots=True, value=[self._domain.omega[0],self._domain.omega[1], interfaces_like, self.Kappa, self.normS], out = stiffness)
-        #..
+#==============================================================================
+#.... application of Dirichlet boundary conditions
 #==============================================================================
 def apply_dirichlet(V, x, dirichlet = True, update = None, periodic = [False, False]):
     """
@@ -1244,521 +1138,95 @@ def apply_zeros(V, x, row_dirichlet=True, col_dirichlet=None):
     return matrix[rows][:, cols].tocoo()
 
 
-#============================================================================== TODO SHOULD STAY IN STENCIL FORMAT
-def apply_periodic(V, x, periodic = None, update = None):
-       
-  if update is None :
-    if isinstance(x, StencilMatrix):
-        x          = x.tosparse()
-        x          = x.toarray()
-        if V.dim == 1:
-            p  = V.degree
-            n1 = V.nbasis
+#==============================================================================
+def apply_periodic(V, x, periodic=None, update=None):
+    """Fold repeated spline coefficients while retaining stencil storage.
 
-            #... eliminate ghost regions
-            li            = np.zeros((2*p, n1))
-            li[:p,:]      = x[-p:,:]
-            li[p:p+p,-p:] = x[-2*p:-p,-p:]
+    Matrices return a reduced StencilMatrix representing P.T @ A @ P;
+    vectors return a reduced StencilVector representing P.T @ b. P extends
+    independent coefficients by copying the first degree entries at each
+    periodic axis's end. No dense or sparse matrix conversion occurs here.
 
-            x    = x[:-p,:-p] 
-            for i in range(p):
-                x[i,:]     += li[i,:-p]
-                x[i,:p]    += li[i,-p:]       
-                x[-1-i,:p] += li[2*p-1-i,-p:]
+    With update=True, extend reduced coefficients to the original space.
+    A StencilVector input returns a StencilVector; array inputs return arrays.
+    If periodic is omitted, all parameter directions are periodic.
+    """
+    from .linalg import StencilVectorSpace
 
-            return x
-
-        elif V.dim == 2:
-          x          = x.reshape((V.nbasis[0],V.nbasis[1], V.nbasis[0], V.nbasis[1]) )
-          if True in periodic:
-            p1,p2  = V.degree
-            n1,n2  = V.nbasis
-            #... eliminate ghost regions
-            
-            if periodic[0] == True:
-               lix                       = np.zeros((2*p1, n2, n1, n2))
-               lix[:p1,:, :, :]          = x[-p1:,:, :,:]
-               lix[p1:p1+p1, :, -p1:, :] = x[-2*p1:-p1,:, -p1:, :]
-            
-               x    = x[:-p1,:,:-p1,:] 
-               for i in range(p1):
-                  x[i, :, :, :]      += lix[i, :, :-p1, :]
-                  x[i, :, :p1, :]    += lix[i, :,-p1:, :]       
-                  x[-1-i, :, :p1, :] += lix[2*p1-1-i, :, -p1:, :]
-               n1 = n1 - p1
-            if periodic[1] == True:
-               liy                       = np.zeros((n1, 2*p2, n1, n2))
-               liy[:,:p2,:,:]            = x[:,-p2:, :,:]
-               liy[:,p2:p2+p2,:,-p2:]    = x[:, -2*p2:-p2, :, -p2:]
- 
-               x    = x[:,:-p2, :,:-p2] 
-               for j in range(p2):
-                  x[:, j, :, :]      += liy[:, j, :, :-p2]
-                  x[:, j, :, :p2]    += liy[:, j, :, -p2:]       
-                  x[:, -1-j, :, :p2] += liy[:, 2*p2-1-j, :, -p2:]
-               n2 = n2 - p2
-            x          = x.reshape(( n1*n2,n1*n2 ))                
-            return x
-          else:
-             raise NotImplementedError('Only if there is a periodic boundary at least in one dimension')
-
-        elif V.dim == 3:
-          x          = x.reshape((V.nbasis[0],V.nbasis[1],V.nbasis[2], V.nbasis[0],V.nbasis[1],V.nbasis[2]) )
-          if True in periodic:
-            p1,p2,p3   = V.degree
-            n1,n2, n3  = V.nbasis
-            #... eliminate ghost regions
-            if periodic[0]==True :
-               li                         = np.zeros((2*p1,n2,n3, n1,n2,n3))
-               li[:p1,:,:, :,:,:]         = x[-p1:,:,:, :,:,:]
-               li[p1:p1+p1,:,:, -p1:,:,:] = x[-2*p1:-p1,:,:, -p1:,:,:]
-            
-               x    = x[:-p1,:,:, :-p1,:,:] 
-               for i in range(p1):
-                  x[i,:,:, :,:,:]      += li[i,:,:, :-p1,:,:]
-                  x[i,:,:, :p1,:,:]    += li[i,:,:, -p1:,:,:]       
-                  x[-1-i,:,:,:p1,:,:]  += li[2*p1-1-i,:,:, -p1:,:,:]
-               n1 = n1 - p1
-            if periodic[1]==True :
-               #...
-               li                            = np.zeros((n1,2*p2,n3, n1,n2,n3))
-               li[:,:p2,:, :,:,:]            = x[:,-p2:,:, :,:,:]
-               li[:,p2:p2+p2,:, :,-p2:,:]    = x[:,-2*p2:-p2,:, :,-p2:,:]
- 
-               x    = x[:,:-p2,:, :,:-p2,:] 
-               for j in range(p2):
-                  x[:,j,:, :,:,:]      += li[:,j,:, :,:-p2,:]
-                  x[:,j,:, :,:p2,:]    += li[:,j,:, :,-p2:,:]       
-                  x[:,-1-j,:, :,:p2,:] += li[:,2*p2-1-j,:, :,-p2:,:]
-               n2 = n2 - p2
-            if periodic[2]==True :
-               #...
-               li                            = np.zeros((n1,n2,2*p3, n1,n2,n3))
-               li[:,:,:p3, :,:,:]            = x[:,:,-p3:, :,:,:]
-               li[:,:,p3:p3+p3, :,:,-p3:]    = x[:,:,-2*p3:-p3, :,:,-p3:]
- 
-               x    = x[:,:,:-p3, :,:,:-p3] 
-               for k in range(p3):
-                  x[:,:,k, :,:,:]      += li[:,:,k, :,:,:-p3]
-                  x[:,:,k, :,:,:p3]    += li[:,:,k, :,:,-p3:]       
-                  x[:,:,-1-k, :,:,:p3] += li[:,:,2*p3-1-k, :,:,-p3:]
-               n3 = n3 - p3                
-            x          = x.reshape(( n1*n2*n3, n1*n2*n3 ))                
-            return x
-          else:
-             raise NotImplementedError('Only if there is a periodic boundary at least in one direction')
-        else :
-            raise NotImplementedError('Only 1d, 2d and 3d are available')
-
-    elif isinstance(x, StencilVector):
-        x          = x.toarray()
-        x          = x.reshape(V.nbasis)
-        if V.dim == 1:
-            #... eliminate ghost regions
-            p    = V.degree
-
-            a    = np.zeros(x.shape[0])
-            a[:] = x[:]
-
-            x  = x[:-p]
-            for i in range(p):
-                x[i]             += a[-p+i]
-            return x
-
-        elif V.dim == 2:
-          if periodic == [True, True] :
-            #... eliminate ghost regions
-            p1,p2  = V.degree
-
-            a      = np.zeros(x.shape)
-            a[:,:] = x[:,:]
-            
-            x      = x[:-p1,:-p2]
-            for i in range(p1):
-               for j in range(p2):            
-                   x[i,j]            += a[i,-p2+j] + a[-p1+i,j] + a[-p1+i,-p2+j]
-            for i in range(p1):
-                x[i,p2:]             += a[-p1+i,p2:-p2]
-            for j in range(p2):
-                x[p1:,j]             += a[p1:-p1,-p2+j]
-            x      = x.reshape(( (V.nbasis[0]-p1)*(V.nbasis[1]-p2) ))
-            return x
-
-          elif periodic == [True, False] :
-            #... eliminate ghost regions
-            p1,p2  = V.degree
-
-            a      = np.zeros(x.shape)
-            a[:,:] = x[:,:]
-            
-            x      = x[:-p1,:]
-            for i in range(p1):
-                x[i,:]             += a[-p1+i,:]
-            x      = x.reshape(( (V.nbasis[0]-p1)*(V.nbasis[1]) ))
-            return x
-            
-          elif  periodic == [False, True] :
-            #... eliminate ghost regions
-            p1,p2  = V.degree
-
-            a      = np.zeros(x.shape)
-            a[:,:] = x[:,:]
-            
-            x     = x[:,:-p2]
-            for j in range(p2):
-                x[:,j]             += a[:,-p2+j]
-            x     = x.reshape(( (V.nbasis[0])*(V.nbasis[1]-p2) ))                                            
-            return x
-          else:
-             raise NotImplementedError('Only if there is a periodic boundary at least in one direction')                
-
-        # ... 
-        elif V.dim == 3:
-          if periodic == [True, True, True] :
-            #... eliminate ghost regions
-            p1, p2, p3 = V.degree
-
-            a          = np.zeros(x.shape)
-            a[:,:,:]   = x[:,:,:]
-            
-            x          = x[:-p1,:-p2,:-p3]
-            for i in range(p1):
-              for j in range(p2):
-                for k in range(p3):
-                    x[i,j,k]             += a[i,j,-p3+k] + a[i,-p2+j,k]  + a[i,-p2+j,-p3+k] + a[-p1+i,j,k]  + a[-p1+i,j,-p3+k] + a[-p1+i,-p2+j,k] + a[-p1+i,-p2+j,-p3+k]
-            # ...
-            for i in range(p1):
-              for j in range(p2):
-                    x[i,j,p3:]           += a[i,-p2+j,p3:-p3] + a[-p1+i,j,p3:-p3]  + a[-p1+i,-p2+j,p3:-p3]
-            for i in range(p1):
-                for k in range(p3):
-                    x[i,p2:,k]           += a[i,p2:-p2,-p3+k] + a[-p1+i,p2:-p2,k]  + a[-p1+i,p2:-p2,-p3+k]
-            for j in range(p2):
-                for k in range(p3):
-                    x[p1:,j,k]           += a[p1:-p1,j,-p3+k] + a[p1:-p1,-p2+j,k]  + a[p1:-p1,-p2+j,-p3+k]
-            # ...
-            for i in range(p1):
-                    x[i,p2:,p3:]         += a[-p1+i,p2:-p2,p3:-p3]
-            for j in range(p2):
-                    x[p1:,j,p3:]         += a[p1:-p1,-p2+j,p3:-p3]
-            for k in range(p3):
-                    x[p1:,p2:,k]         += a[p1:-p1,p2:-p2,-p3+k]
-                                                                                
-            x          = x.reshape(( (V.nbasis[0]-p1)*(V.nbasis[1]-p2)*(V.nbasis[2]-p3) ))
-            return x
-          elif periodic == [True, True, False] :
-            #... eliminate ghost regions
-            p1, p2, p3 = V.degree
-
-            a          = np.zeros(x.shape)
-            a[:,:,:]   = x[:,:,:]
-            
-            x          = x[:-p1,:-p2,:]
-            for i in range(p1):
-              for j in range(p2):
-                    x[i,j,:]             += a[i,-p2+j,:] + a[-p1+i,j,:]  + a[-p1+i,-p2+j,:]
-            # ...
-            for i in range(p1):
-                    x[i,p2:,:]           += a[-p1+i,p2:-p2,:]
-            for j in range(p2):
-                    x[p1:,j,:]           += a[p1:-p1,-p2+j,:]
-            x          = x.reshape(( (V.nbasis[0]-p1)*(V.nbasis[1]-p2)*(V.nbasis[2]) ))
-            return x                
-
-          elif periodic == [True, False, True] :
-            #... eliminate ghost regions
-            p1, p2, p3 = V.degree
-
-            a          = np.zeros(x.shape)
-            a[:,:,:]   = x[:,:,:]
-            
-            x          = x[:-p1,:,:-p3]
-            for i in range(p1):
-                for k in range(p3):
-                    x[i,:,k]             += a[i,:,-p3+k] + a[-p1+i,:,k]  + a[-p1+i,:,-p3+k]
-            # ...
-            for i in range(p1):
-                    x[i,:,p3:]           += a[-p1+i,:,p3:-p3]
-            for k in range(p3):
-                    x[p1:,:,k]           += a[p1:-p1,:,-p3+k]
-            x          = x.reshape(( (V.nbasis[0]-p1)*(V.nbasis[1])*(V.nbasis[2]-p3) ))
-            return x
-          elif periodic == [False, True, True] :
-            #... eliminate ghost regions
-            p1, p2, p3 = V.degree
-
-            a          = np.zeros(x.shape)
-            a[:,:,:]   = x[:,:,:]
-            
-            x          = x[:,:-p2,:-p3]
-            for j in range(p2):
-                for k in range(p3):
-                    x[:,j,k]             += a[:,j,-p3+k] + a[:,-p2+j,k]  + a[:,-p2+j,-p3+k]   
-            # ...
-            for j in range(p2):
-                    x[:,j,p3:]           += a[:,-p2+j,p3:-p3]
-            for k in range(p3):
-                    x[:,p2:,k]           += a[:,p2:-p2,-p3+k]
-                    
-            x          = x.reshape(( (V.nbasis[0])*(V.nbasis[1]-p2)*(V.nbasis[2]-p3) ))
-            return x
-          elif periodic == [False, False, True] :
-            #... eliminate ghost regions
-            p1, p2, p3 = V.degree
-
-            a          = np.zeros(x.shape)
-            a[:,:,:]   = x[:,:,:]
-            
-            x          = x[:,:,:-p3]
-            for k in range(p3):
-                    x[:,:,k]             += a[:,:,-p3+k] 
-            x          = x.reshape(( (V.nbasis[0])*(V.nbasis[1])*(V.nbasis[2]-p3) ))
-            return x
-          elif periodic == [False, True, False] :
-            #... eliminate ghost regions
-            p1, p2, p3 = V.degree
-
-            a          = np.zeros(x.shape)
-            a[:,:,:]   = x[:,:,:]
-            
-            x          = x[:,:-p2,:]
-            for j in range(p2):
-                    x[:,j,:]             +=  a[:,-p2+j,:]                    
-
-            x          = x.reshape(( (V.nbasis[0])*(V.nbasis[1]-p2)*(V.nbasis[2]) ))
-            return x
-          elif periodic == [True, False, False] :
-            #... eliminate ghost regions
-            p1, p2, p3 = V.degree
-
-            a          = np.zeros(x.shape)
-            a[:,:,:]   = x[:,:,:]
-            
-            x          = x[:-p1,:,:]
-            for i in range(p1):
-                    x[i,:,:]             +=  a[-p1+i,:,:]
-                    
-            x          = x.reshape(( (V.nbasis[0]-p1)*(V.nbasis[1])*(V.nbasis[2]) ))
-            return x
-          else:
-             raise NotImplementedError('Only if there is a periodic boundary at least in one direction')                
-                             
-        else:
-            raise NotImplementedError('Only 1d, 2d and 3d are available')
-
+    ndim = V.dim
+    if ndim not in (1, 2, 3):
+        raise NotImplementedError('Only 1d, 2d and 3d are available')
+    shape = (V.nbasis,) if ndim == 1 else tuple(V.nbasis)
+    pads = (V.degree,) if ndim == 1 else tuple(V.degree)
+    if periodic is None:
+        periodic = (True,)*ndim
+    elif isinstance(periodic, (bool, np.bool_)):
+        periodic = (bool(periodic),)*ndim
     else:
-        raise TypeError('ERROR 1 ! Expecting StencilMatrix or StencilVector')
+        periodic = tuple(bool(flag) for flag in periodic)
+    if len(periodic) != ndim:
+        raise ValueError('periodic must contain one flag per parameter direction')
+    reduced_shape = tuple(n-p if flag else n for n, p, flag in zip(shape, pads, periodic))
+    if any(n <= 0 for n in reduced_shape):
+        raise ValueError('Periodic space must have independent coefficients')
+    reduced_space = StencilVectorSpace(reduced_shape, pads, periodic, dtype=V.vector_space.dtype)
 
-  else :
-        if V.dim == 1:
-            #... update the eliminated ghost regions
-            p       = V.degree
-            n1      = x.shape[0] + p
-            
-            a       = np.zeros(n1)
-            for i in range(p):
-                a[-p-i] = x[i]
-            return a
+    if update is not None and update is not False:
+        if isinstance(x, StencilMatrix):
+            raise TypeError('Periodic extension requires coefficient arrays or a StencilVector')
+        values = x.tensor if isinstance(x, StencilVector) else np.asarray(x)
+        if values.size != int(np.prod(reduced_shape)):
+            raise ValueError('Coefficient size does not match the reduced periodic space')
+        values = values.reshape(reduced_shape)
+        indices = [np.arange(n) % m if flag else np.arange(n)
+                   for n, m, flag in zip(shape, reduced_shape, periodic)]
+        extended = values[np.ix_(*indices)]
+        if isinstance(x, StencilVector):
+            result = StencilVector(V.vector_space)
+            result.from_array(V, extended)
+            return result
+        return extended.copy()
 
-        elif V.dim == 2:
-          if periodic == [True, True] :
-            #... update the eliminated ghost regions
-            p1,p2   = V.degree
-            n1      = x.shape[0] + p1
-            n2      = x.shape[1] + p2
-                        
-            a       = np.zeros((n1, n2) )           
-            a[:-p1,:-p2]  = x[:,:]
-            for i in range(p1):
-               for j in range(p2):            
-                   a[i,-p2+j]     = x[i,j]
-                   a[-p1+i,j]     = x[i,j] 
-                   a[-p1+i,-p2+j] = x[i,j]
-
-            for i in range(p1):
-                a[-p1+i,p2:-p2] = x[i,p2:]
-
-            for j in range(p2):
-                a[p1:-p1,-p2+j] = x[p1:,j]                  
-
-            return a
-
-          elif periodic == [True, False] :
-            #... update the eliminated ghost regions
-            p1,p2      = V.degree
-            n1         = x.shape[0] + p1
-            n2         = x.shape[1]
-                        
-            a          = np.zeros((n1, n2))
-            a[:-p1,:]  = x[:,:]
-            for i in range(p1):
-                a[-p1+i,:]   = x[i,:]
-
-            return a
-
-          elif  periodic == [False, True] :
-            #... update the eliminated ghost regions
-            p1,p2      = V.degree
-            n1         = x.shape[0]
-            n2         = x.shape[1] + p2
-                        
-            a          = np.zeros((n1, n2))
-            a[:,:-p2]  = x[:,:]
-            for j in range(p2):
-                a[:,-p2+j]   = x[:,j]                                            
-            return a
-          else:
-             raise NotImplementedError('Only if there is a periodic boundary at least in one direction')      
-
-        # ... 
-        elif V.dim == 3:
-          if periodic == [True, True, True] :
-            #... update the eliminated ghost regions
-            p1, p2, p3 = V.degree
-            n1      = x.shape[0] + p1
-            n2      = x.shape[1] + p2
-            n3      = x.shape[2] + p3
-                                    
-            a       = np.zeros((n1, n2, n3))
-            a[:-p1,:-p2,:-p3]  = x[:,:,:]            
-            for i in range(p1):
-              for j in range(p2):
-                for k in range(p3):
-                    a[i,j,-p3+k]          = x[i,j,k]
-                    a[i,-p2+j,k]          = x[i,j,k]
-                    a[i,-p2+j,-p3+k]      = x[i,j,k]
-                    a[-p1+i,j,k]          = x[i,j,k]
-                    a[-p1+i,j,-p3+k]      = x[i,j,k]
-                    a[-p1+i,-p2+j,k]      = x[i,j,k]
-                    a[-p1+i,-p2+j,-p3+k]  = x[i,j,k]
-            # ...
-            for i in range(p1):
-              for j in range(p2):
-                    a[i,-p2+j,p3:-p3]     = x[i,j,p3:]
-                    a[-p1+i,j,p3:-p3]     = x[i,j,p3:]
-                    a[-p1+i,-p2+j,p3:-p3] = x[i,j,p3:]
-            for i in range(p1):
-                for k in range(p3):
-                    a[i,p2:-p2,-p3+k]     = x[i,p2:,k]
-                    a[-p1+i,p2:-p2,k]     = x[i,p2:,k]
-                    a[-p1+i,p2:-p2,-p3+k] = x[i,p2:,k]
-            for j in range(p2):
-                for k in range(p3):
-                    a[p1:-p1,j,-p3+k]     = x[p1:,j,k]
-                    a[p1:-p1,-p2+j,k]     = x[p1:,j,k]
-                    a[p1:-p1,-p2+j,-p3+k] = x[p1:,j,k]
-            # ...
-            for i in range(p1):
-                    a[-p1+i,p2:-p2,p3:-p3] = x[i,p2:,p3:]
-            for j in range(p2):
-                    a[p1:-p1,-p2+j,p3:-p3] = x[p1:,j,p3:]
-            for k in range(p3):
-                    a[p1:-p1,p2:-p2,-p3+k] = x[p1:,p2:,k]
-            return a
-
-          elif periodic == [True, True, False] :
-            #... update the eliminated ghost regions
-            p1, p2, p3 = V.degree
-            n1      = x.shape[0] + p1
-            n2      = x.shape[1] + p2
-            n3      = x.shape[2]
-                                    
-            a       = np.zeros((n1, n2, n3))
-            a[:-p1,:-p2,:]  = x[:,:,:]            
-            for i in range(p1):
-              for j in range(p2):
-                    a[i,-p2+i,:]     = x[i,j,:]
-                    a[-p1+i,j,:]     = x[i,j,:]
-                    a[-p1+i,-p2+j,:] = x[i,j,:]
-            # ...
-            for i in range(p1):
-                    a[-p1+i,p2:-p2,:] = x[i,p2:,:]
-            for j in range(p2):
-                    a[p1:-p1,-p2+j,:] = x[p1:,j,:]
-            return a
-
-          elif periodic == [True, False, True] :
-            #... update the eliminated ghost regions
-            p1, p2, p3 = V.degree
-            n1      = x.shape[0] + p1
-            n2      = x.shape[1] 
-            n3      = x.shape[2] + p3
-                                    
-            a       = np.zeros((n1, n2, n3))
-            a[:-p1,:,:-p3]  = x[:,:,:]            
-            for i in range(p1):
-                for k in range(p3):
-                    a[i,:,-p3+k]      = x[i,:,k]
-                    a[-p1+i,:,k]      = x[i,:,k]
-                    a[-p1+i,:,-p3+k]  = x[i,:,k]
-            # ...
-            for i in range(p1):
-                    a[-p1+i,:,p3:-p3] = x[i,:,p3:]
-            for k in range(p3):
-                    a[p1:-p1,:,-p3+k] = x[p1:,:,k]
-            return a 
-
-          elif periodic == [False, True, True] :
-            #... update the eliminated ghost regions
-            p1, p2, p3 = V.degree
-            n1      = x.shape[0]
-            n2      = x.shape[1] + p2
-            n3      = x.shape[2] + p3
-                                    
-            a       = np.zeros((n1, n2, n3))
-            a[:,:-p2,:-p3]  = x[:,:,:]            
-            for j in range(p2):
-                for k in range(p3):
-                    a[:,j,-p3+k]      = x[:,j,k]
-                    a[:,-p2+j,k]      = x[:,j,k]
-                    a[:,-p2+j,-p3+k]  = x[:,j,k]         
-            # ...
-            for j in range(p2):
-                    a[:,-p2+j,p3:-p3] = x[:,j,p3:]
-            for k in range(p3):
-                    a[:,p2:-p2,-p3+k] = x[:,p2:,k]
-            return a
-            
-          elif periodic == [False, False, True] :
-            #... update the eliminated ghost regions
-            p1, p2, p3 = V.degree
-            n1      = x.shape[0] 
-            n2      = x.shape[1]
-            n3      = x.shape[2] + p3
-                                    
-            a       = np.zeros((n1, n2, n3))
-            a[:,:,:-p3]  = x[:,:,:]            
-            for k in range(p3):
-                    a[:,:,-p3+k] = x[:,:,k]
-            return a
-
-          elif periodic == [False, True, False] :
-            #... update the eliminated ghost regions
-            p1, p2, p3 = V.degree
-            n1      = x.shape[0] 
-            n2      = x.shape[1] + p2
-            n3      = x.shape[2]
-                                    
-            a       = np.zeros((n1, n2, n3))
-            a[:,:-p2,:]  = x[:,:,:]            
-            for j in range(p2):
-                    a[:,-p2+j,:] = x[:,j,:]
-            return a
-            
-          elif periodic == [True, False, False] :
-            #... update the eliminated ghost regions
-            p1, p2, p3 = V.degree
-            n1      = x.shape[0] + p1
-            n2      = x.shape[1] 
-            n3      = x.shape[2]
-                                    
-            a       = np.zeros((n1, n2, n3))
-            a[:-p1,:,:]  = x[:,:,:]            
-            for i in range(p1):
-                    a[-p1+i,:,:] = x[i,:,:]
-            return a
-          else:
-             raise NotImplementedError('Only if there is a periodic boundary at least in one direction')                
-
-        else:
-            raise NotImplementedError('Only 1d, 2d and 3d are available')
+    owned = tuple(slice(p, p+n) for p, n in zip(pads, shape))
+    if isinstance(x, StencilMatrix):
+        if x.domain.npts != shape or x.codomain.npts != shape:
+            raise ValueError('Matrix dimensions do not match the original spline space')
+        result = StencilMatrix(reduced_space, reduced_space)
+        local = x._data[owned]
+        indices = np.nonzero(local)
+        if not len(indices[0]):
+            return result
+        values = local[indices]
+        rows, offsets = indices[:ndim], indices[ndim:]
+        targets = []
+        diagonals = []
+        valid = np.ones(values.shape, dtype=bool)
+        for axis, (n, m, p, flag) in enumerate(zip(shape, reduced_shape, pads, periodic)):
+            column = rows[axis]+offsets[axis]-p
+            # Match the input stencil's column wrapping convention.
+            column = column % n
+            row = rows[axis] % m if flag else rows[axis]
+            column = column % m if flag else column
+            delta = column-row
+            if flag:
+                delta = (delta+m//2) % m-m//2
+            valid &= np.abs(delta) <= p
+            targets.append(row+p)
+            diagonals.append(delta+p)
+        if not valid.all():
+            raise ValueError('Periodic folding produced a coupling outside the stencil bandwidth')
+        np.add.at(result._data, tuple(targets+diagonals), values)
+        return result
+    if isinstance(x, StencilVector):
+        if x.space.npts != shape:
+            raise ValueError('Vector dimensions do not match the original spline space')
+        result = StencilVector(reduced_space)
+        source_indices = np.indices(shape)
+        target_indices = tuple(source_indices[a] % reduced_shape[a] if periodic[a]
+                               else source_indices[a] for a in range(ndim))
+        folded = np.zeros(reduced_shape, dtype=x._data.dtype)
+        np.add.at(folded, target_indices, x._data[owned])
+        target_owned = tuple(slice(p, p+n) for p, n in zip(pads, reduced_shape))
+        result._data[target_owned] = folded
+        return result
+    raise TypeError('Periodic reduction requires a StencilMatrix or StencilVector')

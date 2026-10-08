@@ -68,11 +68,11 @@ def Proj_solve(V1, V2 , V, alpha):
 
        M1               = assemble_mass1D(V1)
        M1               = apply_periodic(V1, M1)
-       M1               = csr_matrix(M1)
+       M1               = csr_matrix(M1.tosparse())
 
        M2               = assemble_mass1D(V2)
-       M2               = apply_periodic(V1, M2)
-       M2               = csr_matrix(M2)
+       M2               = apply_periodic(V2, M2)
+       M2               = csr_matrix(M2.tosparse())
        # ... assemble 2D mass matrix from 1D mass matrix
        M                = kron(M1, M2)
  
@@ -85,7 +85,7 @@ def Proj_solve(V1, V2 , V, alpha):
        rhs               = assemble_dtrhs( V, fields = [u], value =[alpha])
        rhs               = apply_periodic( V, rhs, periodic)
        # ...
-       b                = -1.*rhs
+       b                = -1.*rhs.toarray()
        #--Solve a linear system
        lu               = sla.splu(csc_matrix(M))
        dtxh             = lu.solve(b)
@@ -137,11 +137,11 @@ def Cahn_Hliard_solve(V1, V2, V, u, ut, xh, txh, dt, N_iter = None):
           rhs        = apply_periodic(V, rhs, periodic)
 
           #--Solve a linear system
-          b          = -1.*rhs
+          b          = -1.*rhs.toarray()
           #++ 
          #  lu         = sla.splu(csc_matrix(M))
          #  d_tx       = lu.solve(b)
-          d_tx       = sla.cgs(M, b, rtol = 1e-10)[0]
+          d_tx       = sla.cgs(M.tosparse().tocsr(), b, rtol = 1e-10)[0]
           #print('CPU-time  SUP_LU== ', time.time()- start)
           d_tx       = d_tx.reshape((V1.nbasis-V1.degree, V2.nbasis-V2.degree))                    
           d_tx       = apply_periodic(V, d_tx, periodic, update= True)
