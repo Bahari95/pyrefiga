@@ -6,34 +6,49 @@ NURBS weights and multipatch coupling are not included here.
 """
 
 import numpy as np
-from scipy.interpolate import BSpline
 from scipy.linalg import eigvalsh
-from scipy.sparse import block_diag, coo_matrix, eye, hstack, kron, vstack
+from scipy.sparse import coo_matrix
 from scipy.sparse.linalg import splu
 
 from .spaces import SplineSpace, TensorSpace
 from .linalg import StencilVector
 from .api import apply_periodic
 from .ad_mesh_tools import assemble_mass1D
+from .bsplines import find_span, basis_funs
+from .gallery import assemble_periodic_derivative_1d, assemble_curlcurl_2d
 
 
-def _periodic_basis(space, points):
-    """Evaluation matrix after identifying repeated periodic coefficients."""
-    full = BSpline.design_matrix(np.asarray(points), space.knots, space.degree).tocoo()
+def _periodic_basis(space, points=None):
+    """Fold local spline values onto independent periodic coefficients.
+
+    Without points, reuse SplineSpace's precomputed quadrature basis.
+    """
     n = space.nbasis-space.degree
-    return coo_matrix((full.data, (full.row, full.col % n)),
+    if points is None:
+        nq = space.points.shape[1]
+        rows = np.broadcast_to(np.arange(space.points.size).reshape(-1, 1, nq),
+                               (space.nelements, space.degree+1, nq))
+        columns = (space.spans[:, None, None]-space.degree
+                   + np.arange(space.degree+1)[None, :, None]) % n
+        columns = np.broadcast_to(columns, rows.shape)
+        return coo_matrix((space.basis[:, :, 0, :].ravel(),
+                           (rows.ravel(), columns.ravel())),
+                          shape=(space.points.size, n)).tocsr()
+    points = np.asarray(points, dtype=float)
+    if points.ndim != 1 or not np.isfinite(points).all():
+        raise ValueError('Evaluation points must be a finite one-dimensional array')
+    if np.any(points < space.grid[0]) or np.any(points > space.grid[-1]):
+        raise ValueError('Evaluation points must lie inside the spline domain')
+    rows, columns, values = [], [], []
+    for i, x in enumerate(points):
+        span = find_span(space.knots, space.degree, x)
+        basis = basis_funs(space.knots, space.degree, x, span)
+        for j, value in enumerate(basis):
+            rows.append(i)
+            columns.append((span-space.degree+j) % n)
+            values.append(value)
+    return coo_matrix((values, (rows, columns)),
                       shape=(len(points), n)).tocsr()
-
-
-def _derivative(high, low):
-    # Trimming the first and last knot gives the derivative spline space.
-    if not np.array_equal(high.knots[1:-1], low.knots):
-        raise ValueError('Derivative space must use the trimmed knot vector')
-    n, p = high.nbasis-high.degree, high.degree
-    j = np.arange(n)
-    scale = p/(high.knots[j+p+1]-high.knots[j+1])
-    return coo_matrix((np.r_[-scale, scale],
-                       (np.r_[j, j], np.r_[j, (j+1) % n])), shape=(n, n)).tocsr()
 
 
 class PeriodicCurlCurl2D:
@@ -45,9 +60,20 @@ class PeriodicCurlCurl2D:
     Degree may be an integer or (px,py), each >= 2; nelements may likewise
     be an integer or a pair. Supply grids=(x_breaks,y_breaks) for a nonuniform
     mesh or a rectangle other than [0,1]^2. Coefficients use C-order flattening.
+    Alternatively, spaces=(V1,V2) supplies the two degree-p periodic spline
+    spaces explicitly; their grids and degrees replace degree/nelements/grids.
     """
 
-    def __init__(self, degree=2, nelements=16, epsilon=1.0, mu=1.0, grids=None):
+    def __init__(self, degree=2, nelements=16, epsilon=1.0, mu=1.0, grids=None, spaces=None):
+        if spaces is not None:
+            spaces = tuple(spaces)
+            if len(spaces) != 2 or any(not isinstance(v, SplineSpace) or not v.periodic
+                                       or v.nurbs for v in spaces):
+                raise ValueError('Provide two periodic non-rational SplineSpace objects')
+            if any(v.spans.ndim != 1 or v.points.shape[1] < v.degree+1 for v in spaces):
+                raise ValueError('Spaces need their knot-grid quadrature with at least degree+1 points')
+            degree = tuple(v.degree for v in spaces)
+            grids = tuple(v.grid for v in spaces)
         degrees = (degree, degree) if np.isscalar(degree) else tuple(degree)
         if len(degrees) != 2 or any(not isinstance(p, (int, np.integer)) or p < 2 for p in degrees):
             raise ValueError('degree must contain two integers >= 2')
@@ -67,10 +93,11 @@ class PeriodicCurlCurl2D:
                or not np.all(np.diff(g) > 0) for g, p in zip(grids, degrees)):
             raise ValueError('Grids must be finite, increasing, with more elements than degree')
         self.grids = grids
-        high = tuple(SplineSpace(int(p), grid=g, periodic=True, quad_degree=int(p)+1)
-                     for p, g in zip(degrees, grids))
-        low = tuple(SplineSpace(int(p)-1, grid=g, periodic=True, quad_degree=int(p)+1)
-                    for p, g in zip(degrees, grids))
+        high = spaces if spaces is not None else tuple(
+            SplineSpace(int(p), grid=g, nderiv=2, periodic=True, quad_degree=int(p)+1)
+            for p, g in zip(degrees, grids))
+        low = tuple(SplineSpace(v.degree-1, grid=v.grid, nderiv=2,
+                                periodic=True, quad_degree=v.points.shape[1]-1) for v in high)
         self.scalar_space = TensorSpace(*high)
         self.component_spaces = (TensorSpace(low[0], high[1]), TensorSpace(high[0], low[1]))
         self.curl_space = TensorSpace(*low)
@@ -82,13 +109,9 @@ class PeriodicCurlCurl2D:
         self.mass_low_stencils = tuple(apply_periodic(v, assemble_mass1D(v)) for v in low)
         mh = tuple(m.tosparse().tocsr() for m in self.mass_high_stencils)
         ml = tuple(m.tosparse().tocsr() for m in self.mass_low_stencils)
-        dx, dy = (_derivative(h, l) for h, l in zip(high, low))
-        ix, iy = (eye(n, format='csr') for n in self.shape)
-        self.gradient = vstack((kron(dx, iy), kron(ix, dy)), format='csr')
-        self.curl = hstack((-kron(ix, dy), kron(dx, iy)), format='csr')
-        self.mass = self.epsilon*block_diag((kron(ml[0], mh[1]), kron(mh[0], ml[1])), format='csr')
-        self.curl_mass = kron(ml[0], ml[1], format='csr')/self.mu
-        self.stiffness = (self.curl.T @ self.curl_mass @ self.curl).tocsr()
+        dx, dy = (assemble_periodic_derivative_1d(h, l) for h, l in zip(high, low))
+        (self.gradient, self.curl, self.mass, self.curl_mass,
+         self.stiffness) = assemble_curlcurl_2d(mh, ml, (dx, dy), self.epsilon, self.mu)
 
         # Tensor mass inverses avoid factoring the full two-dimensional matrix.
         self._mass_factors = ((splu(ml[0].tocsc()), splu(mh[1].tocsc())),
@@ -101,7 +124,7 @@ class PeriodicCurlCurl2D:
         self.dt_limit = 2/np.sqrt(self.lambda_max)
         self._points = tuple(v.points.ravel() for v in high)
         self._weights = np.outer(high[0].weights.ravel(), high[1].weights.ravel())
-        self._load_bases = tuple(tuple(_periodic_basis(v, q) for v, q in zip(space.spaces, self._points))
+        self._load_bases = tuple(tuple(_periodic_basis(v) for v in space.spaces)
                                  for space in self.component_spaces)
 
     def _coefficients(self, values):

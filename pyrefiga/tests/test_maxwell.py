@@ -9,6 +9,21 @@ from pyrefiga.maxwell import PeriodicCurlCurl2D, CurlCurlLeapfrog
 
 
 class MaxwellTests(unittest.TestCase):
+    def test_explicit_spline_spaces(self):
+        from pyrefiga import SplineSpace
+
+        grid = np.linspace(0, 1, 7)
+        spaces = tuple(SplineSpace(degree=3, grid=grid, nderiv=2, periodic=True)
+                       for _ in range(2))
+        op = PeriodicCurlCurl2D(spaces=spaces, epsilon=2, mu=3)
+        reference = PeriodicCurlCurl2D(degree=3, nelements=6, epsilon=2, mu=3)
+        self.assertIs(op.scalar_space.spaces[0], spaces[0])
+        np.testing.assert_allclose(op.mass.toarray(), reference.mass.toarray(), atol=2e-14)
+        np.testing.assert_allclose(op.stiffness.toarray(), reference.stiffness.toarray(), atol=2e-13)
+        constant = op.project(lambda x, y, t: (1., -2.))
+        np.testing.assert_allclose(constant[:op.component_size], 1., atol=2e-13)
+        np.testing.assert_allclose(constant[op.component_size:], -2., atol=2e-13)
+
     def test_nonuniform_derivative_and_complex(self):
         op = PeriodicCurlCurl2D(degree=(3, 2), grids=(
             np.array([0, .07, .2, .4, .65, .8, 1]), np.array([0, .1, .3, .55, .7, 1])))

@@ -9,7 +9,7 @@ import argparse
 from pathlib import Path
 import numpy as np
 
-from pyrefiga import apply_periodic, load_xml, pyref_multipatch, paraview_TimeSolutionMultipatch
+from pyrefiga import SplineSpace, apply_periodic, load_xml, pyref_multipatch, paraview_TimeSolutionMultipatch
 from pyrefiga.maxwell import PeriodicCurlCurl2D, CurlCurlLeapfrog
 
 
@@ -32,7 +32,17 @@ def main(argv=None):
     if args.steps < 0 or args.save_every < 1 or args.nbpts < 2 or not 0 < args.cfl < 1:
         parser.error('Use steps >= 0, save-every >= 1, nbpts >= 2 and 0 < cfl < 1')
     try:
-        op = PeriodicCurlCurl2D(args.degree, args.nelements, args.epsilon, args.mu)
+        if args.degree < 2 or args.nelements <= args.degree:
+            raise ValueError('Use degree >= 2 and nelements > degree')
+        grid = np.linspace(0, 1, args.nelements+1)
+        V1 = SplineSpace(degree=args.degree, grid=grid, nderiv=2, periodic=True)
+        V2 = SplineSpace(degree=args.degree, grid=grid, nderiv=2, periodic=True)
+        # The operator builds u_x in S(p-1,p), u_y in S(p,p-1).
+        # 1D masses: assemble_mass1D + apply_periodic.
+        # Derivatives and vector matrices: pyrefiga/gallery.py,
+        # assemble_periodic_derivative_1d and assemble_curlcurl_2d:
+        # C = [-I_x (x) D_y, D_x (x) I_y], A = C.T @ M_(1/mu) @ C.
+        op = PeriodicCurlCurl2D(epsilon=args.epsilon, mu=args.mu, spaces=(V1, V2))
     except ValueError as exc:
         parser.error(str(exc))
     natural_frequency = 2*np.pi/np.sqrt(args.epsilon*args.mu)

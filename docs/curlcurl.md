@@ -75,6 +75,18 @@ $$M_\epsilon=\epsilon\,\mathrm{diag}
 The mass is consistent, not lumped. Its inverse is applied using cached
 one-dimensional sparse factorizations and tensor solves.
 
+The example constructs `V1` and `V2` explicitly using
+`SplineSpace(degree=args.degree, grid=grid, nderiv=2, periodic=True)` and
+passes them as `spaces=(V1,V2)` to the operator. The degree-reduced spaces
+use the same quadrature rule. Source projection reuses `SplineSpace.basis`
+and `spans`; arbitrary-point evaluation uses the library's `find_span`
+and `basis_funs`, without SciPy `BSpline`.
+
+The matrix construction is exposed in [pyrefiga/gallery.py](../pyrefiga/gallery.py):
+`assemble_periodic_derivative_1d` builds each coefficient derivative, and
+`assemble_curlcurl_2d` builds `G`, `C`, `M_epsilon`, the curl mass and
+`A = C.T @ curl_mass @ C` explicitly from the one-dimensional matrices.
+
 ## Time integration and source
 
 Leapfrog stores `u` at time n*dt and `velocity_half` at time (n+1/2)*dt.

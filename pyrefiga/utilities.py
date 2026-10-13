@@ -1474,12 +1474,6 @@ class pyref_multipatch(object):
     #.. get dirichlet BCs for a given patch
     def getDirPatch(self, num_patch):
         return self.dirichlet[num_patch-1]
-    # .. get singularity points L shape TODO
-    # def getSingularityPatch(self, num_patch):
-    #     interfaceP = self.getInterfacePatch(num_patch)
-    #     if 2 in interfaceP and 4 in interfaceP:            
-    #         patch_tmp = self.patch_connection(num_patch)
-    #     return 0
 
     #... get neighbors for a given patch : list of [patch_nb, interface_nb]
     def getNeighbors(self, num_patch):
