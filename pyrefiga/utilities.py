@@ -946,22 +946,30 @@ class pyref_patch:
     
     def Refinegrid(self, j_direct, numElevate = 1):
         """
-        Refine a grid multiple times by inserting midpoints between unique knots.
+        Refine a parameter grid by bisecting each distinct knot span.
         
         Parameters
         ----------
-        numElevate : int
-            Number of refinement iterations.
+        j_direct : int
+            Parameter direction (zero-based).
+        numElevate : int, optional
+            Non-negative number of refinement iterations. Zero returns a copy
+            of the original grid.
         Returns
         -------
         Grid_refined : ndarray
             Refined grid with original multiplicities preserved.
         """
-        if numElevate ==0:
-            return self._grids[j_direct]
+        if isinstance(numElevate, (bool, np.bool_)) or not isinstance(numElevate, (int, np.integer)):
+            raise TypeError('numElevate must be a non-negative integer')
+        if numElevate < 0:
+            raise ValueError('numElevate must be a non-negative integer')
 
-        #... refine the grid numElevate times
-        Grid_refined = np.array(self._grids[j_direct])        
+        # Explicit slice bounds also work for degree zero (where [p:-p]
+        # would be empty). Preserve repeated knots in the original grid.
+        knots = self.knots[j_direct]
+        degree = self.degree[j_direct]
+        Grid_refined = knots[degree:len(knots)-degree].copy()
         for _ in range(numElevate):
             # extract unique values
             unique_knots = np.unique(Grid_refined)
@@ -974,40 +982,93 @@ class pyref_patch:
     
     def RefineGeometryMap(self, numElevate=1):
         """
-        pyref_patch :  Refine the geometry by elevating the DoFs numElevate times.
-        """
-        assert(numElevate >= 1)
-        #... refine the grid numElevate times
-        #... refine the space
-        if self.dim == 2:
-            Vh1       = SplineSpace(degree=self.degree[0], grid= self.Refinegrid(0, numElevate))
-            Vh2       = SplineSpace(degree=self.degree[1], grid= self.Refinegrid(1, numElevate))
-            Vh        = TensorSpace(Vh1, Vh2)# after refinement
-            #... initial
-            nbasis_tot = self._nbasis[0]*self._nbasis[1]
-            VH         = self.space
-        else:
-            Vh1        = SplineSpace(degree=self.degree[0], grid= self.Refinegrid(0, numElevate))
-            Vh2        = SplineSpace(degree=self.degree[1], grid= self.Refinegrid(1, numElevate))
-            Vh3        = SplineSpace(degree=self.degree[2], grid= self.Refinegrid(2, numElevate))            
-            Vh         = TensorSpace(Vh1, Vh2, Vh3)# after refinement
-            #... initial
-            VH         = self.space
-            nbasis_tot = self._nbasis[0]*self._nbasis[1]*self._nbasis[2]
+        Refine the geometry by midpoint knot insertion without changing it.
 
-        # Extract coefs data
-        coefs_data = []
-        # Refine the coefs
-        M_mp      = prolongation_matrix(VH, Vh)
+        Parameters
+        ----------
+        numElevate : int, optional
+            Non-negative number of uniform refinement iterations in every
+            parameter direction. Each iteration bisects every distinct knot
+            span; the spline degrees and existing multiplicities are unchanged.
+            Zero returns copies of the original coefficients and weights.
+
+        Returns
+        -------
+        list of ndarray
+            For NURBS, ``[weights, x, y, ...]``; for B-splines,
+            ``[x, y, ...]``. Each array has the refined tensor-product basis
+            shape, matching the grids returned by :meth:`Refinegrid`.
+
+        Notes
+        -----
+        The patch is not modified. NURBS are refined in homogeneous coordinates
+        (weights and weighted control points), so general, nonseparable weights
+        are supported. Applying one-dimensional refinement matrices along each
+        axis avoids constructing a full tensor-product prolongation matrix or
+        quadrature data.
+        """
+        grids = [self.Refinegrid(axis, numElevate) for axis in range(self.dim)]
+        if numElevate == 0:
+            coefs = [coef.copy() for coef in self.coefs]
+            return ([self._weights.reshape(self.nbasis).copy()] + coefs
+                    if self.nurbs else coefs)
+        coefs = np.stack(self.coefs, axis=-1)
         if self.nurbs:
-            coefs_data.append( (M_mp.dot(self._weights)).reshape(Vh.nbasis))
-            for i in range(self.geo_dim):
-                coefs_data.append( (M_mp.dot(self._weights*self._coefs[i].reshape(nbasis_tot))).reshape(Vh.nbasis) / coefs_data[0])
-            return coefs_data
-        else:
-            for i in range(self.geo_dim):
-                coefs_data.append( (M_mp.dot(self._coefs[i].reshape(nbasis_tot))).reshape(Vh.nbasis) )
-            return coefs_data
+            weights = self._weights.reshape(self.nbasis)
+            coefs = np.concatenate((weights[..., None], weights[..., None] * coefs), axis=-1)
+
+        for axis, (knots, degree, grid) in enumerate(zip(self.knots, self.degree, grids)):
+            inserted = np.setdiff1d(grid, knots)
+            if inserted.size == 0:
+                continue
+            matrix = csr_matrix(hrefinement_matrix(inserted, degree, knots))
+            values = np.moveaxis(coefs, axis, 0)
+            refined = matrix.dot(values.reshape(values.shape[0], -1))
+            values = refined.reshape((matrix.shape[0], *values.shape[1:]))
+            coefs = np.moveaxis(values, 0, axis)
+
+        if self.nurbs:
+            weights = coefs[..., 0]
+            return [weights.copy()] + [coefs[..., i+1] / weights for i in range(self.geo_dim)]
+        return [coefs[..., i].copy() for i in range(self.geo_dim)]
+
+    def UnRefine(self, n=1):
+        """Uniformly refine this patch in place and return ``None``.
+
+        ``n`` is a non-negative integer giving the number of midpoint
+        refinements in every parameter direction. Each iteration doubles the
+        number of knot spans while preserving the geometry and spline degrees.
+        Repeated calls refine the current patch; ``n=0`` leaves it unchanged.
+
+        Control points, weights, knots, grids, basis sizes and element counts
+        are updated together, so subsequent evaluation and space construction
+        use the refined patch. Boundary settings are preserved.
+
+        Examples
+        --------
+        >>> g = pyref_patch('fields/quart_annulus.xml', '0')
+        >>> g.UnRefine(2)
+        >>> V = g.space
+        """
+        refined = self.RefineGeometryMap(n)
+        if n == 0:
+            return
+
+        grids = [self.Refinegrid(axis, n) for axis in range(self.dim)]
+        knots = [np.sort(np.concatenate((t, np.setdiff1d(grid, t)))).tolist()
+                 for t, grid in zip(self.knots, grids)]
+        coefs = np.asarray(refined[1:] if self.nurbs else refined)
+        nbasis = list(coefs.shape[1:])
+        weights = refined[0].reshape(-1) if self.nurbs else np.ones(np.prod(nbasis))
+        nelements = [len(np.unique(grid))-1 for grid in grids]
+        grids = [grid.tolist() for grid in grids]
+
+        self.knots_data = knots
+        self._grids = grids
+        self._coefs = coefs
+        self._weights = weights
+        self._nbasis = nbasis
+        self._nelements = nelements
     # ...
     def eval_mesh(self, mesh, i_dir):
         '''
@@ -1410,6 +1471,35 @@ class pyref_multipatch(object):
     #.. get refined geometry map
     def getRefineGeometryMap(self, num_patch=1, numElevate=1):
         return self.patches[num_patch-1].RefineGeometryMap(numElevate=numElevate)
+
+    def UnRefine(self, n=1):
+        """Uniformly refine every patch in place and return ``None``.
+
+        ``n`` is a non-negative integer counting midpoint refinements in every
+        parameter direction. Repeated calls refine the current geometry;
+        ``n=0`` leaves it unchanged. Existing patch objects, interfaces,
+        interface orientations and Dirichlet settings are preserved.
+
+        Shared knots, grids, weights and the cached geometry space are refreshed
+        from the first patch, following the multipatch metadata convention.
+
+        Examples
+        --------
+        >>> g = pyref_multipatch('fields/quart_annulus.xml', (0, 1))
+        >>> g.UnRefine(2)
+        >>> V = g.space
+        """
+        for patch in self.patches:
+            patch.UnRefine(n)
+        if n == 0:
+            return
+
+        first = self.patches[0]
+        self._degree = first.degree
+        self._knots = first.knots
+        self._grids = first.grids
+        self._weights = first.weights
+        self._space = first.space
     
     #.. refined grid
     def Refinegrid(self, j_direct=0, numElevate=1):

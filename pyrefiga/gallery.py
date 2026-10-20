@@ -3,8 +3,44 @@ __all__ = ['assemble_stiffness_1d',
            'assemble_stiffness_2d',
            'assemble_rhs_2d',
            'assemble_periodic_derivative_1d',
-           'assemble_curlcurl_2d'
+           'assemble_curlcurl_2d',
+           'assemble_uniform_spline_stencils_1d'
 ]
+
+def assemble_uniform_spline_stencils_1d(degree):
+    """Infinite-grid mass, stiffness and mixed derivative rows, with h=1.
+
+    Integrate an interior row using SplineSpace.basis and weights, without
+    periodic folding. Offsets j-i run from -degree to +degree. These rows
+    define continuous Bloch symbols, including phases that are unavailable
+    on a finite periodic domain. Mixed entries are integral B_i * B'_j.
+    """
+    import numpy as np
+    from .spaces import SplineSpace
+
+    if not isinstance(degree, (int, np.integer)) or degree < 1:
+        raise ValueError('degree must be an integer >= 1')
+    p = int(degree)
+    space = SplineSpace(degree=p, grid=np.arange(2*p+4, dtype=float),
+                        nderiv=1, periodic=True)
+    offsets = np.arange(-p, p+1)
+    mass, stiffness, mixed = (np.zeros(2*p+1) for _ in range(3))
+    row = p+1  # Entire support lies strictly inside the integration domain.
+    for element, span in enumerate(space.spans):
+        il = row-(span-p)
+        if not 0 <= il <= p:
+            continue
+        bi = space.basis[element, il, 0]
+        di = space.basis[element, il, 1]
+        weights = space.weights[element]
+        for jl in range(p+1):
+            offset = span-p+jl-row
+            bj = space.basis[element, jl, 0]
+            dj = space.basis[element, jl, 1]
+            mass[offset+p] += np.sum(weights*bi*bj)
+            stiffness[offset+p] += np.sum(weights*di*dj)
+            mixed[offset+p] += np.sum(weights*bi*dj)
+    return offsets, mass, stiffness, mixed
 
 def assemble_periodic_derivative_1d(high, low):
     """Coefficient derivative S^p -> S^(p-1), with periodic DOFs folded.
