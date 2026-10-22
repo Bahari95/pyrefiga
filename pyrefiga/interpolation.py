@@ -92,28 +92,20 @@ def least_square_Bspline(degree, knots, f):
     
     Pc[0]   = Q[0]
     Pc[n-1] = Q[m-1]  
-    #... Assembles matrix N of non vanishing basis functions in each u_k value
-    N       = zeros((m-2,n-2))
+    # No free coefficients for a single linear element.
+    if n == 2:
+        return Pc
+
+    # Assemble before removing endpoints: on a single element, both endpoint
+    # basis functions contribute in the same span.
+    N       = zeros((m-2,n))
     for k in range(1, m-1):
        span                           = find_span( knots, degree, u_k[k] )
        b                              = basis_funs( knots, degree, u_k[k], span )
-       if span-degree ==0 :
-          N[k-1,span-degree:span]     = b[1:]
-       elif span+1 == n :
-          N[k-1,span-degree-1:span-1] = b[:-1]
-       else :
-          N[k-1,span-degree-1:span]   = b
+       N[k-1,span-degree:span+1]    = b
 
-    #... Right hand side of least square Approximation
-    R       = zeros(m-2)
-    for k in range(1,m-1) : 
-       span            = find_span( knots, degree, u_k[k] )
-       b               = basis_funs( knots, degree, u_k[k], span )
-       R[k-1] = Q[k]
-       if span - degree == 0 :
-          R[k-1]      -= b[0]*Q[0]
-       if span + 1 == n :
-          R[k-1]      -= b[degree]*Q[m-1]
+    R = Q[1:-1] - N[:,0]*Pc[0] - N[:,-1]*Pc[-1]
+    N = N[:,1:-1]
     R      = N.T.dot(R)
     M      = (N.T).dot(N)
     #print(N,'\n M = ',M)

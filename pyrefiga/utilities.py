@@ -577,10 +577,20 @@ def build_dirichlet(V, f, map = None, admap = None, refinN = 10, Boundaries = No
 #========================================================================
 import xml.etree.ElementTree as ET
 import numpy as np
-def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
+def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None, precision = None):
     """
     save_geometry_to_xml : save the coefficients table, knots table, and degree in an XML file.
+
+    precision : int or None, optional
+        Significant digits for coefficients. None retains the historical six
+        decimal places; 17 allows float64 round trips without coefficient loss.
     """
+    if precision is None:
+        coefficient_format = '.6f'
+    else:
+        if isinstance(precision, bool) or not isinstance(precision, (int, np.integer)) or precision < 1:
+            raise ValueError('precision must be a positive integer or None')
+        coefficient_format = f'.{precision}g'
     if locname is None :
         filename = f'./figs/'+name+'.xml'
     else :
@@ -605,7 +615,7 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
 
             co = ET.SubElement(inner, 'coefs', geoDim='2')
             co.text = '\n' + '\n'.join(
-                ' '.join(f'{float(v):.6f}' for v in row) for row in gmap
+                ' '.join(format(float(v), coefficient_format) for v in row) for row in gmap
             ) + '\n'
             co.tail = '\n'            
 
@@ -637,7 +647,7 @@ def save_geometry_to_xml(V, Gmap, name = 'Geometry', locname = None):
         
         # Add coefficients (control points)
         coefs      = ET.SubElement(basis_inner, 'coefs', geoDim='2')
-        coefs.text = '\n' + '\n'.join(' '.join(f'{v:.6f}' for v in row) for row in Gmap) + '\n'
+        coefs.text = '\n' + '\n'.join(' '.join(format(float(v), coefficient_format) for v in row) for row in Gmap) + '\n'
 
         # Close inner Basis element properly
         basis_inner.tail = '\n'
@@ -680,6 +690,9 @@ class pyref_patch:
         The id of the geometry element to extract.
     nurbs : bool, optional
         If True, weights will be extracted; otherwise, weights default to ones. Default is False.
+    orient : bool, optional
+        If True (default), apply the existing automatic orientation correction.
+        False preserves the input coefficient order and parameter directions.
     Returns
     -------
     An object with attributes:
@@ -692,7 +705,7 @@ class pyref_patch:
     - _grids : list of lists
         The grid points for each dimension. 
     """
-    def __init__(self, filename, element_id, nurbs = True, Dirichlet_all = True):
+    def __init__(self, filename, element_id, nurbs = True, Dirichlet_all = True, orient = True):
       #print("""Initialize with the XML filename.""", filename)
       root            = ET.parse(filename).getroot()
       """Retrieve coefs table, knots table, and degree for a given id."""
@@ -765,7 +778,8 @@ class pyref_patch:
       self.element_id  = element_id
       self.boundaries  = boundaries
       self.dirichmlet  = Dirichlet_all
-      self.ensure_positive_orientation
+      if orient:
+          self.ensure_positive_orientation
     @property
     def nbasis(self):
         return self._nbasis
