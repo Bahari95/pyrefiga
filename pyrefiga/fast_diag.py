@@ -132,7 +132,6 @@ from scipy.sparse    import csr_matrix, coo_matrix
 from .               import fast_diag_core as core
 from scipy.sparse    import kron
 from scipy.sparse    import csr_matrix
-from pyccel          import epyccel
 
 # =========================================================================
 class Poisson(object):

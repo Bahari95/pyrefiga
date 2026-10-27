@@ -12,7 +12,7 @@ from   .results_f90     import sol_field_NURBS_2d, sol_field_NURBS_3d
 #----------------------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------------------
 import numpy                        as     np
-import pyvista                      as     pv
+from   ._optional                   import import_optional
 from   .utilities                   import pyref_multipatch, pyref_patch
 import os
 
@@ -70,6 +70,7 @@ def paraview_nurbsAdMeshMultipatch(nbpts, pyrefGeometry, moving_mesh, solution =
    None
        The function saves the multi-block dataset to the specified output path.
    """
+   pv = import_optional('pyvista', 'visualization')
    assert isinstance(pyrefGeometry, (pyref_multipatch, pyref_patch)), \
    "Geomapping must be pyref_multipatch or pyref_patch class"
    #---
@@ -290,6 +291,7 @@ def paraview_nurbsSolutionMultipatch(nbpts, pyrefGeometry, solution = None, func
        The function saves the multi-block dataset to the specified output path.
        
    """
+   pv = import_optional('pyvista', 'visualization')
    assert isinstance(pyrefGeometry, (pyref_multipatch, pyref_patch)), \
    "Geomapping must be pyref_multipatch or pyref_patch class"
    #---
@@ -500,6 +502,7 @@ def paraview_TimeSolutionMultipatch(nbpts, pyrefGeometry, LStime = None, solutio
        The function saves the multi-block dataset to the specified output path.
        
    """
+   pv = import_optional('pyvista', 'visualization')
    assert isinstance(pyrefGeometry, (pyref_multipatch, pyref_patch)), \
    "Geomapping must be pyref_multipatch or pyref_patch class"
    #---

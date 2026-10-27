@@ -16,7 +16,7 @@ This project is licensed under the GNU GPL v3.0, as it includes and modifies cod
 
     Fast solvers
 
-    Examples on Poisson, Cahn-Hilliard, and Elasticity problems(not yet!) ...
+    Examples on Poisson, Cahn-Hilliard, and Elasticity problems
 
     It supports mappings defined by composition.
 
@@ -37,27 +37,64 @@ cd pyrefiga
 
 ## Install
 
-**Standard mode**
+Python 3.10 or newer is required. The core library uses NumPy and SciPy and
+runs with Python kernels; plotting packages and a compiler are optional.
 
-```shell
-
-    python3 -m pip install .
-
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install .
 ```
 
-**Development mode**
+For development, use an editable installation:
 
-```shell
-    python3 -m pip install --user -e .
+```bash
+python -m pip install -e '.[dev]'
 ```
-Please pyccelize the specific files and run them afterward to accelerate the computation of results and mesh adaptation using the following command:
-**Pyccel**
-```shell
-    python3 setup.py run_pyccel
-```
-You can explore and run some tests in the "tests" folder or review the content in the "examples" folder.
 
-You may work in the **newFolder** for your tasks, as it has been created automatically for you.
+Install optional features as needed:
+
+```bash
+python -m pip install '.[visualization]'  # Matplotlib plots and PyVista/VTK export
+python -m pip install '.[accelerate]'     # Pyccel acceleration
+```
+
+`compile_kernel(core, arity=...)` uses Pyccel when it is installed and falls
+back to Python when it is absent. Pass `pyccel=False` to always use Python,
+or `pyccel=True` to require Pyccel. Compilation failures are reported rather
+than silently switching backends. Acceleration also requires a compiler
+supported by Pyccel, such as gfortran for its default Fortran backend.
+
+To compile the bundled kernels from a source checkout:
+
+```bash
+python setup.py run_pyccel
+```
+
+The XML geometries are included in installed packages and can be located with
+`pyrefiga.load_xml('elasticity.xml')` from any working directory.
+
+## Tests
+
+Run the numerical regression suite from the repository root:
+
+```bash
+python -m unittest discover -s pyrefiga/tests -p 'test_*.py' -v
+```
+
+The PyVista export test is skipped when visualization support is absent.
+Install `.[visualization,accelerate]` to run the full suite with acceleration
+and export support. CI runs both the core suite and the optional features,
+and checks a wheel built from the source distribution outside the checkout.
+
+To reproduce the wheel installation check in a separate environment:
+
+```bash
+python -m build
+python3 -m venv /tmp/pyrefiga-wheel-check
+/tmp/pyrefiga-wheel-check/bin/python -m pip install dist/*.whl
+/tmp/pyrefiga-wheel-check/bin/python -I tests/test_installed_package.py
+```
 
 ## Example
 

@@ -1970,15 +1970,16 @@ def load_xml(name: str) -> str:
     str
         Full path to the requested file as a string.
     """
-    # Installed location
-    base_path = Path(pyrefiga.__file__).parent.parent
-    xml_path = base_path / "fields" / name
+    # Wheels keep geometry data inside the package.
+    package_path = Path(pyrefiga.__file__).parent
+    xml_path = package_path / "fields" / name
     if xml_path.exists():
         return str(xml_path)
 
-    # Development fallback
-    dev_path = Path(__file__).parent.parent.parent / "fields" / name
-    if dev_path.exists():
-        return str(dev_path)
+    # Source checkouts and older installations keep fields/ beside pyrefiga/.
+    for root in (package_path.parent, Path(__file__).parent.parent.parent):
+        dev_path = root / "fields" / name
+        if dev_path.exists():
+            return str(dev_path)
 
     raise FileNotFoundError(f"Cannot find XML file '{name}' in fields/")

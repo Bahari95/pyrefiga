@@ -1,5 +1,4 @@
-import matplotlib.pyplot            as     plt
-from   mpl_toolkits.axes_grid1      import make_axes_locatable
+from ._optional import import_optional
 import numpy                        as     np
 from   numpy                        import empty
 colors      = ['b', 'k', 'r', 'g', 'm', 'c', 'y', 'orange']
@@ -227,11 +226,12 @@ def point_on_bspline_curve(knots, P, x):
 
     c = np.zeros(d)
     for k in range(0, degree+1):
-        c[:] += b[k,0]*P[span-degree+k,:]
+        c[:] += b[0,k]*P[span-degree+k,:]
     return c
 
 # ==========================================================
 def plot_field_1d(knots, degree, u, nx=101, color='b', xmin = None, xmax = None, label = None, plot = False):
+    plt = import_optional('matplotlib.pyplot', 'visualization')
     n = len(knots) - degree - 1
 
     if xmin is None :
@@ -260,6 +260,7 @@ def plot_results(X, Y, xlabel = '$\\mathbf{Time}$', ylabel = '$\\mathbf{H^1-erro
    '''
    plot error under refinement or over time 
    '''
+   plt = import_optional('matplotlib.pyplot', 'visualization')
    font = {'family': 'serif', 
             'color':  'k', 
             'weight': 'normal', 

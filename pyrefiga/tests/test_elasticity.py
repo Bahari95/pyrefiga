@@ -1,6 +1,7 @@
 """Checks of the full-weight NURBS plate-with-hole elasticity example."""
 
 import contextlib
+import importlib.util
 import io
 from pathlib import Path
 import tempfile
@@ -109,6 +110,7 @@ class ElasticityTests(unittest.TestCase):
         self.assertTrue(final_errors[2] < final_errors[1] < final_errors[0])
         self.assertTrue(orders[2] > orders[1] > orders[0] > 1.4)
 
+    @unittest.skipUnless(importlib.util.find_spec('pyvista'), 'requires pyrefiga[visualization]')
     def test_example_export_and_importable_main(self):
         import pyvista as pv
         from docs.examples.elasticity2d_example import main

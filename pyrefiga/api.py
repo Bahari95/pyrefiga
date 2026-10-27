@@ -1,7 +1,7 @@
 import numpy as np
 from functools import partial
 
-from pyccel  import epyccel
+from ._optional import import_optional
 
 from .linalg import StencilMatrix
 from .linalg import StencilVector
@@ -183,11 +183,20 @@ def assemble_scalar(core, V, fields=None, knots = None, value = None):
     return core( *args )
 
 #==============================================================================
-def compile_kernel(core, arity, pyccel=True):
-    assert(arity in [0,1,2])
+def compile_kernel(core, arity, pyccel=None):
+    """Wrap an assembly kernel, optionally accelerating it with Pyccel.
 
-    if pyccel:
-        core = epyccel(core) #, accelerators = '--openmp' libs = ["/usr/lib/gcc/x86_64-linux-gnu/9", "-gfortran", "-lm"] )#, language = 'c')
+    By default use Pyccel when installed, otherwise run the Python kernel.
+    Set ``pyccel=False`` to select Python explicitly, or ``pyccel=True``
+    to require acceleration. Compilation errors are always propagated.
+    """
+    if arity not in (0, 1, 2):
+        raise ValueError('arity must be 0, 1 or 2')
+
+    if pyccel or pyccel is None:
+        compiler = import_optional('pyccel', 'accelerate', required=bool(pyccel))
+        if compiler is not None:
+            core = compiler.epyccel(core)
 
     if arity == 2:
         return partial(assemble_matrix, core)
