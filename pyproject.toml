@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyrefiga"
+dynamic = ["version"]
+description = "Isogeometric analysis with adaptive mesh refinement using spline-based methods."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [{name = "Mustapha Bahari", email = "mustapha0leibniz@gmail.com"}]
+keywords = ["isogeometric analysis", "IGA", "splines", "NURBS", "adaptive mesh"]
+dependencies = ["numpy>=1.24", "scipy>=1.10"]
+
+[project.optional-dependencies]
+visualization = ["matplotlib>=3.7", "pyvista>=0.43"]
+accelerate = ["pyccel>=2.2", "setuptools>=77"]
+dev = ["build>=1.2", "setuptools>=77"]
+
+[project.urls]
+Repository = "https://github.com/Bahari95/pyrefiga"
+
+[tool.setuptools]
+packages = ["pyrefiga", "pyrefiga.fields"]
+include-package-data = false
+
+[tool.setuptools.package-dir]
+pyrefiga = "pyrefiga"
+"pyrefiga.fields" = "fields"
+
+[tool.setuptools.package-data]
+"pyrefiga.fields" = ["*.xml"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pyrefiga.version.__version__"}
